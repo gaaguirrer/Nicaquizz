@@ -1,0 +1,11 @@
+{
+  "name": "nicaquizz-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions para NicaQuizz",
+  "type": "module",
+  "main": "functions/*.js",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

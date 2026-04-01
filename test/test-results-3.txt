@@ -1,0 +1,21 @@
+
+> nicaquizz-tests@1.0.0 test:run
+> vitest run
+
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/ingga/OneDrive/Documentos/Nueva carpeta/Nicaquizz/test[39m
+
+ [32m✓[39m e2e/flujos.test.js [2m ([22m[2m14 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m integracion/servicios-nuevos.test.js [2m ([22m[2m2 tests[22m[2m)[22m[90m 30[2mms[22m[39m
+ [32m✓[39m unitarios/constantes.test.js [2m ([22m[2m17 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m e2e/flujos-nuevos.test.js [2m ([22m[2m20 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m integracion/firestore.test.js [2m ([22m[2m20 tests[22m[2m)[22m[90m 28[2mms[22m[39m
+ [33m❯[39m unitarios/componentes-nuevos.test.jsx [2m ([22m[2m34 tests[22m [2m|[22m [31m1 failed[39m[2m)[22m[90m 51[2mms[22m[39m
+[31m   [33m❯[31m unitarios/componentes-nuevos.test.jsx[2m > [22mLógica de Negocio - Componentes[2m > [22mcalcula el progreso de conquista correctamente[39m
+[31m     → expected 65 to be 64 // Object.is equality[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m5 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m106 passed[39m[22m[90m (107)[39m
+[2m   Start at [22m 12:34:01
+[2m   Duration [22m 4.18s[2m (transform 414ms, setup 2.35s, collect 729ms, tests 186ms, environment 10.90s, prepare 7.30s)[22m
+

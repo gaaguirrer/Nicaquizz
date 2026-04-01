@@ -1,12 +1,13 @@
 /**
- * Landing Page - Puerta de Entrada de NicaQuizz
- * "El Nacatamal del Conocimiento"
+ * Landing.jsx - Página de Aterrizaje de NicaQuizz
+ * "El Modern Mestizaje"
  * 
- * Presenta el juego a los nuevos usuarios con:
- * - Hero section con CTA principal
- * - Sección "Cómo Funciona" con 3 pasos
- * - Social proof con contador de nacatamales
- * - Vista previa de categorías
+ * Secciones:
+ * - Hero Impactante con título y CTA
+ * - Tu Receta al Éxito (pasos del juego)
+ * - Prueba Social Dinámica (contador + avatares)
+ * - Inventario Cultural (ingredientes)
+ * - CTA de Cierre para registro
  */
 
 import { Link } from 'react-router-dom';
@@ -59,285 +60,433 @@ const IngredientIcon = ({ type, className = '' }) => {
   return icons[type] || null;
 };
 
+// Datos simulados para prueba social
+const NACATAMALES_HOY = 1847;
+const AVATARES = [
+  { id: 1, nombre: 'María', imagen: '👩‍🎓' },
+  { id: 2, nombre: 'Carlos', imagen: '👨‍💼' },
+  { id: 3, nombre: 'Ana', imagen: '👩‍🔬' },
+  { id: 4, nombre: 'Luis', imagen: '👨‍🎨' }
+];
+
+// Pasos del juego
+const PASOS = [
+  {
+    numero: 1,
+    titulo: 'Elige tu Materia',
+    descripcion: 'Selecciona entre Historia, Matemáticas, Geografía o Ciencias. Cada categoría te da un ingrediente único.',
+    icono: 'menu_book',
+    color: 'from-nica-verde to-nica-amarillo',
+    ingrediente: null
+  },
+  {
+    numero: 2,
+    titulo: 'Responde Correctamente',
+    descripcion: 'Contesta trivias desafiantes. Tienes 30 segundos por pregunta. ¡Usa mejoras estratégicamente!',
+    icono: 'quiz',
+    color: 'from-blue-500 to-cyan-500',
+    ingrediente: null
+  },
+  {
+    numero: 3,
+    titulo: 'Gana Ingredientes',
+    descripcion: 'Recolecta Masa, Cerdo, Arroz, Papa y Chile. ¡Cinco ingredientes completan un Nacatamal!',
+    icono: 'inventory_2',
+    color: 'from-nica-amarillo to-orange-500',
+    ingrediente: null
+  }
+];
+
+// Ingredientes del nacatamal
+const INGREDIENTES = [
+  { 
+    tipo: 'masa', 
+    nombre: 'Masa de Maíz', 
+    categoria: 'Historia', 
+    descripcion: 'La base de todo nacatamal. Gánala dominando la historia de Nicaragua.',
+    color: 'bg-amber-400'
+  },
+  { 
+    tipo: 'cerdo', 
+    nombre: 'Carne de Cerdo', 
+    categoria: 'Matemáticas', 
+    descripcion: 'Proteína matemática. Resuelve problemas y obtén este ingrediente esencial.',
+    color: 'bg-pink-400'
+  },
+  { 
+    tipo: 'arroz', 
+    nombre: 'Arroz', 
+    categoria: 'Geografía', 
+    descripcion: 'Grano de conocimiento geográfico. Explora el mundo y gánalo.',
+    color: 'bg-gray-200'
+  },
+  { 
+    tipo: 'papa', 
+    nombre: 'Papa', 
+    categoria: 'Ciencias', 
+    descripcion: 'Tubérculo científico. Domina las ciencias naturales para obtenerlo.',
+    color: 'bg-yellow-600'
+  },
+  { 
+    tipo: 'chile', 
+    nombre: 'Chile', 
+    categoria: 'Retos', 
+    descripcion: 'El toque picante. Gánalo en retos en línea contra otros jugadores.',
+    color: 'bg-red-600'
+  }
+];
+
 export default function Landing() {
   const { currentUser } = useAuth();
 
-  // Categorías con sus ingredientes y colores
-  const categorias = [
-    {
-      nombre: 'Historia',
-      icono: 'history_edu',
-      color: 'bg-categoria-historia',
-      ingrediente: 'masa',
-      descripcion: 'Historia de Nicaragua y Centroamérica'
-    },
-    {
-      nombre: 'Matemáticas',
-      icono: 'calculate',
-      color: 'bg-categoria-matematicas',
-      ingrediente: 'cerdo',
-      descripcion: 'Álgebra, geometría y cálculo'
-    },
-    {
-      nombre: 'Geografía',
-      icono: 'public',
-      color: 'bg-categoria-geografia',
-      ingrediente: 'arroz',
-      descripcion: 'Geografía de Nicaragua y el mundo'
-    },
-    {
-      nombre: 'Ciencias',
-      icono: 'science',
-      color: 'bg-categoria-ciencias',
-      ingrediente: 'papa',
-      descripcion: 'Biología, química y física'
-    }
-  ];
-
-  // Pasos de "Cómo Funciona"
-  const pasos = [
-    {
-      numero: 1,
-      titulo: 'Elige una Materia',
-      descripcion: 'Selecciona entre Historia, Matemáticas, Geografía o Ciencias',
-      icono: 'menu_book'
-    },
-    {
-      numero: 2,
-      titulo: 'Responde Correctamente',
-      descripcion: 'Tienes 30 segundos por pregunta. ¡Usa tus mejoras estratégicamente!',
-      icono: 'check_circle'
-    },
-    {
-      numero: 3,
-      titulo: 'Gana Ingredientes',
-      descripcion: 'Completa categorías y colecciona los 5 ingredientes del nacatamal',
-      icono: 'lunch_dining'
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-nica-verde via-gray-900 to-nica-verde/50">
-      {/* Navegación */}
-      <nav className="border-b border-white/10 backdrop-blur-md bg-black/20 sticky top-0 z-40">
+    <div className="min-h-screen bg-gradient-to-br from-nica-verde/30 via-gray-900 to-nica-verde/30">
+      {/* Header / Navegación */}
+      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-nica-amarillo/30 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <span className="text-4xl">🇳🇮</span>
-            <div>
-              <h1 className="text-3xl font-display text-nica-amarillo">NicaQuizz</h1>
-              <p className="text-xs text-gray-400">El Nacatamal del Conocimiento</p>
-            </div>
+          <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <span className="text-4xl">🇳🇮</span>
+              <div>
+                <h1 className="text-3xl font-display text-nica-amarillo">NicaQuizz</h1>
+                <p className="text-xs text-gray-400">El Nacatamal del Conocimiento</p>
+              </div>
+            </Link>
           </div>
-          {currentUser ? (
-            <UserMenu />
-          ) : (
-            <div className="flex gap-3">
-              <Link
-                to="/auth"
-                className="btn-secondary"
-              >
-                Iniciar Sesión
-              </Link>
-              <Link
-                to="/auth?mode=register"
-                className="btn-bounce"
-              >
-                ¡Empezar a Jugar!
-              </Link>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {currentUser ? (
+              <UserMenu />
+            ) : (
+              <>
+                <Link to="/auth" className="text-gray-300 hover:text-nica-amarillo font-bold transition-colors hidden sm:block">
+                  Iniciar Sesión
+                </Link>
+                <Link to="/auth?mode=register" className="btn-primary">
+                  <span className="material-symbols-rounded inline-block align-middle mr-1 text-sm">play_arrow</span>
+                  ¡Empezar a Jugar!
+                </Link>
+              </>
+            )}
+          </div>
         </div>
-      </nav>
+      </header>
 
       {/* Hero Section */}
       <section className="relative py-20 px-4 overflow-hidden">
-        {/* Elementos decorativos de fondo */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-nica-amarillo/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-48 h-48 bg-nica-rojo/10 rounded-full blur-3xl"></div>
+        {/* Elementos decorativos */}
+        <div className="absolute top-20 left-10 w-96 h-96 bg-nica-amarillo/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-80 h-80 bg-nica-rojo/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         
-        <div className="max-w-7xl mx-auto text-center relative z-10">
-          {/* Título principal */}
-          <h2 className="text-6xl md:text-8xl font-display mb-6 animate-fade-in">
-            <span className="gradient-text-nica">
-              ¡Conviértete en el Maestro<br/>del Nacatamal!
-            </span>
-          </h2>
-          
-          <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            Aprende <strong className="text-nica-amarillo">Historia</strong>, <strong className="text-nica-amarillo">Matemáticas</strong> y más 
-            mientras recolectas ingredientes para tu nacatamal virtual.
-          </p>
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center relative z-10">
+          {/* Contenido Hero */}
+          <div className="text-center lg:text-left">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-nica-amarillo/20 border border-nica-amarillo/50 px-4 py-2 rounded-full mb-6">
+              <span className="material-symbols-rounded text-nica-amarillo text-sm">emoji_events</span>
+              <span className="text-nica-amarillo font-bold text-sm">¡Únete a +5,000 jugadores!</span>
+            </div>
 
-          {/* CTA Principal */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link
-              to={currentUser ? '/play' : '/auth?mode=register'}
-              className="btn-bounce text-lg px-8 py-4"
-            >
-              <span className="material-symbols-rounded inline-block align-middle mr-2">
-                play_arrow
-              </span>
-              {currentUser ? 'Ir al Juego' : '¡Empezar a Jugar!'}
-            </Link>
-            <Link
-              to="/play"
-              className="btn-secondary text-lg px-8 py-4"
-            >
-              <span className="material-symbols-rounded inline-block align-middle mr-2">
-                info
-              </span>
-              Saber Más
-            </Link>
-          </div>
+            {/* Título Principal */}
+            <h1 className="text-5xl md:text-7xl font-display text-nica-amarillo mb-6 leading-tight gradient-text">
+              ¡Conviértete en el<br/>
+              <span className="text-white">Maestro del Nacatamal!</span>
+            </h1>
 
-          {/* Ingredientes en animación */}
-          <div className="flex justify-center gap-4 flex-wrap mb-8">
-            {['masa', 'cerdo', 'arroz', 'papa', 'chile'].map((ing, i) => (
-              <div 
-                key={ing}
-                className="w-16 h-16 md:w-20 md:h-20 animate-bounce-slow"
-                style={{ animationDelay: `${i * 0.2}s` }}
+            {/* Subtítulo */}
+            <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+              Aprende <strong className="text-nica-amarillo">Historia</strong>, <strong className="text-nica-amarillo">Matemáticas</strong> y más mientras recolectas ingredientes para tu nacatamal virtual.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
+              <Link
+                to={currentUser ? '/play' : '/auth?mode=register'}
+                className="btn-primary text-lg px-8 py-5 animate-bounce-slow"
               >
-                <IngredientIcon type={ing} className="w-full h-full" />
+                <span className="material-symbols-rounded inline-block align-middle mr-2">play_arrow</span>
+                {currentUser ? 'Ir al Juego' : '¡Empezar a Jugar!'}
+              </Link>
+              <Link
+                to="#como-funciona"
+                className="btn-secondary text-lg px-8 py-5"
+              >
+                <span className="material-symbols-rounded inline-block align-middle mr-2">info</span>
+                Saber Más
+              </Link>
+            </div>
+
+            {/* Prueba Social - Nacatamales Hoy */}
+            <div className="card bg-gradient-to-r from-nica-verde/30 to-nica-amarillo/30 border-nica-amarillo/50 inline-block">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-nica-amarillo to-yellow-600 flex items-center justify-center shadow-comic">
+                  <span className="material-symbols-rounded text-4xl text-white">lunch_dining</span>
+                </div>
+                <div className="text-left">
+                  <p className="text-gray-400 text-sm uppercase tracking-wider font-bold">Nacatamales Completados Hoy</p>
+                  <p className="text-4xl font-display text-nica-amarillo font-bold">{NACATAMALES_HOY.toLocaleString()}</p>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Cómo Funciona */}
-      <section className="py-16 px-4 bg-black/20">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-display text-center text-nica-amarillo mb-4">
-            ¿Cómo Funciona?
-          </h2>
-          <p className="text-center text-gray-400 mb-12 text-lg">
-            Tres simples pasos para convertirte en el maestro del nacatamal
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {pasos.map((paso, index) => (
-              <div 
-                key={paso.numero}
-                className="card text-center relative group hover-lift"
-              >
-                {/* Número de paso */}
-                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-                  <div className="w-12 h-12 bg-gradient-to-br from-nica-amarillo to-nica-verde rounded-full flex items-center justify-center font-display text-2xl text-white shadow-comic border-2 border-black/20">
-                    {paso.numero}
+              
+              {/* Avatares de jugadores */}
+              <div className="mt-4 pt-4 border-t border-nica-amarillo/30">
+                <div className="flex items-center justify-center lg:justify-start gap-2">
+                  {AVATARES.map((avatar) => (
+                    <div
+                      key={avatar.id}
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-nica-verde to-nica-amarillo flex items-center justify-center text-xl shadow-comic hover:scale-110 transition-transform"
+                      title={avatar.nombre}
+                    >
+                      {avatar.imagen}
+                    </div>
+                  ))}
+                  <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 border-2 border-gray-600">
+                    +4k
                   </div>
                 </div>
-
-                {/* Icono */}
-                <div className="w-20 h-20 bg-gradient-to-br from-nica-verde to-nica-amarillo rounded-2xl flex items-center justify-center mx-auto mb-6 mt-4 shadow-comic group-hover:shadow-comic-hover transition-shadow">
-                  <span className="material-symbols-rounded text-4xl text-white">
-                    {paso.icono}
-                  </span>
-                </div>
-
-                <h3 className="text-2xl font-display text-white mb-3">
-                  {paso.titulo}
-                </h3>
-                <p className="text-gray-400">
-                  {paso.descripcion}
-                </p>
               </div>
-            ))}
+            </div>
+          </div>
+
+          {/* Imagen/Ilustración Hero */}
+          <div className="relative hidden lg:block">
+            <div className="relative z-10 bg-gradient-to-br from-gray-800/90 to-gray-900/90 p-8 rounded-3xl shadow-2xl border border-nica-amarillo/30 rotate-3 hover:rotate-0 transition-transform duration-500">
+              {/* Nacatamal Central */}
+              <div className="text-center">
+                <div className="w-48 h-48 mx-auto mb-6 relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-nica-amarillo to-yellow-600 rounded-full blur-2xl opacity-50 animate-glow"></div>
+                  <div className="relative w-full h-full bg-gradient-to-br from-nica-verde to-nica-amarillo rounded-full flex items-center justify-center shadow-comic">
+                    <span className="material-symbols-rounded text-8xl text-white">lunch_dining</span>
+                  </div>
+                </div>
+                <h3 className="text-2xl font-display text-nica-amarillo mb-2">¡Tu Nacatamal Te Espera!</h3>
+                <p className="text-gray-400">Completa los 5 ingredientes para convertirte en Maestro</p>
+              </div>
+
+              {/* Ingredientes Flotantes */}
+              <div className="absolute -top-4 -left-4 w-16 h-16 bg-gray-800 rounded-2xl shadow-comic flex items-center justify-center animate-bounce-slow">
+                <IngredientIcon type="masa" className="w-10 h-10" />
+              </div>
+              <div className="absolute -top-4 -right-4 w-16 h-16 bg-gray-800 rounded-2xl shadow-comic flex items-center justify-center animate-bounce-slow" style={{ animationDelay: '0.5s' }}>
+                <IngredientIcon type="cerdo" className="w-10 h-10" />
+              </div>
+              <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gray-800 rounded-2xl shadow-comic flex items-center justify-center animate-bounce-slow" style={{ animationDelay: '1s' }}>
+                <IngredientIcon type="arroz" className="w-10 h-10" />
+              </div>
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-gray-800 rounded-2xl shadow-comic flex items-center justify-center animate-bounce-slow" style={{ animationDelay: '1.5s' }}>
+                <IngredientIcon type="papa" className="w-10 h-10" />
+              </div>
+            </div>
+
+            {/* Decoración de fondo */}
+            <div className="absolute inset-0 bg-gradient-to-br from-nica-amarillo/20 to-nica-rojo/20 rounded-3xl rotate-6 scale-105 -z-10"></div>
           </div>
         </div>
       </section>
 
-      {/* Social Proof - Contador */}
-      <section className="py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="card text-center bg-gradient-to-br from-nica-verde/30 to-nica-amarillo/30 border-nica-amarillo/50">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <span className="material-symbols-rounded text-4xl text-nica-amarillo">
-                lunch_dining
-              </span>
-              <h3 className="text-2xl font-display text-white">
-                Nacatamales Completados Hoy
-              </h3>
-            </div>
-            <div className="text-6xl font-display text-nica-amarillo animate-glow">
-              127
-            </div>
-            <p className="text-gray-400 mt-2">
-              ¡Únete a la competencia!
+      {/* Sección: Tu Receta al Éxito */}
+      <section id="como-funciona" className="py-20 px-4 bg-black/20">
+        <div className="max-w-7xl mx-auto">
+          {/* Título de Sección */}
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-display text-nica-amarillo mb-4">Tu Receta al Éxito</h2>
+            <div className="w-24 h-1.5 bg-gradient-to-r from-nica-verde to-nica-amarillo mx-auto rounded-full mb-4"></div>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Tres simples pasos para convertirte en el Maestro Cocinero
             </p>
           </div>
+
+          {/* Pasos */}
+          <div className="grid md:grid-cols-3 gap-8 relative">
+            {/* Línea conectora (desktop) */}
+            <div className="hidden md:block absolute top-12 left-0 right-0 h-1 bg-gradient-to-r from-nica-verde/50 via-nica-amarillo/50 to-nica-verde/50 rounded-full"></div>
+
+            {PASOS.map((paso, index) => (
+              <div key={paso.numero} className="relative">
+                {/* Card de Paso */}
+                <div className="card text-center group hover-lift">
+                  {/* Número de Paso */}
+                  <div className={`absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-gradient-to-br ${paso.color} flex items-center justify-center shadow-comic border-4 border-gray-900 z-10`}>
+                    <span className="text-white font-display font-bold text-xl">{paso.numero}</span>
+                  </div>
+
+                  {/* Icono */}
+                  <div className={`w-24 h-24 mx-auto mb-6 mt-4 rounded-2xl bg-gradient-to-br ${paso.color} flex items-center justify-center shadow-comic group-hover:shadow-comic-hover transition-shadow`}>
+                    <span className="material-symbols-rounded text-5xl text-white">{paso.icono}</span>
+                  </div>
+
+                  {/* Contenido */}
+                  <h3 className="text-2xl font-display text-white mb-3 group-hover:text-nica-amarillo transition-colors">
+                    {paso.titulo}
+                  </h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    {paso.descripcion}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Categorías Preview */}
-      <section className="py-16 px-4">
+      {/* Sección: Inventario Cultural */}
+      <section className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-display text-center text-nica-amarillo mb-4">
-            Categorías Disponibles
-          </h2>
-          <p className="text-center text-gray-400 mb-12 text-lg">
-            Compite en 4 categorías y colecciona todos los ingredientes
-          </p>
+          {/* Título de Sección */}
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-display text-nica-amarillo mb-4">Inventario Cultural</h2>
+            <div className="w-24 h-1.5 bg-gradient-to-r from-nica-verde to-nica-amarillo mx-auto rounded-full mb-4"></div>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Colecciona los 5 ingredientes del nacatamal nicaragüense
+            </p>
+          </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {categorias.map((cat) => (
+          {/* Grid de Ingredientes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            {INGREDIENTES.map((ing) => (
               <div
-                key={cat.nombre}
-                className={`${cat.color} category-card group`}
+                key={ing.tipo}
+                className="card text-center group hover-lift relative overflow-hidden"
               >
-                {/* Icono de categoría */}
-                <div className="flex justify-between items-start mb-4">
-                  <span className="material-symbols-rounded text-4xl text-white">
-                    {cat.icono}
-                  </span>
-                  <div className="w-10 h-10">
-                    <IngredientIcon type={cat.ingrediente} className="w-full h-full" />
+                {/* Fondo con gradiente */}
+                <div className={`absolute inset-0 ${ing.color} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
+
+                {/* Icono del Ingrediente */}
+                <div className="relative z-10">
+                  <div className="w-24 h-24 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <IngredientIcon type={ing.tipo} className="w-full h-full" />
                   </div>
-                </div>
 
-                {/* Información */}
-                <h3 className="text-2xl font-display text-white mb-2 group-hover:text-nica-amarillo transition-colors">
-                  {cat.nombre}
-                </h3>
-                <p className="text-white/80 text-sm mb-4">
-                  {cat.descripcion}
-                </p>
+                  {/* Información */}
+                  <h3 className="text-xl font-display text-white mb-2">{ing.nombre}</h3>
+                  
+                  {/* Categoría Badge */}
+                  <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 ${
+                    ing.categoria === 'Historia' ? 'bg-amber-900/50 text-amber-400' :
+                    ing.categoria === 'Matemáticas' ? 'bg-blue-900/50 text-blue-400' :
+                    ing.categoria === 'Geografía' ? 'bg-green-900/50 text-green-400' :
+                    ing.categoria === 'Ciencias' ? 'bg-purple-900/50 text-purple-400' :
+                    'bg-red-900/50 text-red-400'
+                  }`}>
+                    {ing.categoria}
+                  </div>
 
-                {/* Ingrediente */}
-                <div className="flex items-center gap-2 text-sm text-white/60">
-                  <span className="material-symbols-rounded text-sm">rewards</span>
-                  <span className="capitalize">{cat.ingrediente}</span>
+                  <p className="text-gray-400 text-sm">
+                    {ing.descripcion}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* CTA Secundario */}
-          <div className="text-center mt-12">
+          {/* Fórmula del Nacatamal */}
+          <div className="card mt-12 bg-gradient-to-r from-nica-verde/20 to-nica-amarillo/20 border-nica-amarillo/50 text-center">
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <span className="material-symbols-rounded text-nica-amarillo text-3xl">formula</span>
+              <h3 className="text-2xl font-display text-white">Fórmula del Nacatamal</h3>
+            </div>
+            <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
+              Completa los 5 ingredientes para formar un <strong className="text-nica-amarillo">Nacatamal Completo</strong> y canjéalo por mejoras en La Pulpería.
+            </p>
+            <div className="flex justify-center items-center gap-4 flex-wrap">
+              {INGREDIENTES.map((ing) => (
+                <div key={ing.tipo} className="flex items-center gap-2">
+                  <div className="w-10 h-10">
+                    <IngredientIcon type={ing.tipo} className="w-full h-full" />
+                  </div>
+                  <span className="text-nica-amarillo font-bold">+</span>
+                </div>
+              ))}
+              <span className="text-white font-bold text-2xl">=</span>
+              <div className="flex items-center gap-2 bg-nica-amarillo/20 px-4 py-2 rounded-xl border border-nica-amarillo/50">
+                <span className="material-symbols-rounded text-nica-amarillo text-2xl">payments</span>
+                <span className="text-nica-amarillo font-bold">1 Nacatamal</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sección: CTA de Cierre */}
+      <section className="py-20 px-4 bg-gradient-to-r from-nica-verde/30 via-nica-amarillo/20 to-nica-verde/30">
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Icono Principal */}
+          <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-nica-amarillo to-yellow-600 flex items-center justify-center shadow-comic animate-glow">
+            <span className="material-symbols-rounded text-6xl text-white">school</span>
+          </div>
+
+          {/* Título */}
+          <h2 className="text-4xl md:text-6xl font-display text-nica-amarillo mb-6">
+            ¿Tienes lo que se necesita para ser el próximo<br/>
+            <span className="text-white">Maestro Cocinero?</span>
+          </h2>
+
+          {/* Descripción */}
+          <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+            Únete a miles de jugadores, compite en el ranking nacional y desbloquea recetas ancestrales mientras aprendes sobre la cultura nicaragüense.
+          </p>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Link
-              to="/play"
-              className="btn-primary text-lg px-8 py-4 inline-flex items-center"
+              to={currentUser ? '/play' : '/auth?mode=register'}
+              className="btn-primary text-lg px-10 py-5 shadow-2xl"
             >
-              <span className="material-symbols-rounded mr-2">explore</span>
-              Ver Todas las Categorías
+              <span className="material-symbols-rounded inline-block align-middle mr-2">person_add</span>
+              {currentUser ? 'Comenzar Aventura' : '¡Registrarse Ahora!'}
             </Link>
+            <Link
+              to="/auth"
+              className="btn-secondary text-lg px-10 py-5"
+            >
+              <span className="material-symbols-rounded inline-block align-middle mr-2">login</span>
+              Iniciar Sesión
+            </Link>
+          </div>
+
+          {/* Estadísticas */}
+          <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto mt-12">
+            <div>
+              <p className="text-4xl font-display text-nica-amarillo font-bold">5,000+</p>
+              <p className="text-gray-400 text-sm mt-1">Jugadores</p>
+            </div>
+            <div>
+              <p className="text-4xl font-display text-nica-amarillo font-bold">50,000+</p>
+              <p className="text-gray-400 text-sm mt-1">Preguntas</p>
+            </div>
+            <div>
+              <p className="text-4xl font-display text-nica-amarillo font-bold">4</p>
+              <p className="text-gray-400 text-sm mt-1">Categorías</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-white/10 bg-black/20">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <span className="text-2xl">🇳🇮</span>
-            <span className="font-display text-xl text-nica-amarillo">NicaQuizz</span>
+      <footer className="bg-gray-900 border-t border-gray-800 py-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            {/* Logo y Nombre */}
+            <div className="flex items-center gap-3">
+              <span className="text-4xl">🇳🇮</span>
+              <div>
+                <h3 className="text-2xl font-display text-nica-amarillo">NicaQuizz</h3>
+                <p className="text-xs text-gray-500">El Nacatamal del Conocimiento</p>
+              </div>
+            </div>
+
+            {/* Enlaces */}
+            <nav className="flex flex-wrap justify-center gap-6 text-sm">
+              <a href="#" className="text-gray-400 hover:text-nica-amarillo transition-colors">Sobre el Proyecto</a>
+              <a href="#" className="text-gray-400 hover:text-nica-amarillo transition-colors">Contacto</a>
+              <a href="#" className="text-gray-400 hover:text-nica-amarillo transition-colors">Términos</a>
+              <a href="#" className="text-gray-400 hover:text-nica-amarillo transition-colors">Privacidad</a>
+            </nav>
+
+            {/* Copyright */}
+            <p className="text-gray-600 text-sm">
+              © 2025 NicaQuizz - El Arte del Modern Mestizaje
+            </p>
           </div>
-          <p className="text-gray-500 text-sm">
-            Hecho con ❤️ para el aprendizaje de Nicaragua
-          </p>
-          <p className="text-gray-600 text-xs mt-2">
-            © 2025 NicaQuizz. Todos los derechos reservados.
-          </p>
         </div>
       </footer>
     </div>

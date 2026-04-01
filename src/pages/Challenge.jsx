@@ -1,449 +1,317 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import {
-  getChallenge,
-  acceptChallenge,
-  rejectChallenge,
-  completeChallenge,
-  fetchApprovedQuestions,
-  submitAnswer,
-  getUserProfile,
-  INGREDIENTE_NAMES,
-  CATEGORIA_INGREDIENTE,
-  addCoins
-} from '../services/firestore';
+/**
+ * Challenge.jsx - Configuración del Duelo de NicaQuizz
+ * "Sabor y Saber"
+ * 
+ * Características:
+ * - Hero con identidad del desafío
+ * - VS Avatar Display (Tú vs Amigo)
+ * - Grid de Categorías con recompensas
+ * - Opción Duelo Libre
+ * - CTA para empezar duelo
+ * - BottomNavBar para móvil
+ * - Decoración orgánica (hojas, chile)
+ */
 
-const MaterialIcon = ({ name, className = '' }) => (
-  <span className={`material-symbols-outlined ${className}`}>{name}</span>
-);
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+// Categorías disponibles
+const CATEGORIAS = [
+  {
+    id: 'historia',
+    nombre: 'Historia',
+    icono: 'history_edu',
+    color: 'bg-[#79001c]/10',
+    textColor: 'text-[#79001c]',
+    badgeColor: 'bg-[#ffdad9]',
+    badgeText: 'text-[#40000a]',
+    recompensa: 'Achiote',
+    iconoRecompensa: 'restaurant',
+    activo: true
+  },
+  {
+    id: 'matematicas',
+    nombre: 'Matemáticas',
+    icono: 'calculate',
+    color: 'bg-[#154212]/10',
+    textColor: 'text-[#154212]',
+    badgeColor: 'bg-[#bcf0ae]',
+    badgeText: 'text-[#23501e]',
+    recompensa: 'Maíz',
+    iconoRecompensa: 'nutrition',
+    activo: false
+  },
+  {
+    id: 'geografia',
+    nombre: 'Geografía',
+    icono: 'explore',
+    color: 'bg-[#755b00]/10',
+    textColor: 'text-[#755b00]',
+    badgeColor: 'bg-[#ffdf90]',
+    badgeText: 'text-[#241a00]',
+    recompensa: 'Hoja',
+    iconoRecompensa: 'eco',
+    activo: false
+  },
+  {
+    id: 'ciencias',
+    nombre: 'Ciencias',
+    icono: 'nature',
+    color: 'bg-[#2D5A27]/10',
+    textColor: 'text-[#2D5A27]',
+    badgeColor: 'bg-[#f2f0c4]',
+    badgeText: 'text-[#1d1d03]',
+    recompensa: 'Cacao',
+    iconoRecompensa: 'local_cafe',
+    activo: false
+  }
+];
 
 export default function Challenge() {
-  const { challengeId } = useParams();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const { currentUser, userData, updateUserStats } = useAuth();
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const [challenge, setChallenge] = useState(null);
-  const [opponent, setOpponent] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [gameState, setGameState] = useState('loading'); // loading, waiting, playing, complete
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState('');
-  const [showResult, setShowResult] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
-  const [timeLeft, setTimeLeft] = useState(30);
-  const [answering, setAnswering] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  // Datos simulados del rival
+  const rival = {
+    nombre: '@marcos_12',
+    avatar: 'https://i.pravatar.cc/100?img=11'
+  };
 
-  useEffect(() => {
-    loadChallenge();
-  }, [challengeId]);
-
-  useEffect(() => {
-    if (!showResult && gameState === 'playing' && timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !showResult && gameState === 'playing') {
-      handleTimeUp();
-    }
-  }, [timeLeft, showResult, gameState]);
-
-  async function loadChallenge() {
+  async function handleEmpezarDuelo(tipo = 'categoria') {
+    setLoading(true);
     try {
-      const challengeData = await getChallenge(challengeId);
+      // Simulación de inicio de duelo
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (!challengeData) {
-        setMessage({ type: 'error', text: 'Reto no encontrado' });
-        setGameState('error');
-        return;
-      }
-
-      setChallenge(challengeData);
-
-      // Verificar si el usuario es parte del reto
-      const isChallenger = challengeData.challengerId === currentUser.uid;
-      const isChallenged = challengeData.challengedId === currentUser.uid;
-
-      if (!isChallenger && !isChallenged) {
-        setMessage({ type: 'error', text: 'No eres parte de este reto' });
-        setGameState('error');
-        return;
-      }
-
-      // Cargar datos del oponente
-      const opponentId = isChallenger ? challengeData.challengedId : challengeData.challengerId;
-      const opponentData = await getUserProfile(opponentId);
-      setOpponent(opponentData);
-
-      // Verificar estado del reto
-      if (challengeData.status === 'pending' && isChallenged) {
-        setGameState('waiting');
-      } else if (challengeData.status === 'accepted') {
-        // Cargar preguntas
-        const categoryId = challengeData.categoryId;
-        const questionsData = await fetchApprovedQuestions(categoryId || null, 'hard');
-        
-        // Preparar preguntas con opciones
-        const questionsWithOptions = questionsData
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 5)
-          .map(q => ({
-            ...q,
-            options: q.options?.length ? q.options : generateOptions(q.correctAnswer)
-          }));
-
-        setQuestions(questionsWithOptions);
-        setGameState('playing');
-      } else if (challengeData.status === 'completed') {
-        setGameState('complete');
-      }
+      // Redirigir al juego
+      navigate(`/challenge/play?tipo=${tipo}&categoria=${categoriaSeleccionada || 'libre'}`);
     } catch (error) {
-      console.error('Error al cargar reto:', error);
-      setMessage({ type: 'error', text: 'Error al cargar el reto' });
-      setGameState('error');
+      console.error('Error al empezar duelo:', error);
     } finally {
       setLoading(false);
     }
   }
 
-  function generateOptions(correctAnswer) {
-    const wrongOptions = [
-      'Opción incorrecta 1',
-      'Respuesta equivocada',
-      'No es esta',
-      'Intenta de nuevo'
-    ];
-    const shuffled = [...wrongOptions, correctAnswer].sort(() => Math.random() - 0.5);
-    return shuffled;
-  }
-
-  async function handleAccept() {
-    try {
-      await acceptChallenge(challengeId);
-      setGameState('playing');
-      setMessage({ type: 'success', text: '¡Reto aceptado! Comenzando...' });
-    } catch (error) {
-      console.error('Error al aceptar reto:', error);
-      setMessage({ type: 'error', text: 'Error al aceptar el reto' });
-    }
-  }
-
-  async function handleReject() {
-    if (!confirm('¿Estás seguro de rechazar este reto?')) return;
-    
-    try {
-      await rejectChallenge(challengeId);
-      navigate('/friends');
-    } catch (error) {
-      console.error('Error al rechazar reto:', error);
-      setMessage({ type: 'error', text: 'Error al rechazar el reto' });
-    }
-  }
-
-  async function handleTimeUp() {
-    setAnswering(true);
-    setIsCorrect(false);
-    setShowResult(true);
-    setScore(prev => ({ ...prev, total: prev.total + 1 }));
-
-    const currentQuestion = questions[currentQuestionIndex];
-    try {
-      await submitAnswer(currentUser.uid, currentQuestion.id, challenge.categoryId || 'general', false);
-      await updateUserStats(currentQuestion.id, challenge.categoryId || 'general', false);
-    } catch (error) {
-      console.error('Error al guardar respuesta:', error);
-    }
-
-    setAnswering(false);
-  }
-
-  async function handleAnswer() {
-    if (!selectedAnswer || answering) return;
-
-    setAnswering(true);
-    const currentQuestion = questions[currentQuestionIndex];
-    const correct = selectedAnswer === currentQuestion.correctAnswer;
-
-    setIsCorrect(correct);
-    setShowResult(true);
-    setScore(prev => ({
-      correct: prev.correct + (correct ? 1 : 0),
-      total: prev.total + 1
-    }));
-
-    try {
-      await submitAnswer(currentUser.uid, currentQuestion.id, challenge.categoryId || 'general', correct);
-      await updateUserStats(currentQuestion.id, challenge.categoryId || 'general', correct);
-    } catch (error) {
-      console.error('Error al guardar respuesta:', error);
-    }
-
-    setAnswering(false);
-  }
-
-  function nextQuestion() {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswer('');
-      setShowResult(false);
-      setTimeLeft(30);
-    } else {
-      finishChallenge();
-    }
-  }
-
-  async function finishChallenge() {
-    try {
-      const percentage = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
-      
-      // Determinar ganador (esto es simplificado - en producción se compara con el oponente)
-      const isWinner = percentage >= 60;
-      
-      await completeChallenge(
-        challengeId,
-        isWinner ? currentUser.uid : (opponent?.id || null),
-        score.correct,
-        0 // opponent score se actualizaría después
-      );
-
-      // Dar recompensa si ganó
-      if (isWinner && challenge.categoryId) {
-        await addCoins(currentUser.uid, challenge.categoryId, true);
-      }
-
-      setGameState('complete');
-    } catch (error) {
-      console.error('Error al completar reto:', error);
-      setMessage({ type: 'error', text: 'Error al completar el reto' });
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white text-xl animate-pulse">Cargando reto...</div>
-      </div>
-    );
-  }
-
-  if (gameState === 'error') {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card text-center max-w-md">
-          <MaterialIcon name="error" className="text-6xl text-red-500 mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-4">Error en el Reto</h1>
-          <p className="text-gray-400 mb-6">{message.text}</p>
-          <Link to="/friends" className="btn-primary">
-            Volver a Amigos
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'waiting') {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card text-center max-w-md">
-          <MaterialIcon name="sports_martial_arts" className="text-6xl text-indigo-500 mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-4">¡Te han retado!</h1>
-          <p className="text-gray-300 mb-2">
-            <strong>{opponent?.displayName}</strong> te ha desafiado
-          </p>
-          {challenge?.categoryId && (
-            <p className="text-gray-400 mb-6">
-              Categoría: <span className="capitalize">{challenge.categoryId}</span>
-            </p>
-          )}
-          <div className="flex gap-4 justify-center">
-            <button onClick={handleAccept} className="btn-primary">
-              <MaterialIcon name="check" className="inline-block align-middle mr-1" /> Aceptar
-            </button>
-            <button onClick={handleReject} className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-all">
-              <MaterialIcon name="close" className="inline-block align-middle mr-1" /> Rechazar
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'complete') {
-    const percentage = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
-    const isWinner = percentage >= 60;
-
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card max-w-md w-full text-center">
-          <div className="mb-6">
-            {isWinner ? (
-              <MaterialIcon name="emoji_events" className="text-7xl text-yellow-500" />
-            ) : (
-              <MaterialIcon name="sentiment_dissatisfied" className="text-7xl text-gray-500" />
-            )}
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-4">
-            {isWinner ? '¡Victoria!' : 'Derrota'}
-          </h1>
-          <div className="text-5xl font-bold gradient-text mb-4">
-            {score.correct}/{score.total}
-          </div>
-          <p className="text-xl text-gray-300 mb-6">
-            Precisión: {percentage}%
-          </p>
-          
-          {isWinner && challenge.categoryId && (
-            <div className="bg-green-900/50 border border-green-700 text-green-300 p-4 rounded-lg mb-6">
-              <p className="font-bold">¡Ganaste un ingrediente!</p>
-              <p className="text-sm">
-                {INGREDIENTE_NAMES[CATEGORIA_INGREDIENTE[challenge.categoryId]] || 'Bonus'}
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Link to="/friends" className="btn-primary">
-              Volver a Amigos
-            </Link>
-            <Link to="/dashboard" className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-6 py-3 rounded-lg font-semibold transition-all">
-              Inicio
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentQuestion = questions[currentQuestionIndex];
-
-  if (!currentQuestion) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card text-center">
-          <p className="text-gray-400 mb-4">No hay preguntas disponibles</p>
-          <Link to="/friends" className="btn-primary">Volver</Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen py-8 px-4 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-      <div className="max-w-2xl mx-auto">
-        {/* Header del reto */}
-        <div className="card mb-6 bg-gray-800/50">
-          <div className="flex justify-between items-center">
-            <div className="text-center">
-              <p className="text-sm text-gray-400 mb-1">Tú</p>
-              <p className="font-bold text-white">{userData?.displayName || 'Usuario'}</p>
-              <div className="text-2xl font-bold text-green-400 mt-1">{score.correct}</div>
-            </div>
-            <div className="text-center">
-              <MaterialIcon name="vs" className="text-4xl text-gray-500" />
-              <p className="text-xs text-gray-400 mt-2">VS</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-400 mb-1">{opponent?.displayName || 'Oponente'}</p>
-              <p className="font-bold text-white">{opponent?.displayName ? 'vs' : '?'}</p>
-              <div className="text-2xl font-bold text-gray-500 mt-1">-</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Info de la pregunta */}
-        <div className="flex justify-between items-center mb-6">
-          <Link to="/friends" className="text-gray-300 hover:text-indigo-400 transition-colors">
-            <MaterialIcon name="arrow_back" className="align-middle" /> Salir
+    <div className="min-h-screen bg-[#fefccf] text-[#1d1d03] font-body">
+      
+      {/* TopAppBar */}
+      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-[#fefccf] shadow-[0_8px_32px_rgba(29,29,3,0.08)] font-headline tracking-tight">
+        <Link to="/" className="text-2xl font-bold text-[#154212]">
+          NicaQuizz
+        </Link>
+        <nav className="hidden md:flex gap-8 items-center">
+          <Link to="/friends" className="text-[#154212]/70 hover:bg-[#154212]/5 transition-colors duration-200">
+            Desafíos
           </Link>
-          <div className="text-gray-300 font-semibold">
-            Pregunta {currentQuestionIndex + 1} de {questions.length}
+          <Link to="/challenge" className="text-[#154212] font-bold border-b-2 border-[#154212] pb-1">
+            Amigos
+          </Link>
+          <Link to="/profile" className="text-[#154212]/70 hover:bg-[#154212]/5 transition-colors duration-200">
+            Logros
+          </Link>
+        </nav>
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center bg-[#f2f0c4] rounded-full px-4 py-1.5 border border-[#c2c9bb]/10">
+            <span className="material-symbols-outlined text-[#154212] text-xl mr-2">search</span>
+            <span className="text-[#42493e]/60 text-sm">Buscar...</span>
           </div>
-          <div className={`text-gray-300 font-semibold ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : ''}`}>
-            <MaterialIcon name="timer" className="inline-block w-5 h-5 align-middle" /> {timeLeft}s
+          <button className="material-symbols-outlined text-[#154212] scale-95 active:scale-90 duration-200">
+            notifications
+          </button>
+          <button className="material-symbols-outlined text-[#154212] scale-95 active:scale-90 duration-200">
+            settings
+          </button>
+          <Link
+            to="/profile"
+            className="w-10 h-10 rounded-full border-2 border-[#2D5A27] p-0.5 overflow-hidden"
+          >
+            <img
+              alt="Perfil"
+              className="w-full h-full object-cover rounded-full"
+              src="https://i.pravatar.cc/100?img=1"
+            />
+          </Link>
+        </div>
+      </header>
+
+      <main className="pt-28 pb-32 px-6 max-w-7xl mx-auto">
+        
+        {/* Hero Section: The Challenge Identity */}
+        <section className="flex flex-col md:flex-row items-center justify-between mb-12 gap-8">
+          <div className="flex-1 space-y-4">
+            <h1 className="text-5xl md:text-6xl font-headline font-extrabold text-[#154212] leading-tight -tracking-widest">
+              Configuración <br/>del <span className="text-[#755b00]">Duelo</span>
+            </h1>
+            <p className="text-[#42493e] text-lg max-w-md">
+              Selecciona el campo de batalla y los ingredientes en juego para este desafío culinario de conocimientos.
+            </p>
           </div>
-        </div>
 
-        {/* Barra de progreso */}
-        <div className="bg-gray-800 rounded-full h-2 mb-6">
-          <div
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full transition-all"
-            style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-          />
-        </div>
+          {/* VS Avatar Display */}
+          <div className="relative flex items-center justify-center p-8 bg-[#f8f6c9] rounded-[2.5rem] shadow-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#ffdf90]/30 to-transparent opacity-40"></div>
+            <div className="flex items-center gap-6 relative z-10">
+              {/* Tú */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-20 h-20 bg-[#2D5A27] rounded-full flex items-center justify-center text-white border-4 border-[#fefccf] shadow-lg">
+                  <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
+                </div>
+                <span className="font-bold text-[#154212]">Tú</span>
+              </div>
 
-        {/* Pregunta */}
-        <div className="card">
-          <h2 className="text-2xl font-bold text-white mb-6">
-            {currentQuestion.text}
-          </h2>
+              {/* VS */}
+              <div className="flex flex-col items-center">
+                <span className="text-3xl font-black italic text-[#79001c]">VS</span>
+                <div className="w-12 h-1 bg-[#79001c]/20 rounded-full mt-2"></div>
+              </div>
 
-          <div className="space-y-3 mb-6">
-            {currentQuestion.options?.map((option, index) => (
-              <label
-                key={index}
-                className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  showResult
-                    ? option === currentQuestion.correctAnswer
-                      ? 'border-green-500 bg-green-900/30'
-                      : option === selectedAnswer
-                      ? 'border-red-500 bg-red-900/30'
-                      : 'border-gray-700'
-                    : selectedAnswer === option
-                    ? 'border-indigo-500 bg-indigo-900/30'
-                    : 'border-gray-700 hover:bg-gray-800'
+              {/* Rival */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-24 h-24 rounded-full p-1 bg-[#fccc38] shadow-xl overflow-hidden transform hover:rotate-3 transition-transform">
+                  <img
+                    alt={`Avatar de ${rival.nombre}`}
+                    className="w-full h-full rounded-full object-cover"
+                    src={rival.avatar}
+                  />
+                </div>
+                <span className="font-bold text-[#154212]">{rival.nombre}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Category Grid */}
+        <section className="mb-16">
+          <div className="flex justify-between items-end mb-8">
+            <h2 className="text-3xl font-headline font-bold text-[#1d1d03]">Categorías de Desafío</h2>
+            <div className="flex gap-2">
+              <span className="px-4 py-1.5 rounded-full bg-[#ffdf90] text-[#1d1d03] font-bold text-sm">
+                RECOMPENSA ACTIVA
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {CATEGORIAS.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setCategoriaSeleccionada(cat.id)}
+                className={`group flex flex-col items-start p-6 rounded-3xl text-left transition-all duration-300 hover:shadow-xl hover:-translate-y-2 border ${
+                  categoriaSeleccionada === cat.id
+                    ? 'bg-[#e6e5b9] border-[#154212]'
+                    : 'bg-white border-[#c2c9bb]/10 hover:border-[#2D5A27]'
                 }`}
               >
-                <input
-                  type="radio"
-                  name="answer"
-                  value={option}
-                  onChange={(e) => setSelectedAnswer(e.target.value)}
-                  checked={selectedAnswer === option}
-                  disabled={showResult || answering}
-                  className="w-4 h-4"
-                />
-                <span className="flex-1 text-gray-300">{option}</span>
-              </label>
+                <div className={`w-14 h-14 rounded-2xl ${cat.color} flex items-center justify-center ${cat.textColor} mb-6 group-hover:scale-110 transition-transform`}>
+                  <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    {cat.icono}
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-[#1d1d03] mb-2">{cat.nombre}</h3>
+                <div className={`flex items-center gap-2 py-2 px-3 ${cat.badgeColor} rounded-xl mt-auto`}>
+                  <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    {cat.iconoRecompensa}
+                  </span>
+                  <span className={`text-xs font-bold ${cat.badgeText} tracking-tight`}>
+                    Recompensa: {cat.recompensa}
+                  </span>
+                </div>
+              </button>
             ))}
           </div>
+        </section>
 
-          {showResult && (
-            <div className={`p-4 rounded-lg mb-4 ${
-              isCorrect ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'
-            }`}>
-              <p className="font-bold">
-                {isCorrect ? <><MaterialIcon name="check_circle" className="inline-block align-middle" /> ¡Correcto!</> : <><MaterialIcon name="cancel" className="inline-block align-middle" /> Incorrecto</>}
-              </p>
-              {!isCorrect && (
-                <p className="mt-1">
-                  Respuesta correcta: <strong>{currentQuestion.correctAnswer}</strong>
-                </p>
-              )}
+        {/* Duelo Libre Option */}
+        <section className="mb-20">
+          <button
+            onClick={() => setCategoriaSeleccionada('libre')}
+            className={`w-full flex flex-col md:flex-row items-center justify-between p-8 bg-gradient-to-r from-[#154212] to-[#2D5A27] rounded-[2rem] text-white overflow-hidden relative group transition-all ${
+              categoriaSeleccionada === 'libre' ? 'ring-4 ring-[#fccc38]' : ''
+            }`}
+          >
+            <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 organic-shape -translate-y-12 translate-x-12 group-hover:scale-110 transition-transform"></div>
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md">
+                <span className="material-symbols-outlined text-4xl">shuffle</span>
+              </div>
+              <div className="text-left">
+                <h3 className="text-2xl font-bold">Duelo Libre</h3>
+                <p className="text-white/80">Preguntas aleatorias de todas las categorías. ¡Doble experiencia!</p>
+              </div>
             </div>
-          )}
+            <span className="material-symbols-outlined text-4xl mt-6 md:mt-0 relative z-10 animate-pulse">
+              arrow_forward_ios
+            </span>
+          </button>
+        </section>
 
-          <div className="flex gap-4">
-            {!showResult ? (
-              <button
-                onClick={handleAnswer}
-                disabled={!selectedAnswer || answering}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white flex-1 py-3 rounded-lg font-semibold transition-all shadow-lg"
-              >
-                {answering ? 'Enviando...' : 'Responder'}
-              </button>
-            ) : (
-              <button
-                onClick={nextQuestion}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white flex-1 py-3 rounded-lg font-semibold transition-all shadow-lg"
-              >
-                {currentQuestionIndex < questions.length - 1 ? 'Siguiente' : 'Ver resultado'}
-              </button>
-            )}
-          </div>
+        {/* Call to Action */}
+        <div className="flex flex-col items-center gap-6">
+          <button
+            onClick={() => handleEmpezarDuelo(categoriaSeleccionada || 'libre')}
+            disabled={loading}
+            className="w-full md:w-auto px-16 py-6 bg-[#fccc38] text-[#1d1d03] font-headline font-extrabold text-2xl rounded-2xl shadow-[0_12px_48px_rgba(117,91,0,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-4 group disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            ¡Empezar Duelo!
+            <span className="material-symbols-outlined text-3xl group-hover:translate-x-2 transition-transform">
+              swords
+            </span>
+          </button>
+          <p className="text-[#42493e]/60 font-semibold text-sm">
+            Tu rival recibirá una notificación al instante.
+          </p>
         </div>
+      </main>
+
+      {/* BottomNavBar (Mobile Only) */}
+      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#fefccf]/70 backdrop-blur-xl shadow-[0_-4px_20px_rgba(29,29,3,0.05)] md:hidden">
+        <Link
+          to="/"
+          className="flex flex-col items-center justify-center text-[#154212]/60 px-5 py-2 hover:text-[#154212] transition-transform duration-300 ease-out"
+        >
+          <span className="material-symbols-outlined">home</span>
+          <span className="font-headline text-[10px] font-semibold uppercase tracking-wider mt-1">Inicio</span>
+        </Link>
+        <Link
+          to="/challenge"
+          className="flex flex-col items-center justify-center bg-[#154212] text-[#fefccf] rounded-2xl px-5 py-2 scale-110 transition-transform duration-300 ease-out"
+        >
+          <span className="material-symbols-outlined">swords</span>
+          <span className="font-headline text-[10px] font-semibold uppercase tracking-wider mt-1">Duelo</span>
+        </Link>
+        <Link
+          to="/shop"
+          className="flex flex-col items-center justify-center text-[#154212]/60 px-5 py-2 hover:text-[#154212] transition-transform duration-300 ease-out"
+        >
+          <span className="material-symbols-outlined">local_mall</span>
+          <span className="font-headline text-[10px] font-semibold uppercase tracking-wider mt-1">Mercado</span>
+        </Link>
+        <Link
+          to="/profile"
+          className="flex flex-col items-center justify-center text-[#154212]/60 px-5 py-2 hover:text-[#154212] transition-transform duration-300 ease-out"
+        >
+          <span className="material-symbols-outlined">person</span>
+          <span className="font-headline text-[10px] font-semibold uppercase tracking-wider mt-1">Perfil</span>
+        </Link>
+      </nav>
+
+      {/* Decoration Layer */}
+      <div className="fixed top-20 right-0 pointer-events-none -z-10 opacity-20">
+        <div className="w-80 h-80 bg-[#2D5A27]/20 rounded-full blur-3xl"></div>
       </div>
+      <div className="fixed bottom-0 left-0 pointer-events-none -z-10 opacity-10">
+        <div className="w-40 h-40 bg-[#79001c]/20 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Estilos personalizados */}
+      <style>{`
+        .organic-shape {
+          border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+        }
+      `}</style>
     </div>
   );
 }

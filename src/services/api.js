@@ -123,19 +123,38 @@ export async function updateUserCoins(uid, coins) {
 }
 
 /**
- * Actualizar power-ups de usuario
+ * Actualizar mejoras de usuario
  */
-export async function updateUserPowerUps(uid, powerUps) {
+export async function updateUserMejoras(uid, mejoras) {
   const response = await fetch(`${API_BASE}/users?uid=${uid}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ powerUps }),
+    body: JSON.stringify({ mejoras }),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || 'Error al actualizar power-ups');
+    throw new Error(data.error || 'Error al actualizar mejoras');
+  }
+
+  return data;
+}
+
+/**
+ * Actualizar trabas de usuario
+ */
+export async function updateUserTrabas(uid, trabas) {
+  const response = await fetch(`${API_BASE}/users?uid=${uid}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trabas }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Error al actualizar trabas');
   }
 
   return data;
@@ -501,10 +520,17 @@ export const ITEM_TYPES = {
   ACCESORIO: 'accesorio',
 };
 
-export const POWERUPS = {
-  PASS_QUESTION: 'pass_question',
-  DOUBLE_TIME: 'double_time',
-  REDUCE_OPTIONS: 'reduce_options',
+export const MEJORAS = {
+  PASE: 'pase',
+  RELOJ_ARENA: 'reloj_arena',
+  COMODIN: 'comodin',
+};
+
+export const TRABAS = {
+  RELOJ_RAPIDO: 'reloj_rapido',
+  PREGUNTA_DIFICIL: 'pregunta_dificil',
+  SIN_PISTAS: 'sin_pistas',
+  CONTROLES_INVERTIDOS: 'controles_invertidos',
 };
 
 // ==================== FUNCIONES AUXILIARES ====================
@@ -531,24 +557,24 @@ export async function addCoins(uid, categoria, isOpenChallenge = false) {
 }
 
 /**
- * Usar power-up
+ * Usar mejora
  */
-export async function usePowerUp(uid, powerUpType) {
+export async function useMejora(uid, mejoraType) {
   const userResponse = await fetch(`${API_BASE}/users?uid=${uid}`);
   const userData = await userResponse.json();
 
   if (!userData.data) return;
 
-  const powerUps = userData.data.powerUps || {};
-  const currentCount = powerUps[powerUpType] || 0;
+  const mejoras = userData.data.mejoras || {};
+  const currentCount = mejoras[mejoraType] || 0;
 
   if (currentCount <= 0) {
-    throw new Error('No tienes power-ups disponibles');
+    throw new Error('No tienes mejoras disponibles');
   }
 
-  await updateUserPowerUps(uid, {
-    ...powerUps,
-    [powerUpType]: currentCount - 1,
+  await updateUserMejoras(uid, {
+    ...mejoras,
+    [mejoraType]: currentCount - 1,
   });
 }
 

@@ -7,8 +7,8 @@ import {
   submitAnswer,
   CATEGORIA_INGREDIENTE,
   addCoins,
-  POWERUPS,
-  usePowerUp
+  MEJORAS,
+  useMejora
 } from '../services/firestore';
 
 // Iconos SVG personalizados para ingredientes del nacatamal
@@ -72,11 +72,11 @@ const MaterialIcon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined ${className}`}>{name}</span>
 );
 
-// Mapeo de power-ups a iconos
-const POWERUP_ICONS = {
-  [POWERUPS.PASS_QUESTION]: 'skip_next',
-  [POWERUPS.DOUBLE_TIME]: 'timer',
-  [POWERUPS.REDUCE_OPTIONS]: 'filter_list'
+// Mapeo de mejoras a iconos
+const MEJORA_ICONS = {
+  [MEJORAS.PASE]: 'skip_next',
+  [MEJORAS.RELOJ_ARENA]: 'timer',
+  [MEJORAS.COMODIN]: 'filter_list'
 };
 
 export default function Questions() {
@@ -96,17 +96,17 @@ export default function Questions() {
   const [quizComplete, setQuizComplete] = useState(false);
   const [answering, setAnswering] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
-  const [powerUps, setPowerUps] = useState({});
-  const [usingPowerUp, setUsingPowerUp] = useState(null);
+  const [mejoras, setMejoras] = useState({});
+  const [mejoraUsada, setMejoraUsada] = useState(false); // Solo 1 mejora por partida
 
   useEffect(() => {
     loadData();
   }, [categoryId]);
 
   useEffect(() => {
-    // Cargar power-ups del usuario
+    // Cargar mejoras del usuario
     if (userData) {
-      setPowerUps(userData.powerUps || {});
+      setMejoras(userData.mejoras || {});
     }
   }, [userData]);
 
@@ -232,60 +232,57 @@ export default function Questions() {
     setQuestions(prev => prev.sort(() => Math.random() - 0.5));
   }
 
-  // Power-up: Pasar pregunta
+  // Mejora: Pasar pregunta
   async function handlePassQuestion() {
-    if (powerUps?.[POWERUPS.PASS_QUESTION] <= 0 || usingPowerUp) return;
-    
-    setUsingPowerUp(POWERUPS.PASS_QUESTION);
+    if (mejoraUsada || mejoras?.[MEJORAS.PASE] <= 0) return;
+
+    setMejoraUsada(true);
     try {
-      await usePowerUp(currentUser.uid, POWERUPS.PASS_QUESTION);
-      setPowerUps(prev => ({ ...prev, [POWERUPS.PASS_QUESTION]: prev[POWERUPS.PASS_QUESTION] - 1 }));
-      
+      await useMejora(currentUser.uid, MEJORAS.PASE);
+      setMejoras(prev => ({ ...prev, [MEJORAS.PASE]: prev[MEJORAS.PASE] - 1 }));
+
       // Marcar como incorrecta pero pasar a la siguiente
       setScore(prev => ({ ...prev, total: prev.total + 1 }));
       nextQuestion();
     } catch (error) {
-      console.error('Error al usar power-up:', error);
+      console.error('Error al usar mejora:', error);
     }
-    setUsingPowerUp(null);
   }
 
-  // Power-up: Duplicar tiempo
+  // Mejora: Duplicar tiempo
   async function handleDoubleTime() {
-    if (powerUps?.[POWERUPS.DOUBLE_TIME] <= 0 || usingPowerUp) return;
-    
-    setUsingPowerUp(POWERUPS.DOUBLE_TIME);
+    if (mejoraUsada || mejoras?.[MEJORAS.RELOJ_ARENA] <= 0) return;
+
+    setMejoraUsada(true);
     try {
-      await usePowerUp(currentUser.uid, POWERUPS.DOUBLE_TIME);
-      setPowerUps(prev => ({ ...prev, [POWERUPS.DOUBLE_TIME]: prev[POWERUPS.DOUBLE_TIME] - 1 }));
+      await useMejora(currentUser.uid, MEJORAS.RELOJ_ARENA);
+      setMejoras(prev => ({ ...prev, [MEJORAS.RELOJ_ARENA]: prev[MEJORAS.RELOJ_ARENA] - 1 }));
       setTimeLeft(prev => Math.min(prev * 2, 60)); // Máximo 60 segundos
     } catch (error) {
-      console.error('Error al usar power-up:', error);
+      console.error('Error al usar mejora:', error);
     }
-    setUsingPowerUp(null);
   }
 
-  // Power-up: Reducir opciones
+  // Mejora: Reducir opciones
   async function handleReduceOptions() {
-    if (powerUps?.[POWERUPS.REDUCE_OPTIONS] <= 0 || usingPowerUp) return;
-    
-    setUsingPowerUp(POWERUPS.REDUCE_OPTIONS);
+    if (mejoraUsada || mejoras?.[MEJORAS.COMODIN] <= 0) return;
+
+    setMejoraUsada(true);
     try {
-      await usePowerUp(currentUser.uid, POWERUPS.REDUCE_OPTIONS);
-      setPowerUps(prev => ({ ...prev, [POWERUPS.REDUCE_OPTIONS]: prev[POWERUPS.REDUCE_OPTIONS] - 1 }));
-      
+      await useMejora(currentUser.uid, MEJORAS.COMODIN);
+      setMejoras(prev => ({ ...prev, [MEJORAS.COMODIN]: prev[MEJORAS.COMODIN] - 1 }));
+
       const currentQuestion = questions[currentQuestionIndex];
       // Eliminar 2 opciones incorrectas
       const correctOption = currentQuestion.correctAnswer;
       const wrongOptions = currentQuestion.options.filter(o => o !== correctOption);
       const remainingWrong = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 1);
       const newOptions = [correctOption, ...remainingWrong].sort(() => Math.random() - 0.5);
-      
+
       setOptions(newOptions);
     } catch (error) {
-      console.error('Error al usar power-up:', error);
+      console.error('Error al usar mejora:', error);
     }
-    setUsingPowerUp(null);
   }
 
   if (loading) {
@@ -411,45 +408,51 @@ export default function Questions() {
           />
         </div>
 
-        {/* Power-ups */}
+        {/* Mejoras */}
         <div className="flex gap-2 mb-4 justify-center">
           <button
             onClick={handlePassQuestion}
-            disabled={powerUps?.[POWERUPS.PASS_QUESTION] <= 0 || usingPowerUp}
+            disabled={mejoraUsada || mejoras?.[MEJORAS.PASE] <= 0}
             className={`px-3 py-1 rounded-lg text-sm font-medium transition-all hover-lift ${
-              powerUps?.[POWERUPS.PASS_QUESTION] > 0
+              !mejoraUsada && mejoras?.[MEJORAS.PASE] > 0
                 ? 'bg-yellow-600 hover:bg-yellow-700 text-white shadow-lg shadow-yellow-500/30'
                 : 'bg-gray-700 text-gray-500 cursor-not-allowed'
             }`}
             title="Pasar pregunta"
           >
-            <MaterialIcon name={POWERUP_ICONS[POWERUPS.PASS_QUESTION]} className="inline-block w-4 h-4 align-middle mr-1" /> {powerUps?.[POWERUPS.PASS_QUESTION] || 0}
+            <MaterialIcon name={MEJORA_ICONS[MEJORAS.PASE]} className="inline-block w-4 h-4 align-middle mr-1" /> {mejoras?.[MEJORAS.PASE] || 0}
           </button>
           <button
             onClick={handleDoubleTime}
-            disabled={powerUps?.[POWERUPS.DOUBLE_TIME] <= 0 || usingPowerUp}
+            disabled={mejoraUsada || mejoras?.[MEJORAS.RELOJ_ARENA] <= 0}
             className={`px-3 py-1 rounded-lg text-sm font-medium transition-all hover-lift ${
-              powerUps?.[POWERUPS.DOUBLE_TIME] > 0
+              !mejoraUsada && mejoras?.[MEJORAS.RELOJ_ARENA] > 0
                 ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30'
                 : 'bg-gray-700 text-gray-500 cursor-not-allowed'
             }`}
             title="Duplicar tiempo"
           >
-            <MaterialIcon name={POWERUP_ICONS[POWERUPS.DOUBLE_TIME]} className="inline-block w-4 h-4 align-middle mr-1" /> {powerUps?.[POWERUPS.DOUBLE_TIME] || 0}
+            <MaterialIcon name={MEJORA_ICONS[MEJORAS.RELOJ_ARENA]} className="inline-block w-4 h-4 align-middle mr-1" /> {mejoras?.[MEJORAS.RELOJ_ARENA] || 0}
           </button>
           <button
             onClick={handleReduceOptions}
-            disabled={powerUps?.[POWERUPS.REDUCE_OPTIONS] <= 0 || usingPowerUp}
+            disabled={mejoraUsada || mejoras?.[MEJORAS.COMODIN] <= 0}
             className={`px-3 py-1 rounded-lg text-sm font-medium transition-all hover-lift ${
-              powerUps?.[POWERUPS.REDUCE_OPTIONS] > 0
+              !mejoraUsada && mejoras?.[MEJORAS.COMODIN] > 0
                 ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/30'
                 : 'bg-gray-700 text-gray-500 cursor-not-allowed'
             }`}
             title="Reducir opciones"
           >
-            <MaterialIcon name={POWERUP_ICONS[POWERUPS.REDUCE_OPTIONS]} className="inline-block w-4 h-4 align-middle mr-1" /> {powerUps?.[POWERUPS.REDUCE_OPTIONS] || 0}
+            <MaterialIcon name={MEJORA_ICONS[MEJORAS.COMODIN]} className="inline-block w-4 h-4 align-middle mr-1" /> {mejoras?.[MEJORAS.COMODIN] || 0}
           </button>
         </div>
+
+        {mejoraUsada && (
+          <p className="text-center text-gray-400 text-sm mb-2">
+            Ya usaste una mejora en esta partida
+          </p>
+        )}
 
         {/* Pregunta */}
         <div className="card">

@@ -45,25 +45,25 @@ export const CATEGORIA_INGREDIENTE = {
   ciencias: INGREDIENTES.PAPA
 };
 
-// Tipos de items de la tienda (solo power-ups y debuffs)
+// Tipos de items de la tienda (solo mejoras y trabas)
 export const ITEM_TYPES = {
-  POWERUP: 'powerup',      // Power-ups para el jugador
-  DEBUFF: 'debuff'         // Debuffs para el oponente
+  MEJORA: 'mejora',      // Mejoras para el jugador
+  TRABA: 'traba'         // Trabas para el oponente
 };
 
-// Tipos de power-ups
-export const POWERUPS = {
-  PASS_QUESTION: 'pass_question',      // Pasar pregunta
-  DOUBLE_TIME: 'double_time',          // Duplicar tiempo
-  REDUCE_OPTIONS: 'reduce_options'     // Reducir a la mitad las opciones
+// Tipos de mejoras
+export const MEJORAS = {
+  RELOJ_ARENA: 'reloj_arena',      // Duplicar tiempo
+  COMODIN: 'comodin',              // Eliminar opciones incorrectas
+  PASE: 'pase'                     // Pasar pregunta
 };
 
-// Tipos de debuffs (para usar contra oponentes)
-export const DEBUFFS = {
-  HALF_TIME: 'half_time',         // Reduce tiempo del oponente a la mitad
-  HARD_QUESTION: 'hard_question', // Agrega pregunta difícil al oponente
-  NO_HINTS: 'no_hints',           // Elimina pistas del oponente
-  REVERSE_CONTROLS: 'reverse_controls' // Invierte controles del oponente
+// Tipos de trabas (para usar contra oponentes)
+export const TRABAS = {
+  RELOJ_RAPIDO: 'reloj_rapido',         // Reduce tiempo del oponente a la mitad
+  PREGUNTA_DIFICIL: 'pregunta_dificil', // Agrega pregunta difícil al oponente
+  SIN_PISTAS: 'sin_pistas',             // Elimina pistas del oponente
+  CONTROLES_INVERTIDOS: 'controles_invertidos' // Invierte controles del oponente
 };
 
 // Tipos de transacciones
@@ -206,11 +206,11 @@ export async function getUserWallet(uid) {
       const data = docSnap.data();
       return {
         coins: data.coins || {},
-        powerUps: data.powerUps || {},
-        debuffs: data.debuffs || {}
+        mejoras: data.mejoras || {},
+        trabas: data.trabas || {}
       };
     }
-    return { coins: {}, powerUps: {}, debuffs: {} };
+    return { coins: {}, mejoras: {}, trabas: {} };
   } catch (error) {
     console.error('Error al obtener monedero:', error);
     throw error;
@@ -254,7 +254,7 @@ export async function getShopItems() {
 }
 
 /**
- * Compra un item de la tienda (power-up o debuff)
+ * Compra un item de la tienda (mejora o traba)
  */
 export async function purchaseItem(uid, itemId, currentPrice, itemType) {
   try {
@@ -272,20 +272,20 @@ export async function purchaseItem(uid, itemId, currentPrice, itemType) {
       throw new Error('Necesitas un nacatamal completo para comprar');
     }
 
-    // Consumir nacatamal y agregar power-up o debuff
+    // Consumir nacatamal y agregar mejora o traba
     await consumeNacatamal(uid);
-    
+
     // Agregar según el tipo de item
-    if (itemType === ITEM_TYPES.DEBUFF) {
+    if (itemType === ITEM_TYPES.TRABA) {
       await updateDoc(userRef, {
-        'debuffs.half_time': increment(1)
+        'trabas.reloj_rapido': increment(1)
       });
     } else {
-      // Power-ups por defecto
+      // Mejoras por defecto
       await updateDoc(userRef, {
-        'powerUps.pass_question': increment(1),
-        'powerUps.double_time': increment(1),
-        'powerUps.reduce_options': increment(1)
+        'mejoras.reloj_arena': increment(1),
+        'mejoras.comodin': increment(1),
+        'mejoras.pase': increment(1)
       });
     }
 
@@ -325,56 +325,94 @@ export async function getTopPurchasedItems(limitCount = 10) {
   }
 }
 
-// ==================== POWER-UPS ====================
+// ==================== MEJORAS ====================
 
 /**
- * Obtiene los power-ups de un usuario
+ * Obtiene las mejoras de un usuario
  */
-export async function getUserPowerUps(uid) {
+export async function getUserMejoras(uid) {
   try {
     const userRef = doc(db, 'users', uid);
     const docSnap = await getDoc(userRef);
-    
+
     if (docSnap.exists()) {
-      return docSnap.data().powerUps || {
-        [POWERUPS.PASS_QUESTION]: 0,
-        [POWERUPS.DOUBLE_TIME]: 0,
-        [POWERUPS.REDUCE_OPTIONS]: 0
+      return docSnap.data().mejoras || {
+        [MEJORAS.PASE]: 0,
+        [MEJORAS.RELOJ_ARENA]: 0,
+        [MEJORAS.COMODIN]: 0
       };
     }
-    return { [POWERUPS.PASS_QUESTION]: 0, [POWERUPS.DOUBLE_TIME]: 0, [POWERUPS.REDUCE_OPTIONS]: 0 };
+    return { [MEJORAS.PASE]: 0, [MEJORAS.RELOJ_ARENA]: 0, [MEJORAS.COMODIN]: 0 };
   } catch (error) {
-    console.error('Error al obtener power-ups:', error);
+    console.error('Error al obtener mejoras:', error);
     throw error;
   }
 }
 
 /**
- * Agrega un power-up al usuario
+ * Agrega una mejora al usuario
  */
-export async function addPowerUp(uid, powerUpType, quantity = 1) {
+export async function addMejora(uid, mejoraType, quantity = 1) {
   try {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, {
-      [`powerUps.${powerUpType}`]: increment(quantity)
+      [`mejoras.${mejoraType}`]: increment(quantity)
     });
   } catch (error) {
-    console.error('Error al agregar power-up:', error);
+    console.error('Error al agregar mejora:', error);
     throw error;
   }
 }
 
 /**
- * Usa un power-up
+ * Usa una mejora
  */
-export async function usePowerUp(uid, powerUpType) {
+export async function useMejora(uid, mejoraType) {
   try {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, {
-      [`powerUps.${powerUpType}`]: increment(-1)
+      [`mejoras.${mejoraType}`]: increment(-1)
     });
   } catch (error) {
-    console.error('Error al usar power-up:', error);
+    console.error('Error al usar mejora:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene las trabas de un usuario
+ */
+export async function getUserTrabas(uid) {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const docSnap = await getDoc(userRef);
+
+    if (docSnap.exists()) {
+      return docSnap.data().trabas || {
+        [TRABAS.RELOJ_RAPIDO]: 0,
+        [TRABAS.PREGUNTA_DIFICIL]: 0,
+        [TRABAS.SIN_PISTAS]: 0,
+        [TRABAS.CONTROLES_INVERTIDOS]: 0
+      };
+    }
+    return { [TRABAS.RELOJ_RAPIDO]: 0, [TRABAS.PREGUNTA_DIFICIL]: 0, [TRABAS.SIN_PISTAS]: 0, [TRABAS.CONTROLES_INVERTIDOS]: 0 };
+  } catch (error) {
+    console.error('Error al obtener trabas:', error);
+    throw error;
+  }
+}
+
+/**
+ * Usa una traba
+ */
+export async function useTraba(uid, trabaType) {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      [`trabas.${trabaType}`]: increment(-1)
+    });
+  } catch (error) {
+    console.error('Error al usar traba:', error);
     throw error;
   }
 }
@@ -1652,70 +1690,70 @@ export async function toggleCurrencyActive(currencyId, active) {
 }
 
 /**
- * Recarga power-ups gratuitos (disponible una vez cada 24 horas)
+ * Recarga mejoras gratuitas (disponible una vez cada 24 horas)
  */
-export async function rechargePowerUps(uid) {
+export async function rechargeMejoras(uid) {
   try {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
-    
+
     if (!userSnap.exists()) {
       throw new Error('Usuario no encontrado');
     }
-    
+
     const userData = userSnap.data();
-    const lastRecharge = userData.lastPowerUpRecharge;
+    const lastRecharge = userData.lastMejoraRecharge;
     const now = new Date();
-    
+
     // Verificar si ya pasó 24 horas desde la última recarga
     if (lastRecharge) {
       const lastRechargeDate = new Date(lastRecharge);
       const hoursSinceRecharge = (now - lastRechargeDate) / (1000 * 60 * 60);
-      
+
       if (hoursSinceRecharge < 24) {
         const hoursLeft = Math.ceil(24 - hoursSinceRecharge);
         throw new Error(`Debes esperar ${hoursLeft} horas más para recargar`);
       }
     }
-    
-    // Recargar power-ups
+
+    // Recargar mejoras
     await updateDoc(userRef, {
-      'powerUps.pass_question': increment(1),
-      'powerUps.double_time': increment(1),
-      'powerUps.reduce_options': increment(1),
-      lastPowerUpRecharge: serverTimestamp()
+      'mejoras.pase': increment(1),
+      'mejoras.reloj_arena': increment(1),
+      'mejoras.comodin': increment(1),
+      lastMejoraRecharge: serverTimestamp()
     });
-    
+
     return { success: true };
   } catch (error) {
-    console.error('Error al recargar power-ups:', error);
+    console.error('Error al recargar mejoras:', error);
     throw error;
   }
 }
 
 /**
- * Verifica si el usuario puede recargar power-ups
+ * Verifica si el usuario puede recargar mejoras
  */
-export async function canRechargePowerUps(uid) {
+export async function canRechargeMejoras(uid) {
   try {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
-    
+
     if (!userSnap.exists()) return { canRecharge: false, hoursLeft: 0 };
-    
+
     const userData = userSnap.data();
-    const lastRecharge = userData.lastPowerUpRecharge;
-    
+    const lastRecharge = userData.lastMejoraRecharge;
+
     if (!lastRecharge) return { canRecharge: true, hoursLeft: 0 };
-    
+
     const lastRechargeDate = new Date(lastRecharge);
     const now = new Date();
     const hoursSinceRecharge = (now - lastRechargeDate) / (1000 * 60 * 60);
-    
+
     if (hoursSinceRecharge >= 24) {
       return { canRecharge: true, hoursLeft: 0 };
     }
-    
+
     return { canRecharge: false, hoursLeft: Math.ceil(24 - hoursSinceRecharge) };
   } catch (error) {
     console.error('Error al verificar recarga:', error);
@@ -1734,25 +1772,25 @@ export async function purchasePowerUp(uid, powerUpType, cost) {
     if (!userSnap.exists()) {
       throw new Error('Usuario no encontrado');
     }
-    
+
     const userData = userSnap.data();
-    
+
     // Verificar si tiene suficientes monedas especiales (Token Dorado)
     const tokensDorados = userData.coins?.token_dorado || 0;
-    
+
     if (tokensDorados < cost) {
       throw new Error('No tienes suficientes Tokens Dorados');
     }
-    
-    // Descontar monedas y agregar power-up
+
+    // Descontar monedas y agregar mejora
     await updateDoc(userRef, {
       [`coins.token_dorado`]: increment(-cost),
-      [`powerUps.${powerUpType}`]: increment(1)
+      [`mejoras.${mejoraType}`]: increment(1)
     });
-    
+
     return { success: true };
   } catch (error) {
-    console.error('Error al comprar power-up:', error);
+    console.error('Error al comprar mejora:', error);
     throw error;
   }
 }

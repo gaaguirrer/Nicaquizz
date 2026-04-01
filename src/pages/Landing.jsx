@@ -205,9 +205,9 @@ export default function Landing() {
               <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-pink-500/30">
                 <span className="material-symbols-outlined text-4xl text-white">shopping_cart</span>
               </div>
-              <h3 className="text-2xl font-bold mb-3 text-white">3. Compra Power-ups</h3>
+              <h3 className="text-2xl font-bold mb-3 text-white">3. Compra Mejoras</h3>
               <p className="text-gray-400">
-                Completa tu nacatamal y canjealo por power-ups y debuffs para mejorar tu juego.
+                Completa tu nacatamal y canjealo por mejoras y trabas para mejorar tu juego.
               </p>
             </div>
           </div>

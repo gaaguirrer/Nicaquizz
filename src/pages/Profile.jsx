@@ -6,9 +6,9 @@ import {
   getUserWallet,
   INGREDIENTES,
   INGREDIENTE_NAMES,
-  rechargePowerUps,
-  canRechargePowerUps,
-  DEBUFFS
+  rechargeMejoras,
+  canRechargeMejoras,
+  TRABAS
 } from '../services/firestore';
 import UserMenu from '../components/UserMenu';
 
@@ -76,14 +76,14 @@ const INGREDIENT_COLORS = {
 const TAB_ICONS = {
   stats: 'bar_chart',
   wallet: 'account_balance_wallet',
-  powerups: 'emoji_events',
+  mejoras: 'emoji_events',
   privacy: 'lock'
 };
 
 export default function Profile() {
   const { currentUser, userData, updatePrivacy } = useAuth();
   const toast = useToast();
-  const [wallet, setWallet] = useState({ coins: {}, powerUps: {}, debuffs: {} });
+  const [wallet, setWallet] = useState({ coins: {}, mejoras: {}, trabas: {} });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('stats');
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -97,22 +97,22 @@ export default function Profile() {
 
   async function checkRechargeInfo() {
     try {
-      const info = await canRechargePowerUps(currentUser.uid);
+      const info = await canRechargeMejoras(currentUser.uid);
       setRechargeInfo(info);
     } catch (error) {
       console.error('Error al verificar recarga:', error);
     }
   }
 
-  async function handleRechargePowerUps() {
+  async function handleRechargeMejoras() {
     setRechargeLoading(true);
     try {
-      await rechargePowerUps(currentUser.uid);
-      toast.success('¡Power-ups recargados exitosamente!');
+      await rechargeMejoras(currentUser.uid);
+      toast.success('¡Mejoras recargadas exitosamente!');
       checkRechargeInfo();
       loadWallet();
     } catch (error) {
-      toast.error(error.message || 'Error al recargar power-ups');
+      toast.error(error.message || 'Error al recargar mejoras');
     } finally {
       setRechargeLoading(false);
     }
@@ -206,14 +206,14 @@ export default function Profile() {
             <MaterialIcon name={TAB_ICONS.wallet} className="inline-block w-5 h-5 align-middle mr-1" /> Monedero
           </button>
           <button
-            onClick={() => setActiveTab('powerups')}
+            onClick={() => setActiveTab('mejoras')}
             className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
-              activeTab === 'powerups'
+              activeTab === 'mejoras'
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name={TAB_ICONS.powerups} className="inline-block w-5 h-5 align-middle mr-1" /> Power-ups
+            <MaterialIcon name={TAB_ICONS.mejoras} className="inline-block w-5 h-5 align-middle mr-1" /> Mejoras
           </button>
           <button
             onClick={() => setActiveTab('privacy')}
@@ -384,26 +384,26 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Tab: Power-ups */}
-        {activeTab === 'powerups' && (
+        {/* Tab: Mejoras */}
+        {activeTab === 'mejoras' && (
           <div className="card">
             <h2 className="text-xl font-bold mb-4 text-white">
-              <MaterialIcon name="emoji_events" className="inline-block w-6 h-6 align-middle mr-1" /> Power-ups y Debuffs
+              <MaterialIcon name="emoji_events" className="inline-block w-6 h-6 align-middle mr-1" /> Mejoras y Trabas
             </h2>
-            
-            {/* Power-ups */}
+
+            {/* Mejoras */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-white text-lg">Power-ups</h3>
+                <h3 className="font-bold text-white text-lg">Mejoras</h3>
                 <button
-                  onClick={handleRechargePowerUps}
+                  onClick={handleRechargeMejoras}
                   disabled={!rechargeInfo.canRecharge || rechargeLoading}
                   className={`text-xs px-3 py-1 rounded-lg font-semibold transition-all ${
                     rechargeInfo.canRecharge
                       ? 'bg-green-600 hover:bg-green-500 text-white'
                       : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                   }`}
-                  title={rechargeInfo.canRecharge ? 'Recargar power-ups' : `Disponible en ${rechargeInfo.hoursLeft}h`}
+                  title={rechargeInfo.canRecharge ? 'Recargar mejoras' : `Disponible en ${rechargeInfo.hoursLeft}h`}
                 >
                   {rechargeLoading ? (
                     'Recargando...'
@@ -419,24 +419,24 @@ export default function Profile() {
                   <div className="text-3xl mb-2 text-yellow-400">
                     <MaterialIcon name="skip_next" className="text-3xl" />
                   </div>
-                  <div className="text-sm text-yellow-300 font-medium mb-1">Pasar Pregunta</div>
-                  <div className="font-bold text-yellow-400 text-2xl">{wallet.powerUps?.pass_question || 0}</div>
+                  <div className="text-sm text-yellow-300 font-medium mb-1">Pase</div>
+                  <div className="font-bold text-yellow-400 text-2xl">{wallet.mejoras?.pase || 0}</div>
                   <p className="text-xs text-gray-400 mt-2">Salta una pregunta difícil</p>
                 </div>
                 <div className="bg-blue-900/50 border border-blue-700 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2 text-blue-400">
                     <MaterialIcon name="timer" className="text-3xl" />
                   </div>
-                  <div className="text-sm text-blue-300 font-medium mb-1">Tiempo Extra</div>
-                  <div className="font-bold text-blue-400 text-2xl">{wallet.powerUps?.double_time || 0}</div>
+                  <div className="text-sm text-blue-300 font-medium mb-1">Reloj de Arena</div>
+                  <div className="font-bold text-blue-400 text-2xl">{wallet.mejoras?.reloj_arena || 0}</div>
                   <p className="text-xs text-gray-400 mt-2">Duplica tu tiempo</p>
                 </div>
                 <div className="bg-red-900/50 border border-red-700 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2 text-red-400">
                     <MaterialIcon name="filter_list" className="text-3xl" />
                   </div>
-                  <div className="text-sm text-red-300 font-medium mb-1">Reducir Opciones</div>
-                  <div className="font-bold text-red-400 text-2xl">{wallet.powerUps?.reduce_options || 0}</div>
+                  <div className="text-sm text-red-300 font-medium mb-1">Comodín</div>
+                  <div className="font-bold text-red-400 text-2xl">{wallet.mejoras?.comodin || 0}</div>
                   <p className="text-xs text-gray-400 mt-2">Elimina opciones incorrectas</p>
                 </div>
               </div>
@@ -446,23 +446,23 @@ export default function Profile() {
               </p>
             </div>
 
-            {/* Debuffs */}
+            {/* Trabas */}
             <div>
-              <h3 className="font-bold text-white text-lg mb-3">Debuffs</h3>
+              <h3 className="font-bold text-white text-lg mb-3">Trabas</h3>
               <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-4">
                 <div className="flex items-center gap-4 mb-3">
                   <div className="text-3xl text-purple-400">
                     <MaterialIcon name="hourglass_empty" className="text-3xl" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-purple-300">Reducir Tiempo</div>
+                    <div className="font-medium text-purple-300">Reloj Rápido</div>
                     <p className="text-xs text-gray-400">Reduce el tiempo del oponente a la mitad</p>
                   </div>
-                  <div className="font-bold text-purple-400 text-2xl">{wallet.debuffs?.half_time || 0}</div>
+                  <div className="font-bold text-purple-400 text-2xl">{wallet.trabas?.reloj_rapido || 0}</div>
                 </div>
                 <p className="text-xs text-gray-400">
                   <MaterialIcon name="info" className="inline-block w-3 h-3 align-middle mr-1" />
-                  Los debuffs se compran en la tienda y se usan en retos contra otros jugadores
+                  Las trabas se compran en la tienda y se usan en retos contra otros jugadores
                 </p>
               </div>
             </div>

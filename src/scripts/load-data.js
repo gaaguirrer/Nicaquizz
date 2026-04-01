@@ -296,19 +296,20 @@ async function createAdminUser() {
       isAdmin: true,
       adminGrantedAt: Timestamp.now(),
       coins: {
-        maiz: 9999,
+        masa: 9999,
         cerdo: 9999,
         arroz: 9999,
         papa: 9999,
-        aceituna: 9999
+        chile: 9999
       },
       inventory: [],
       equipped: {},
-      powerUps: {
-        pass_question: 3,
-        double_time: 2,
-        reduce_options: 2
+      mejoras: {
+        pase: 3,
+        reloj_arena: 2,
+        comodin: 2
       },
+      trabas: {},
       friends: [],
       stats: {
         totalQuestionsAnswered: 0,

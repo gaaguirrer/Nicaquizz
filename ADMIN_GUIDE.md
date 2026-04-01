@@ -1,117 +1,88 @@
-# Sistema de Administradores - NicaQuizz
+# Guía para Administradores - NicaQuizz
 
-## Introduccion
+## Tabla de Contenidos
 
-Este documento explica como funciona el sistema de administradores en NicaQuizz. La idea es que entiendan bien como gestionar el contenido del juego y como pueden contribuir con nuevas preguntas.
+- [Introducción](#introducción)
+- [Tipos de Usuario](#tipos-de-usuario)
+- [Cómo Convertirse en Administrador](#cómo-convertirse-en-administrador)
+- [Panel de Administración](#panel-de-administración)
+- [Gestión de Preguntas](#gestión-de-preguntas)
+- [Gestión de Categorías](#gestión-de-categorías)
+- [Sistema de Monedas Infinitas](#sistema-de-monedas-infinitas)
+- [Mejores Prácticas](#mejores-prácticas)
+- [Mantenimiento Periódico](#mantenimiento-periódico)
+- [Solución de Problemas](#solución-de-problemas)
+- [Referencia de Funciones](#referencia-de-funciones)
+
+---
+
+## Introducción
+
+Esta guía está diseñada para los administradores de NicaQuizz. Como administrador, tendrás acceso a herramientas especiales para gestionar el contenido del juego, aprobar preguntas de usuarios y mantener la calidad educativa de la plataforma.
+
+### Responsabilidades del Administrador
+
+- Revisar y aprobar preguntas enviadas por usuarios
+- Crear y gestionar categorías de preguntas
+- Monitorear la actividad de los usuarios
+- Mantener la calidad del contenido educativo
+- Resolver problemas técnicos básicos
+
+---
 
 ## Tipos de Usuario
 
-En el sistema tenemos dos tipos de usuarios:
-
 ### Usuario Normal
 
-Como usuario normal ustedes pueden:
+Los usuarios normales pueden:
 
-- Jugar y responder preguntas en las diferentes categorias
-- Ganar ingredientes del nacatamal (maiz, cerdo, arroz, papa, aceituna)
-- Comprar items en la tienda
-- Personalizar tu personaje
-- Proponer nuevas preguntas para que otros jugadores las respondan
+| Función | Descripción |
+|---------|-------------|
+| Jugar | Responder preguntas en las diferentes categorías |
+| Ganar ingredientes | Obtener masa, cerdo, arroz, papa y chile |
+| Comprar mejoras | Adquirir mejoras y trabas en la tienda |
+| Agregar amigos | Conectar con otros jugadores |
+| Enviar retos | Competir contra amigos o jugadores en línea |
+| Proponer preguntas | Enviar preguntas para aprobación |
+| Ver historial | Revisar su progreso y estadísticas |
 
 ### Administrador
 
-El administrador tiene todo lo que tiene el usuario normal, mas estas funciones:
+Los administradores tienen todas las funciones del usuario normal, más:
 
-- Monedas infinitas automaticas: 9999 de cada ingrediente al iniciar sesion
-- Acceso al panel de administracion en `/admin`
-- Aprobar o rechazar preguntas enviadas por usuarios
-- Crear nuevas categorias de preguntas
-- Eliminar categorias existentes
+| Función | Descripción |
+|---------|-------------|
+| Monedas infinitas | 9999 de cada ingrediente automáticamente |
+| Panel de administración | Acceso a `/admin` para gestionar contenido |
+| Aprobar preguntas | Revisar y aprobar preguntas pendientes |
+| Rechazar preguntas | Eliminar preguntas de baja calidad |
+| Crear categorías | Agregar nuevas categorías de preguntas |
+| Eliminar categorías | Remover categorías obsoletas |
+| Ver estadísticas | Acceder a métricas generales del sistema |
 
-## Panel de Administracion
+---
 
-El panel esta en la ruta `/admin` y solo pueden entrar los administradores. Tiene tres pestanas:
+## Cómo Convertirse en Administrador
 
-### Preguntas Pendientes
+### Paso 1: Registro del Usuario
 
-Aqui van a ver todas las preguntas que los usuarios enviaron. Para cada una pueden:
+La persona debe tener una cuenta registrada en NicaQuizz:
 
-- Ver el contenido completo: texto, respuesta correcta, categoria y dificultad
-- Aprobar: La pregunta se publica y aparece en el juego
-- Rechazar: La pregunta se elimina
+1. Ve a `/auth` o haz clic en "Registrarse"
+2. Completa el formulario:
+   - Nombre completo
+   - Email válido
+   - Contraseña (mínimo 6 caracteres)
+3. Haz clic en "Registrarse"
+4. Inicia sesión con las credenciales
 
-Mi recomendacion es que revisen esta seccion regularmente para mantener el contenido actualizado.
+### Paso 2: Ejecutar el Script
 
-### Categorias
-
-Aqui pueden gestionar las categorias:
-
-**Para crear una nueva:**
-
-1. Pongan el nombre (ej: "Literatura Universal")
-2. Agreguen una descripcion si quieren
-3. Seleccionen el ingrediente asociado (esto determina que moneda se gana al jugar)
-4. Elijan un icono de Material Icons
-5. Click en "Crear Categoria"
-
-**Para eliminar una existente:**
-
-- Click en el icono de eliminar al lado de la categoria
-- Confirmen la eliminacion
-- Tengan en cuenta que las preguntas de esa categoria quedan en la base de datos
-
-### Monedas Infinitas
-
-Esta seccion es solo para administradores. Muestra los 5 ingredientes con 9999 cada uno y un boton para recargar manualmente.
-
-Las monedas infinitas se agregan solas cuando un administrador inicia sesion por primera vez, pero esta pestana les sirve si necesitan recargar manualmente en algun momento.
-
-## Como Proponer una Pregunta
-
-Si quieren contribuir con preguntas al juego, sigan estos pasos:
-
-1. Vayan a `/propose` o hagan click en "Proponer Pregunta" en el menu
-2. Completen el formulario:
-   - Categoria: Seleccionen la relacionada con su pregunta
-   - Dificultad: Facil, Media o Dificil
-   - Pregunta: Escriban el enunciado
-   - Opciones: De 2 a 4 opciones de respuesta
-   - Respuesta Correcta: Debe coincidir exactamente con una de las opciones
-3. Revisen que todo este correcto
-4. Click en "Enviar Pregunta"
-5. Van a recibir una confirmacion
-
-**¿Que pasa despues?**
-
-Su pregunta queda pendiente. Un administrador la va a revisar y si la aprueba, va a aparecer en el juego para todos. Si la rechaza, no se va a ver.
-
-## Consejos para Crear Buenas Preguntas
-
-Para que aprueben sus preguntas, tengan en cuenta esto:
-
-1. **Claridad**: Redacten de forma clara y especifica
-2. **Una sola respuesta correcta**: Que no haya lugar a dudas
-3. **Informacion veridica**: Verifiquen los datos antes de enviar
-4. **Originalidad**: Eviten preguntas demasiado obvias o repetidas
-5. **Ortografia**: Revisen antes de enviar
-
-## Como Hacer Administrador a un Usuario
-
-Si necesitan que alguien sea administrador, sigan estos pasos:
-
-### Paso 1: Registro
-
-La persona tiene que crear una cuenta primero. Sin cuenta registrada, no se puede asignar el rol.
-
-### Paso 2: Ejecutar el script
-
-Abran una terminal en la carpeta del proyecto y ejecuten:
+Abre una terminal en la carpeta del proyecto y ejecuta:
 
 ```bash
 node src/scripts/make-admin.js email@ejemplo.com
 ```
-
-Pongan el correo del usuario que va a ser administrador.
 
 **Ejemplo:**
 
@@ -119,196 +90,418 @@ Pongan el correo del usuario que va a ser administrador.
 node src/scripts/make-admin.js profesor@nicaquizz.com
 ```
 
-### Paso 3: Verificar
+### Paso 3: Verificar el Resultado
 
-El script les va a mostrar:
+El script mostrará:
 
-- Email del usuario
-- UID del usuario
-- Nombre del usuario
-- Permisos concedidos
+```
+Buscando usuario con email: profesor@nicaquizz.com
+✓ Usuario encontrado
+  Email: profesor@nicaquizz.com
+  UID: abc123xyz456
+  Nombre: Profesor NicaQuizz
+✓ Permisos de administrador concedidos
+  isAdmin: true
+  adminGrantedAt: 2025-04-01T12:00:00.000Z
+```
 
-### Paso 4: Iniciar sesion
+### Paso 4: Confirmar Acceso
 
-El nuevo administrador tiene que cerrar sesion y volver a entrar. Cuando ingrese, va a ver:
-- El enlace "Panel Admin" en la navegacion
+El nuevo administrador debe:
 
-- Monedas infinitas en su cuenta
-- Acceso a `/admin`
+1. Cerrar sesión
+2. Volver a iniciar sesión
+3. Verificar que aparece el enlace "Panel Admin" en el menú
+4. Acceder a `/admin` para confirmar que funciona
 
-## Estructura de Datos
+### Solución de Problemas del Script
 
-### Usuario en Firestore
+| Error | Causa | Solución |
+|-------|-------|----------|
+| "Usuario no encontrado" | Email incorrecto o no registrado | Verifica el email exacto |
+| "Error de conexión" | Firebase no está configurado | Revisa el archivo .env |
+| "Permission denied" | Reglas de Firestore restrictivas | Usa reglas de desarrollo temporalmente |
 
-Cada usuario se guarda en `users` asi:
+---
 
+## Panel de Administración
+
+El panel está ubicado en la ruta `/admin` y solo es accesible para administradores.
+
+### Acceso al Panel
+
+1. Inicia sesión con tu cuenta de administrador
+2. Busca el enlace "Panel Admin" en el menú de navegación
+3. Haz clic para acceder a `/admin`
+
+**Nota**: Si no ves el enlace, verifica en Firebase Console → Firestore → users/{tu-uid} que `isAdmin: true`
+
+### Estructura del Panel
+
+El panel tiene tres pestañas principales:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Panel de Administración                            │
+├─────────────────────────────────────────────────────┤
+│  [Preguntas Pendientes] [Categorías] [Monedas]     │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Contenido de la pestaña seleccionada               │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## Gestión de Preguntas
+
+### Pestaña: Preguntas Pendientes
+
+Aquí se muestran todas las preguntas enviadas por usuarios que esperan aprobación.
+
+#### Información Mostrada
+
+| Campo | Descripción |
+|-------|-------------|
+| Texto de la pregunta | Enunciado completo |
+| Categoría | Materia a la que pertenece |
+| Dificultad | Nivel (Fácil, Media, Difícil) |
+| Opciones | Lista de respuestas posibles |
+| Respuesta correcta | Opción correcta marcada |
+| Fecha de envío | Cuándo fue propuesta |
+
+#### Acciones Disponibles
+
+**Aprobar:**
+- La pregunta se publica inmediatamente
+- Aparece en el juego para todos los usuarios
+- El estado cambia a `approved`
+
+**Rechazar:**
+- La pregunta se elimina permanentemente
+- No aparece en el juego
+- El estado cambia a `rejected`
+
+#### Criterios de Aprobación
+
+Para aprobar una pregunta, verifica:
+
+1. **Claridad**: El enunciado es claro y específico
+2. **Una respuesta correcta**: Solo una opción es válida
+3. **Información verídica**: Los datos son correctos
+4. **Ortografía**: Sin errores ortográficos
+5. **Originalidad**: No es una copia de otra pregunta
+6. **Nivel apropiado**: Adecuada para secundaria
+
+#### Ejemplo de Revisión
+
+**Pregunta APROBABLE:**
+```
+¿Cuál es la capital de Nicaragua?
+Opciones: León, Managua, Granada, Masaya
+Correcta: Managua
+```
+
+**Pregunta RECHAZABLE:**
+```
+¿Quién fue el primero?
+Opciones: Uno, Dos, Tres, Cuatro
+Correcta: Uno
+```
+*Razón: Demasiado ambigua, sin contexto*
+
+---
+
+## Gestión de Categorías
+
+### Pestaña: Categorías
+
+Aquí puedes crear nuevas categorías o eliminar las existentes.
+
+#### Crear Nueva Categoría
+
+1. Haz clic en "Nueva Categoría"
+2. Completa el formulario:
+
+| Campo | Descripción | Ejemplo |
+|-------|-------------|---------|
+| Nombre | Título de la categoría | "Literatura Universal" |
+| Descripción | Breve explicación | "Obras y autores clásicos" |
+| Ingrediente | Moneda que se gana | masa, cerdo, arroz, papa, chile |
+| Icono | Material Icon | "menu_book", "science" |
+
+3. Haz clic en "Crear Categoría"
+4. Verifica que aparezca en la lista
+
+#### Eliminar Categoría
+
+1. Busca la categoría en la lista
+2. Haz clic en el ícono de eliminar (papelera)
+3. Confirma la eliminación
+4. **Nota**: Las preguntas de esa categoría permanecen en la base de datos
+
+#### Mejores Prácticas para Categorías
+
+- **Nombres claros**: Usa nombres descriptivos
+- **Descripciones útiles**: Explica qué contiene
+- **Ingredientes balanceados**: Distribuye equitativamente
+- **Iconos reconocibles**: Usa íconos relacionados
+
+#### Categorías Sugeridas
+
+| Categoría | Ingrediente | Icono |
+|-----------|-------------|-------|
+| Historia | masa | history_edu |
+| Matemáticas | cerdo | calculate |
+| Geografía | arroz | public |
+| Ciencias Naturales | papa | science |
+| Literatura | chile | menu_book |
+| Arte | chile | palette |
+| Música | chile | music_note |
+
+---
+
+## Sistema de Monedas Infinitas
+
+### Pestaña: Monedas Infinitas
+
+Esta sección es exclusiva para administradores.
+
+### Funcionamiento
+
+- **Automático**: Se otorgan 9999 de cada ingrediente al primer inicio de sesión
+- **Manual**: Botón para recargar si se gastan
+
+### Ingredientes para Admins
+
+| Ingrediente | Cantidad |
+|-------------|----------|
+| Masa | 9999 |
+| Cerdo | 9999 |
+| Arroz | 9999 |
+| Papa | 9999 |
+| Chile | 9999 |
+
+### Cuándo Usar
+
+- **Pruebas**: Testear la tienda y compras
+- **Demostraciones**: Mostrar el juego a nuevos usuarios
+- **Desarrollo**: Probar nuevas funcionalidades
+
+### No Usar Para
+
+- Ventaja competitiva en rankings
+- Dar a usuarios normales
+- Modificar la economía del juego
+
+---
+
+## Mejores Prácticas
+
+### Para Aprobar Preguntas
+
+1. **Revisa diariamente**: No dejes preguntas pendientes más de 48 horas
+2. **Sé consistente**: Usa los mismos criterios para todas
+3. **Documenta rechazos**: Si puedes, explica por qué rechazas
+4. **Equilibra categorías**: Asegura variedad en todas las materias
+
+### Para Crear Categorías
+
+1. **Planifica**: Piensa en cómo se relaciona con el currículo
+2. **Consulta**: Habla con otros docentes antes de crear
+3. **Prueba**: Juega en la nueva categoría antes de publicar
+4. **Monitorea**: Revisa el rendimiento de los estudiantes
+
+### Para Mantener la Calidad
+
+1. **Actualiza contenido**: Reemplaza preguntas obsoletas
+2. **Corrige errores**: Si encuentras un error, corrígelo
+3. **Escucha feedback**: Considera sugerencias de usuarios
+4. **Analiza estadísticas**: Revisa qué categorías se usan más
+
+---
+
+## Mantenimiento Periódico
+
+### Diario
+
+- [ ] Revisar preguntas pendientes
+- [ ] Aprobar/rechazar nuevas propuestas
+- [ ] Verificar que no haya contenido inapropiado
+
+### Semanal
+
+- [ ] Revisar estadísticas de uso
+- [ ] Identificar categorías populares
+- [ ] Detectar posibles errores
+
+### Mensual
+
+- [ ] Limpiar preguntas duplicadas
+- [ ] Actualizar categorías obsoletas
+- [ ] Revisar rendimiento del sistema
+- [ ] Backup de la base de datos
+
+---
+
+## Solución de Problemas
+
+### No Puede Acceder al Panel
+
+**Síntoma**: El enlace "Panel Admin" no aparece
+
+**Solución**:
+1. Verifica en Firebase Console → Firestore → users/{tu-uid}
+2. Confirma que `isAdmin: true`
+3. Cierra sesión y vuelve a entrar
+4. Revisa la consola del navegador (F12) por errores
+
+### Las Monedas No Se Agregan
+
+**Síntoma**: Los ingredientes no aparecen como 9999
+
+**Solución**:
+1. Verifica que el hook `useIsAdmin` funcione
+2. Revisa las reglas de Firestore
+3. Prueba recargar manualmente desde la pestaña
+4. Verifica en Firebase Console → Firestore
+
+### Las Preguntas No Aparecen
+
+**Síntoma**: Las preguntas aprobadas no se ven en el juego
+
+**Solución**:
+1. Confirma que `status: "approved"`
+2. Verifica que la categoría exista
+3. Revisa que haya preguntas en esa categoría
+4. Limpia la caché del navegador
+
+### Error al Crear Categoría
+
+**Síntoma**: La categoría no se guarda
+
+**Solución**:
+1. El nombre no puede estar vacío
+2. El ingrediente debe estar seleccionado
+3. El icono debe ser válido de Material Icons
+4. Verifica conexión a internet
+
+---
+
+## Referencia de Funciones
+
+### Funciones de Firestore para Administradores
+
+| Función | Parámetros | Descripción |
+|---------|------------|-------------|
+| `fetchPendingQuestions()` | - | Obtiene preguntas pendientes |
+| `approveQuestion(id)` | id de pregunta | Aprueba una pregunta |
+| `rejectQuestion(id)` | id de pregunta | Rechaza una pregunta |
+| `createCategoryAdmin(data)` | datos de categoría | Crea categoría |
+| `deleteCategory(id)` | id de categoría | Elimina categoría |
+| `addInfiniteCoins(uid)` | uid de usuario | Agrega monedas infinitas |
+| `checkIfUserIsAdmin(uid)` | uid de usuario | Verifica si es admin |
+
+### Estructura de Datos
+
+**Usuario en Firestore:**
 ```javascript
 {
-  email: "usuario@ejemplo.com",
-  displayName: "Nombre del Usuario",
-  isAdmin: false,
+  email: "admin@nicaquizz.com",
+  displayName: "Administrador",
+  isAdmin: true,
+  adminGrantedAt: Timestamp,
   coins: {
-    maiz: 10,
-    cerdo: 5,
-    arroz: 8,
-    papa: 3,
-    aceituna: 1
+    masa: 9999,
+    cerdo: 9999,
+    arroz: 9999,
+    papa: 9999,
+    chile: 9999
   },
   stats: {
-    totalQuestionsAnswered: 50,
-    totalCorrect: 35,
-    wins: 5,
-    losses: 3
-  }
+    totalQuestionsAnswered: 0,
+    totalCorrect: 0,
+    wins: 0,
+    losses: 0
+  },
+  mejoras: {
+    pase: 3,
+    reloj_arena: 2,
+    comodin: 2
+  },
+  trabas: {}
 }
 ```
 
-### Pregunta en Firestore
-
-Las preguntas van a `questions`:
-
+**Pregunta en Firestore:**
 ```javascript
 {
-  text: "¿Cual es la capital de Nicaragua?",
+  text: "¿Cuál es la capital de Nicaragua?",
   correctAnswer: "Managua",
   categoryId: "geografia",
   status: "approved",
   createdBy: "uid-del-usuario",
   difficulty: "hard",
   options: ["Leon", "Managua", "Granada", "Masaya"],
-  createdAt: Timestamp
+  createdAt: Timestamp,
+  approvedAt: Timestamp
 }
 ```
 
-### Categoria en Firestore
-
-Las categorias van a `categories`:
-
+**Categoría en Firestore:**
 ```javascript
 {
   name: "Historia",
-  description: "Historia de Nicaragua y Centroamerica",
-  ingrediente: "maiz",
+  description: "Historia de Nicaragua y Centroamérica",
+  ingrediente: "masa",
   icon: "history_edu",
   createdAt: Timestamp
 }
 ```
 
-## Flujo de Aprobacion
+---
 
-```text
-Usuario → Propone Pregunta → Pendiente → Admin Revisa → Aprueba/Rechaza
+## Flujo de Aprobación de Preguntas
+
+```
+┌──────────┐     ┌─────────────┐     ┌──────────┐     ┌─────────┐
+│ Usuario  │────▶│ Propone     │────▶│ Admin    │────▶│ Juego   │
+│ Propone  │     │ Pregunta    │     │ Revisa   │     │ Publica │
+└──────────┘     └─────────────┘     └──────────┘     └─────────┘
+                      │                   │
+                      ▼                   ▼
+                 Pendiente           Aprueba/Rechaza
 ```
 
-Si aprueban: `status: "approved"` y aparece en el juego
-Si rechazan: se elimina la pregunta
+**Estados de una pregunta:**
 
-## Componentes Relacionados
+| Estado | Descripción | Visible en juego |
+|--------|-------------|------------------|
+| `pending` | Esperando revisión | No |
+| `approved` | Aprobada | Sí |
+| `rejected` | Rechazada | No |
 
-| Componente | Ruta | Que hace |
-|------------|------|----------|
-| AdminPanel.jsx | /admin | Panel de administracion |
-| ProposeQuestion.jsx | /propose | Formulario para proponer |
-
-## Funciones de Firestore
-
-| Funcion | Que hace |
-|---------|----------|
-| fetchPendingQuestions() | Obtiene preguntas pendientes |
-| approveQuestion(id) | Aprueba una pregunta |
-| rejectQuestion(id) | Rechaza una pregunta |
-| createCategoryAdmin() | Crea categoria (solo admin) |
-| deleteCategory(id) | Elimina categoria (solo admin) |
-| proposeQuestion() | Propone pregunta (usuarios) |
-| addInfiniteCoins(uid) | Agrega monedas infinitas |
-| checkIfUserIsAdmin(uid) | Verifica si es admin |
-
-## Script make-admin.js
-
-Este script convierte un usuario en administrador.
-
-**Uso:**
-
-```bash
-node src/scripts/make-admin.js email@ejemplo.com
-```
-
-**Lo que hace:**
-
-1. Busca el usuario por email en Firestore
-2. Pone `isAdmin: true`
-3. Agrega la fecha de cuando se le dio el rol
-4. Muestra los datos del usuario
-
-## Reglas de Seguridad
-
-Para production, configuren esto en Firebase Console:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    match /questions/{questionId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if get(/databases/(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-    
-    match /categories/{categoryId} {
-      allow read: if true;
-      allow create, update, delete: if get(/databases/(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-    
-    match /{collection=**}/{doc=**} {
-      allow read, write: if true;
-    }
-  }
-}
-```
-
-## Solucion de Problemas
-
-### No puede acceder al panel
-
-1. Verifiquen que `isAdmin: true` en Firestore
-2. Cierren sesion y vuelvan a entrar
-3. Revisen la consola del navegador
-
-### Las monedas no se agregan
-
-1. Verifiquen que el hook `useIsAdmin` este funcionando
-2. Revisen las reglas de Firestore
-3. Prueben agregar manualmente desde la pestana
-
-### Las preguntas no aparecen
-
-1. Verifiquen que `status: "pending"`
-2. Revisen que `fetchPendingQuestions` funcione
-3. Chequeen los indices en Firebase Console
-
-### Error al crear categoria
-
-1. El nombre no puede estar vacio
-2. El ingrediente tiene que estar seleccionado
-3. El icono tiene que ser valido de Material Icons
+---
 
 ## Resumen
 
-**Como administrador:**
+### Como Administrador:
 
-- Revisar preguntas pendientes
-- Asegurar la calidad del contenido
-- Crear categorias nuevas
-- Mantener el orden
+- Revisa preguntas pendientes diariamente
+- Asegura la calidad del contenido educativo
+- Crea categorías nuevas según necesidad
+- Mantén el orden en la base de datos
+- Ayuda a los usuarios con problemas
 
-**Como usuario normal:**
+### Como Usuario Normal:
 
-- Jugar y responder preguntas
-- Ganar premios por categorias
-- Proponer preguntas nuevas
-- Competir en el ranking
+- Juega y responde preguntas
+- Gana ingredientes por categoría
+- Propón preguntas nuevas
+- Compite en el ranking
+- Disfruta aprendiendo
+
+---
+
+**¡Gracias por contribuir a la calidad educativa de NicaQuizz!**

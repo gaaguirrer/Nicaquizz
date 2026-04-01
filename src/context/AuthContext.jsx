@@ -65,14 +65,12 @@ export function AuthProvider({ children }) {
           papa: 0,
           chile: 0
         },
-        powerUps: {
-          pass_question: 3,
-          double_time: 2,
-          reduce_options: 2
+        mejoras: {
+          pase: 3,
+          reloj_arena: 2,
+          comodin: 2
         },
-        debuffs: {
-          half_time: 0
-        },
+        trabas: {},
         createdAt: new Date().toISOString() // Usar string en lugar de serverTimestamp para evitar problemas
       };
       

@@ -74,16 +74,16 @@ const INGREDIENT_COLORS = {
 
 // Configuración de tipos de items
 const ITEM_TYPE_CONFIG = {
-  [ITEM_TYPES.POWERUP]: { 
-    icon: 'emoji_events', 
-    color: 'from-yellow-500 to-orange-500', 
-    label: 'Power-ups',
+  [ITEM_TYPES.MEJORA]: {
+    icon: 'emoji_events',
+    color: 'from-yellow-500 to-orange-500',
+    label: 'Mejoras',
     description: 'Ventajas para ti'
   },
-  [ITEM_TYPES.DEBUFF]: { 
-    icon: 'do_not_disturb_on', 
-    color: 'from-purple-500 to-pink-500', 
-    label: 'Debuffs',
+  [ITEM_TYPES.TRABA]: {
+    icon: 'do_not_disturb_on',
+    color: 'from-purple-500 to-pink-500',
+    label: 'Trabas',
     description: 'Desventajas para el oponente'
   }
 };
@@ -95,7 +95,7 @@ export default function Shop() {
   const [wallet, setWallet] = useState({ coins: {} });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [filter, setFilter] = useState('all'); // all, powerup, debuff
+  const [filter, setFilter] = useState('all'); // all, mejora, traba
 
   useEffect(() => {
     loadItems();
@@ -128,7 +128,7 @@ export default function Shop() {
 
     try {
       await purchaseItem(currentUser.uid, item.id, item.currentPrice, item.type);
-      setMessage({ type: 'success', text: `¡${item.name} comprado! Revisa tus power-ups en Perfil.` });
+      setMessage({ type: 'success', text: `¡${item.name} comprado! Revisa tus mejoras en Perfil.` });
       toast.success(`¡${item.name} adquirido con éxito!`);
       loadWallet();
       loadItems();
@@ -178,7 +178,7 @@ export default function Shop() {
             <MaterialIcon name="storefront" className="inline-block w-12 h-12 align-middle mr-2" />
             Tienda
           </h1>
-          <p className="text-gray-400 text-lg">Power-ups y debuffs para mejorar tu juego</p>
+          <p className="text-gray-400 text-lg">Mejoras y trabas para mejorar tu juego</p>
         </div>
 
         {message.text && (
@@ -393,19 +393,19 @@ export default function Shop() {
           <div className="card bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border-yellow-700">
             <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
               <MaterialIcon name="emoji_events" className="text-yellow-400" />
-              Power-ups
+              Mejoras
             </h3>
             <p className="text-gray-400 text-sm">
-              Los power-ups te dan ventajas durante el juego. Úsalos estratégicamente para mejorar tu rendimiento en las preguntas.
+              Las mejoras te dan ventajas durante el juego. Úsalas estratégicamente para mejorar tu rendimiento en las preguntas.
             </p>
           </div>
           <div className="card bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-700">
             <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
               <MaterialIcon name="do_not_disturb_on" className="text-purple-400" />
-              Debuffs
+              Trabas
             </h3>
             <p className="text-gray-400 text-sm">
-              Los debuffs afectan a tu oponente durante los retos. Úsalos para desequilibrar la balanza a tu favor.
+              Las trabas afectan a tu oponente durante los retos. Úsalas para desequilibrar la balanza a tu favor.
             </p>
           </div>
         </div>

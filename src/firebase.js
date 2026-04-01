@@ -59,11 +59,12 @@ export async function signInWithGoogle() {
         },
         inventory: [],
         equipped: {},
-        powerUps: {
-          pass_question: 3,
-          double_time: 2,
-          reduce_options: 2
+        mejoras: {
+          pase: 3,
+          reloj_arena: 2,
+          comodin: 2
         },
+        trabas: {},
         friends: [],
         nacatamales: 0,
         nacatamalesEarned: 0,

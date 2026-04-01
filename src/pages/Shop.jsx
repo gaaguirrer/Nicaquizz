@@ -1,3 +1,11 @@
+/**
+ * Shop.jsx - La Pulpería de NicaQuizz
+ * "Mercado Artesanal del Saber"
+ * 
+ * Una interfaz de mercado artesanal donde se pueden canjear
+ * los "Nacatamales" por power-ups estratégicos.
+ */
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,11 +19,7 @@ import {
   getUserWallet
 } from '../services/firestore';
 import UserMenu from '../components/UserMenu';
-
-// Componente para iconos de Material Icons
-const MaterialIcon = ({ name, className = '' }) => (
-  <span className={`material-symbols-outlined ${className}`}>{name}</span>
-);
+import Button from '../components/Button';
 
 // Iconos SVG para ingredientes
 const IngredientIcon = ({ type, className = '' }) => {
@@ -63,28 +67,43 @@ const IngredientIcon = ({ type, className = '' }) => {
   return icons[type] || null;
 };
 
-// Mapeo de ingredientes a colores
-const INGREDIENT_COLORS = {
-  masa: { bg: 'from-amber-100 to-amber-200', border: 'border-amber-400', text: 'text-amber-600' },
-  cerdo: { bg: 'from-pink-200 to-rose-300', border: 'border-pink-400', text: 'text-pink-600' },
-  arroz: { bg: 'from-gray-50 to-gray-100', border: 'border-gray-300', text: 'text-gray-600' },
-  papa: { bg: 'from-yellow-200 to-amber-300', border: 'border-yellow-500', text: 'text-yellow-700' },
-  chile: { bg: 'from-green-200 to-emerald-300', border: 'border-green-500', text: 'text-green-600' }
-};
-
 // Configuración de tipos de items
 const ITEM_TYPE_CONFIG = {
   [ITEM_TYPES.MEJORA]: {
     icon: 'emoji_events',
     color: 'from-yellow-500 to-orange-500',
     label: 'Mejoras',
-    description: 'Ventajas para ti'
+    description: 'Ventajas estratégicas para tu juego',
+    badge: 'bg-yellow-500'
   },
   [ITEM_TYPES.TRABA]: {
     icon: 'do_not_disturb_on',
     color: 'from-purple-500 to-pink-500',
     label: 'Trabas',
-    description: 'Desventajas para el oponente'
+    description: 'Desventajas para tus oponentes',
+    badge: 'bg-purple-500'
+  }
+};
+
+// Mejoras disponibles con descripciones detalladas
+const MEJORAS_INFO = {
+  pase: {
+    nombre: 'Pase',
+    descripcion: 'Salta una pregunta difícil sin penalización',
+    icono: 'skip_next',
+    color: 'yellow'
+  },
+  reloj_arena: {
+    nombre: 'Reloj de Arena',
+    descripcion: 'Duplica tu tiempo disponible (30s → 60s)',
+    icono: 'hourglass_top',
+    color: 'blue'
+  },
+  comodin: {
+    nombre: 'Comodín',
+    descripcion: 'Elimina 2 opciones incorrectas',
+    icono: 'filter_list',
+    color: 'red'
   }
 };
 
@@ -92,10 +111,9 @@ export default function Shop() {
   const { currentUser, userData } = useAuth();
   const toast = useToast();
   const [items, setItems] = useState([]);
-  const [wallet, setWallet] = useState({ coins: {} });
+  const [wallet, setWallet] = useState({ coins: {}, mejoras: {}, trabas: {} });
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [filter, setFilter] = useState('all'); // all, mejora, traba
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     loadItems();
@@ -117,38 +135,34 @@ export default function Shop() {
       setItems(shopItems);
     } catch (error) {
       console.error('Error al cargar items:', error);
-      setMessage({ type: 'error', text: 'Error al cargar la tienda' });
+      toast.error('Error al cargar la pulpería');
     } finally {
       setLoading(false);
     }
   }
 
   async function handlePurchase(item) {
-    if (!confirm(`¿Comprar ${item.name} por 1 nacatamal completo?`)) return;
+    if (!confirm(`¿Canjear 1 Nacatamal completo por ${item.name}?`)) return;
 
     try {
       await purchaseItem(currentUser.uid, item.id, item.currentPrice, item.type);
-      setMessage({ type: 'success', text: `¡${item.name} comprado! Revisa tus mejoras en Perfil.` });
-      toast.success(`¡${item.name} adquirido con éxito!`);
+      toast.success(`¡${item.name} adquirido! Revisa tus mejoras en Perfil.`);
       loadWallet();
       loadItems();
     } catch (error) {
       toast.error(error.message || 'Error al comprar');
-      setMessage({ type: 'error', text: error.message || 'Error al comprar' });
     }
   }
 
-  // Calcular ingredientes del nacatamal
-  const coins = wallet.coins || {};
-  const totalIngredients = Object.values(INGREDIENTES).reduce(
-    (sum, ing) => sum + (coins[ing] || 0),
-    0
+  // Calcular nacatamales completados
+  const monedas = wallet.coins || {};
+  const nacatamalesCount = Math.min(
+    monedas.masa || 0,
+    monedas.cerdo || 0,
+    monedas.arroz || 0,
+    monedas.papa || 0,
+    monedas.chile || 0
   );
-  const maxIngredients = Object.values(INGREDIENTES).length;
-  const hasNacatamal = Object.values(INGREDIENTES).every(ing => (coins[ing] || 0) >= 1);
-  const nacatamalesCount = hasNacatamal
-    ? Math.min(...Object.values(INGREDIENTES).map(ing => coins[ing] || 0))
-    : 0;
 
   // Filtrar items
   let filteredItems = filter === 'all'
@@ -156,257 +170,266 @@ export default function Shop() {
     : items.filter(item => item.type === filter);
 
   return (
-    <div className="min-h-screen pb-12">
+    <div className="min-h-screen pb-12 bg-gradient-to-br from-amber-900/20 via-gray-900 to-amber-900/20">
       {/* Header */}
-      <header className="bg-gray-900/80 backdrop-blur-md shadow-lg border-b border-gray-700/50 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-amber-700/30 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <span className="text-3xl">🇳🇮</span>
-              <h1 className="text-2xl font-bold gradient-text">NicaQuizz</h1>
+              <span className="text-4xl">🏪</span>
+              <div>
+                <h1 className="text-3xl font-display text-amber-400">La Pulpería</h1>
+                <p className="text-xs text-gray-400">Mercado Artesanal del Saber</p>
+              </div>
             </Link>
           </div>
           <UserMenu />
         </div>
       </header>
 
-      {/* Contenido */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-3 gradient-text">
-            <MaterialIcon name="storefront" className="inline-block w-12 h-12 align-middle mr-2" />
-            Tienda
+      {/* Contenido Principal */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        
+        {/* Título */}
+        <div className="text-center mb-10">
+          <h1 className="text-6xl font-display text-amber-400 mb-3 gradient-text">
+            <span className="material-symbols-rounded inline-block align-middle mr-2">storefront</span>
+            La Pulpería
           </h1>
-          <p className="text-gray-400 text-lg">Mejoras y trabas para mejorar tu juego</p>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Canjea tus <strong className="text-amber-400">Nacatamales Completos</strong> por mejoras estratégicas
+          </p>
         </div>
 
-        {message.text && (
-          <div className={`p-4 rounded-lg mb-6 flex items-center gap-3 ${
-            message.type === 'success'
-              ? 'bg-green-900/50 text-green-300 border border-green-700'
-              : 'bg-red-900/50 text-red-300 border border-red-700'
-          }`}>
-            <MaterialIcon name={message.type === 'success' ? 'check_circle' : 'error'} className="w-6 h-6" />
-            {message.text}
-          </div>
-        )}
-
-        {/* Nacatamal Progress Card */}
-        <div className="card mb-8 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/10 to-transparent rounded-full -mr-16 -mt-16"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                <span className="material-symbols-outlined text-green-400 text-3xl">lunch_dining</span>
-                Tu Nacatamal
-              </h2>
-              <div className="flex items-center gap-3">
-                <svg viewBox="0 0 64 64" className="w-10 h-10">
-                  <circle cx="32" cy="32" r="28" fill="#FFD700" stroke="#DAA520" strokeWidth="3"/>
-                  <circle cx="32" cy="32" r="22" fill="none" stroke="#FFA500" strokeWidth="2"/>
-                  <text x="32" y="40" textAnchor="middle" fontSize="24" fontWeight="bold" fill="#DAA520">$</text>
-                </svg>
-                <span className="text-3xl font-bold text-green-400">{nacatamalesCount}</span>
+        {/* Monedero del Jugador */}
+        <div className="card bg-gradient-to-r from-amber-900/30 to-yellow-900/30 border-2 border-amber-500/50 mb-10">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            {/* Nacatamales Disponibles */}
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-comic">
+                <span className="material-symbols-rounded text-5xl text-white">payments</span>
+              </div>
+              <div>
+                <p className="text-gray-400 text-sm mb-1">Nacatamales Completos</p>
+                <p className="text-4xl font-display text-amber-400 font-bold">{nacatamalesCount}</p>
               </div>
             </div>
 
-            {/* Progress Bar */}
-            <div className="bg-gray-700 rounded-full h-4 mb-4 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-green-600 to-emerald-500 h-full rounded-full transition-all duration-500"
-                style={{ width: `${(totalIngredients / maxIngredients) * 100}%` }}
-              ></div>
-            </div>
-
-            {/* Ingredients Grid */}
-            <div className="grid grid-cols-5 gap-3">
+            {/* Ingredientes Individuales */}
+            <div className="flex flex-wrap justify-center gap-3">
               {Object.entries(INGREDIENTES).map(([key, value]) => {
-                const hasIngredient = (coins[value] || 0) >= 1;
-                const colors = INGREDIENT_COLORS[key] || { bg: 'from-gray-200 to-gray-300', border: 'border-gray-400', text: 'text-gray-600' };
-
+                const cantidad = monedas[value] || 0;
+                const tiene = cantidad > 0;
                 return (
                   <div
                     key={value}
-                    className={`flex flex-col items-center p-3 rounded-2xl transition-all hover:scale-105 ${
-                      hasIngredient
-                        ? `bg-gradient-to-br ${colors.bg} border-2 ${colors.border} shadow-lg`
-                        : 'bg-gray-800/50 border border-gray-600/50 opacity-50'
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all ${
+                      tiene
+                        ? 'bg-gray-800/80 border-amber-500/50'
+                        : 'bg-gray-800/30 border-gray-700 opacity-50'
                     }`}
                   >
-                    <div className="w-12 h-12 mb-1">
-                      <IngredientIcon
-                        type={key}
-                        className={`w-full h-full ${!hasIngredient ? 'grayscale' : ''}`}
-                      />
+                    <div className="w-8 h-8">
+                      <IngredientIcon type={value} className="w-full h-full" />
                     </div>
-                    <span className={`text-xs font-bold ${
-                      hasIngredient ? colors.text : 'text-gray-500'
-                    }`}>
-                      {INGREDIENTE_NAMES[value]}
-                    </span>
-                    {hasIngredient && (
-                      <div className="flex gap-0.5 mt-1">
-                        {[...Array(Math.min(coins[value], 5))].map((_, i) => (
-                          <div key={i} className={`w-1.5 h-1.5 rounded-full ${colors.text.replace('text-', 'bg-')}`}></div>
-                        ))}
-                      </div>
-                    )}
+                    <div>
+                      <p className="text-xs text-gray-400 capitalize">{key}</p>
+                      <p className={`font-bold ${tiene ? 'text-amber-400' : 'text-gray-600'}`}>
+                        {cantidad}
+                      </p>
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            {!hasNacatamal && (
-              <div className="mt-4 text-center">
-                <p className="text-gray-400 text-sm">
-                  <MaterialIcon name="info" className="w-4 h-4 inline-block align-middle mr-1" />
-                  Completa tu nacatamal respondiendo preguntas en cada categoría
-                </p>
-              </div>
-            )}
+            {/* Info */}
+            <div className="text-center md:text-right">
+              <p className="text-gray-400 text-sm mb-2">¿Cómo obtener nacatamales?</p>
+              <p className="text-xs text-gray-500">
+                Completa 1 de cada ingrediente<br/>
+                para formar 1 Nacatamal
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex gap-2 mb-8 overflow-x-auto">
+        {/* Filtros */}
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-full font-semibold transition-all hover-lift flex items-center gap-2 ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               filter === 'all'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-comic'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="apps" className="w-5 h-5" />
+            <span className="material-symbols-rounded">apps</span>
             <span>Todos</span>
           </button>
           {Object.entries(ITEM_TYPE_CONFIG).map(([type, config]) => (
             <button
               key={type}
               onClick={() => setFilter(type)}
-              className={`px-4 py-2 rounded-full font-semibold transition-all hover-lift flex items-center gap-2 ${
+              className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
                 filter === type
-                  ? `bg-gradient-to-r ${config.color} text-white shadow-lg`
+                  ? `bg-gradient-to-r ${config.color} text-white shadow-comic`
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
-              <MaterialIcon name={config.icon} className="w-5 h-5" />
+              <span className="material-symbols-rounded">{config.icon}</span>
               <span>{config.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Items de la tienda */}
+        {/* Grid de Productos */}
         {loading ? (
           <div className="text-center py-16">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
-            <p className="text-gray-400 mt-4">Cargando tienda...</p>
+            <span className="material-symbols-rounded text-6xl text-amber-400 animate-spin inline-block">progress_activity</span>
+            <p className="text-gray-400 mt-4">Cargando productos...</p>
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="card text-center py-16">
-            <MaterialIcon name="shopping_cart_off" className="w-24 h-24 mx-auto text-gray-600 mb-4" />
-            <p className="text-gray-400 text-lg">No hay items disponibles en esta categoría</p>
-            <button
-              onClick={() => setFilter('all')}
-              className="mt-4 btn-primary"
-            >
-              Ver todos los items
-            </button>
+            <span className="material-symbols-rounded text-6xl text-gray-600 mb-4">storefront</span>
+            <p className="text-gray-400 text-lg">No hay productos disponibles en esta categoría</p>
+            <Button onClick={() => setFilter('all')} className="mt-4">
+              Ver todos los productos
+            </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredItems.map(item => {
-              const typeConfig = ITEM_TYPE_CONFIG[item.type] || { color: 'from-gray-500 to-gray-600', icon: 'help' };
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredItems.map((item) => {
+              const typeConfig = ITEM_TYPE_CONFIG[item.type] || ITEM_TYPE_CONFIG[ITEM_TYPES.MEJORA];
               const isPopular = item.timesPurchased >= 10;
+              const mejoraInfo = MEJORAS_INFO[item.id] || null;
 
               return (
-                <div key={item.id} className="card hover-lift overflow-hidden group">
-                  {/* Icon Badge con Gradiente */}
-                  <div className="relative mb-4">
-                    <div className={`w-24 h-24 mx-auto rounded-full bg-gradient-to-br ${typeConfig.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                      <MaterialIcon name={item.icon || typeConfig.icon} className="text-5xl text-white" />
+                <div
+                  key={item.id}
+                  className="card hover-lift overflow-hidden group relative bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-amber-700/30"
+                >
+                  {/* Badge de Popular */}
+                  {isPopular && (
+                    <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-comic z-10">
+                      <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">local_fire</span>
+                      Popular
                     </div>
-                    {isPopular && (
-                      <div className="absolute top-2 right-2 bg-yellow-500 text-gray-900 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
-                        <MaterialIcon name="local_fire" className="w-3 h-3 inline-block align-middle mr-0.5" />
-                        Popular
-                      </div>
-                    )}
+                  )}
+
+                  {/* Icono del Producto */}
+                  <div className="relative mb-6">
+                    <div className={`w-24 h-24 mx-auto rounded-2xl bg-gradient-to-br ${typeConfig.color} flex items-center justify-center shadow-comic group-hover:scale-110 transition-transform duration-300`}>
+                      <span className="material-symbols-rounded text-5xl text-white">{item.icono || typeConfig.icon}</span>
+                    </div>
                     {/* Tipo de item */}
-                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-1 rounded-full border border-gray-700">
+                    <div className={`absolute -bottom-3 left-1/2 transform -translate-x-1/2 ${typeConfig.badge} text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg`}>
                       {typeConfig.label}
                     </div>
                   </div>
 
-                  {/* Información del Item */}
-                  <div className="text-center mb-4 mt-2">
-                    <h3 className="text-xl font-bold text-white mb-2">{item.name}</h3>
-                    <p className="text-sm text-gray-400">{item.description}</p>
+                  {/* Información del Producto */}
+                  <div className="text-center mb-4">
+                    <h3 className="text-2xl font-display text-white mb-2">{item.name}</h3>
+                    <p className="text-gray-400 text-sm">{mejoraInfo?.descripcion || item.description}</p>
                   </div>
 
                   {/* Precio y Stats */}
-                  <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
+                  <div className="bg-gray-700/50 rounded-xl p-4 mb-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <svg viewBox="0 0 64 64" className="w-6 h-6">
-                          <circle cx="32" cy="32" r="28" fill="#FFD700" stroke="#DAA520" strokeWidth="3"/>
-                        </svg>
-                        <span className="text-lg font-bold text-white">1 Nacatamal</span>
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
+                          <span className="material-symbols-rounded text-sm text-white">payments</span>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-amber-400">1 Nacatamal</p>
+                          <p className="text-xs text-gray-500">Completo</p>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-gray-500">{item.timesPurchased} comprados</div>
+                        <p className="text-xs text-gray-500">{item.timesPurchased} canjeados</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Botón de Compra */}
-                  <button
+                  <Button
                     onClick={() => handlePurchase(item)}
-                    disabled={!hasNacatamal}
-                    className={`w-full py-3 rounded-lg font-semibold transition-all hover-lift flex items-center justify-center gap-2 ${
-                      hasNacatamal
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/30'
-                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                    }`}
+                    disabled={nacatamalesCount < 1}
+                    variant={nacatamalesCount >= 1 ? 'primary' : 'secondary'}
+                    fullWidth
+                    icon={nacatamalesCount >= 1 ? 'shopping_cart' : 'lock'}
                   >
-                    {hasNacatamal ? (
-                      <>
-                        <MaterialIcon name="shopping_cart" className="w-5 h-5" />
-                        Comprar
-                      </>
-                    ) : (
-                      <>
-                        <MaterialIcon name="lock" className="w-5 h-5" />
-                        Necesitas Nacatamal
-                      </>
-                    )}
-                  </button>
+                    {nacatamalesCount >= 1 ? 'Canjear' : 'Necesitas Nacatamal'}
+                  </Button>
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* Info adicional */}
-        <div className="mt-8 grid md:grid-cols-2 gap-6">
-          <div className="card bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border-yellow-700">
-            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-              <MaterialIcon name="emoji_events" className="text-yellow-400" />
+        {/* Info Adicional */}
+        <div className="mt-12 grid md:grid-cols-2 gap-6">
+          <div className="card bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border-yellow-700/50">
+            <h3 className="text-xl font-display text-white mb-3 flex items-center gap-2">
+              <span className="material-symbols-rounded text-yellow-400">emoji_events</span>
               Mejoras
             </h3>
             <p className="text-gray-400 text-sm">
-              Las mejoras te dan ventajas durante el juego. Úsalas estratégicamente para mejorar tu rendimiento en las preguntas.
+              Las mejoras te dan ventajas estratégicas durante el juego. Úsalas sabiamente para maximizar tu rendimiento y subir en el ranking nacional.
             </p>
+            <ul className="mt-4 space-y-2 text-sm text-gray-300">
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-rounded text-yellow-400 text-sm">check</span>
+                <span>Se activan automáticamente al usarlas</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-rounded text-yellow-400 text-sm">check</span>
+                <span>Solo 1 mejora por partida</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-rounded text-yellow-400 text-sm">check</span>
+                <span>Recarga gratuita cada 24 horas</span>
+              </li>
+            </ul>
           </div>
-          <div className="card bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-700">
-            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-              <MaterialIcon name="do_not_disturb_on" className="text-purple-400" />
+          <div className="card bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-700/50">
+            <h3 className="text-xl font-display text-white mb-3 flex items-center gap-2">
+              <span className="material-symbols-rounded text-purple-400">do_not_disturb_on</span>
               Trabas
             </h3>
             <p className="text-gray-400 text-sm">
-              Las trabas afectan a tu oponente durante los retos. Úsalas para desequilibrar la balanza a tu favor.
+              Las trabas afectan a tu oponente durante los retos en línea. Úsalas estratégicamente para desequilibrar la balanza a tu favor.
             </p>
+            <ul className="mt-4 space-y-2 text-sm text-gray-300">
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-rounded text-purple-400 text-sm">check</span>
+                <span>Solo disponibles en retos</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-rounded text-purple-400 text-sm">check</span>
+                <span>Se activan al inicio del reto</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-rounded text-purple-400 text-sm">check</span>
+                <span>Impacto significativo en el juego</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Consejo del Día */}
+        <div className="card mt-8 bg-gradient-to-r from-nica-verde/20 to-nica-amarillo/20 border-nica-verde/30">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-nica-verde/30 flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-rounded text-3xl text-nica-verde">lightbulb</span>
+            </div>
+            <div>
+              <h4 className="font-display text-white text-lg mb-2">Consejo del Maestro Cocinero</h4>
+              <p className="text-gray-400 text-sm">
+                "Un verdadero maestro no depende solo de las mejoras. Practica sin ellas para mejorar tu conocimiento, y úsalas estratégicamente en los momentos clave. ¡La sabiduría es el mejor ingrediente!"
+              </p>
+            </div>
           </div>
         </div>
       </main>

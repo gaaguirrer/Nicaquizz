@@ -56,8 +56,7 @@ export default function FriendsConnected() {
       const challenges = await getUserChallenges(currentUser.uid, 'pending');
       setRetos(challenges);
     } catch (error) {
-      console.error('Error al cargar amigos:', error);
-      toast.error('Error al cargar amigos');
+      toast.handleError(error, 'Error al cargar amigos');
     } finally {
       setLoading(false);
     }
@@ -79,7 +78,7 @@ export default function FriendsConnected() {
       );
       setResultadosBusqueda(filtrados);
     } catch (error) {
-      console.error('Error al buscar:', error);
+      toast.handleError(error, 'Error al buscar usuarios');
     }
   }
 

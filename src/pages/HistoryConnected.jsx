@@ -46,7 +46,7 @@ export default function HistoryConnected() {
       const statsData = await getBattleStats(currentUser.uid);
       setStats(statsData);
     } catch (error) {
-      console.error('Error al cargar historial:', error);
+      toast.handleError(error, 'Error al cargar historial');
     } finally {
       setLoading(false);
     }

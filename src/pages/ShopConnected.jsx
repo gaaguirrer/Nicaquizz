@@ -60,8 +60,7 @@ export default function ShopConnected() {
       const history = await getUserExchangeHistory(currentUser.uid, 5);
       setExchangeHistory(history);
     } catch (error) {
-      console.error('Error al cargar tienda:', error);
-      toast.error('Error al cargar la tienda');
+      toast.handleError(error, 'Error al cargar tienda');
     } finally {
       setLoading(false);
     }

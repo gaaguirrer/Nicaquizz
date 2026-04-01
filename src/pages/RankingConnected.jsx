@@ -46,7 +46,7 @@ export default function RankingConnected() {
         setMiPosicion(miIndice >= 0 ? miIndice + 1 : null);
       }
     } catch (error) {
-      console.error('Error al cargar ranking:', error);
+      toast.handleError(error, 'Error al cargar ranking');
     } finally {
       setLoading(false);
     }

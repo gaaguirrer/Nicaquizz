@@ -89,8 +89,7 @@ export default function AccountConnected() {
 
       toast.success('Perfil actualizado exitosamente');
     } catch (error) {
-      console.error('Error al actualizar perfil:', error);
-      toast.error(error.message || 'Error al actualizar perfil');
+      toast.handleError(error, 'Error al actualizar perfil');
     } finally {
       setLoading(false);
     }
@@ -138,12 +137,12 @@ export default function AccountConnected() {
         confirmPassword: ''
       });
     } catch (error) {
-      console.error('Error al cambiar contraseña:', error);
-      
+      toast.handleError(error, 'Error al cambiar contraseña', false);
+
       if (error.code === 'auth/wrong-password') {
         toast.error('La contraseña actual es incorrecta');
       } else if (error.code === 'auth/requires-recent-login') {
-        toast.error('Debes iniciar sesión nuevamente para cambiar la contraseña');
+        toast.error('Debes iniciar sesión nuevamente');
       } else {
         toast.error(error.message || 'Error al cambiar contraseña');
       }

@@ -68,8 +68,7 @@ export default function TradeConnected() {
       );
       setTradeRequests(filtered);
     } catch (error) {
-      console.error('Error al cargar trueques:', error);
-      toast.error('Error al cargar los trueques');
+      toast.handleError(error, 'Error al cargar trueques');
     } finally {
       setLoading(false);
     }

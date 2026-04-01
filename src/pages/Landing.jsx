@@ -31,7 +31,7 @@ export default function Landing() {
         setNacatamalesCount(count > 0 ? count : 1284); // Usar dato real o default
         setActiveUsers(users);
       } catch (error) {
-        console.error('Error al cargar estadísticas:', error);
+        toast.handleError(error, 'Error al cargar estadísticas');
       } finally {
         setLoading(false);
       }

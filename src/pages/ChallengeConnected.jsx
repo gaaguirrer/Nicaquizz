@@ -72,8 +72,7 @@ export default function ChallengeConnected() {
         setChallenger(challengerData);
       }
     } catch (error) {
-      console.error('Error al cargar reto:', error);
-      toast.error('Error al cargar el reto');
+      toast.handleError(error, 'Error al cargar reto');
     } finally {
       setLoading(false);
     }

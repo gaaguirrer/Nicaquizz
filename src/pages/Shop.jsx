@@ -1,438 +1,343 @@
 /**
- * Shop.jsx - La Pulpería de NicaQuizz
- * "Mercado Artesanal del Saber"
+ * Shop.jsx - La Pulpería de Mejoras de NicaQuizz
+ * "Ingredientes Secretos del Sabor"
  * 
- * Una interfaz de mercado artesanal donde se pueden canjear
- * los "Nacatamales" por power-ups estratégicos.
+ * Características:
+ * - Power-Ups: Saltador, Reloj de Arena, Comodín
+ * - Desafíos: Reloj Rápido, Pregunta Difícil, Sin Pistas
+ * - Sidebar Mi Despensa (inventario)
+ * - CTA final para jugar
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import {
   getShopItems,
   purchaseItem,
   INGREDIENTES,
-  INGREDIENTE_NAMES,
   ITEM_TYPES,
   getUserWallet
 } from '../services/firestore';
-import UserMenu from '../components/UserMenu';
-import Button from '../components/Button';
 
-// Iconos SVG para ingredientes
-const IngredientIcon = ({ type, className = '' }) => {
-  const icons = {
-    masa: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="32" rx="12" ry="20" fill="#F4C430" stroke="#D4A017" strokeWidth="2"/>
-        <circle cx="28" cy="28" r="3" fill="#E8B830"/>
-        <circle cx="36" cy="28" r="3" fill="#E8B830"/>
-        <circle cx="28" cy="36" r="3" fill="#E8B830"/>
-        <circle cx="36" cy="36" r="3" fill="#E8B830"/>
-        <circle cx="32" cy="32" r="3" fill="#E8B830"/>
-      </svg>
-    ),
-    cerdo: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <rect x="16" y="20" width="32" height="24" rx="4" fill="#FF6B6B" stroke="#CC5555" strokeWidth="2"/>
-        <rect x="20" y="24" width="10" height="8" rx="2" fill="#FF8888"/>
-        <rect x="34" y="24" width="10" height="8" rx="2" fill="#FF8888"/>
-      </svg>
-    ),
-    arroz: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="40" rx="24" ry="12" fill="#F5F5F5" stroke="#DDD" strokeWidth="2"/>
-        <ellipse cx="24" cy="38" rx="4" ry="8" fill="#FFF" transform="rotate(-30 24 38)"/>
-        <ellipse cx="32" cy="36" rx="4" ry="8" fill="#FFF"/>
-        <ellipse cx="40" cy="38" rx="4" ry="8" fill="#FFF" transform="rotate(30 40 38)"/>
-      </svg>
-    ),
-    papa: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="34" rx="20" ry="16" fill="#C9A959" stroke="#9A7B4A" strokeWidth="2"/>
-        <circle cx="26" cy="30" r="3" fill="#8B6F47"/>
-        <circle cx="38" cy="32" r="2" fill="#8B6F47"/>
-        <circle cx="32" cy="40" r="2" fill="#8B6F47"/>
-      </svg>
-    ),
-    chile: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <path d="M32 12 Q36 8 40 12 L44 18 Q48 24 44 34 Q40 46 34 52 Q28 56 26 52 Q24 48 28 40 Q32 30 34 22 Q36 16 32 12Z" fill="#E74C3C" stroke="#C0392B" strokeWidth="2"/>
-        <path d="M32 12 Q30 8 28 10 L26 14 Q28 16 32 12Z" fill="#27AE60"/>
-      </svg>
-    )
-  };
-  return icons[type] || null;
-};
-
-// Configuración de tipos de items
-const ITEM_TYPE_CONFIG = {
-  [ITEM_TYPES.MEJORA]: {
-    icon: 'emoji_events',
-    color: 'from-yellow-500 to-orange-500',
-    label: 'Mejoras',
-    description: 'Ventajas estratégicas para tu juego',
-    badge: 'bg-yellow-500'
+// Power-Ups disponibles
+const POWER_UPS = [
+  {
+    id: 'saltador',
+    nombre: 'Saltador',
+    descripcion: 'Salta esa pregunta que te quema como el achiote puro. No pierdes puntos ni racha.',
+    icono: 'step_over',
+    precio: 150,
+    color: 'bg-[#154212]'
   },
-  [ITEM_TYPES.TRABA]: {
-    icon: 'do_not_disturb_on',
-    color: 'from-purple-500 to-pink-500',
-    label: 'Trabas',
-    description: 'Desventajas para tus oponentes',
-    badge: 'bg-purple-500'
-  }
-};
-
-// Mejoras disponibles con descripciones detalladas
-const MEJORAS_INFO = {
-  pase: {
-    nombre: 'Pase',
-    descripcion: 'Salta una pregunta difícil sin penalización',
-    icono: 'skip_next',
-    color: 'yellow'
-  },
-  reloj_arena: {
+  {
+    id: 'reloj_arena',
     nombre: 'Reloj de Arena',
-    descripcion: 'Duplica tu tiempo disponible (30s → 60s)',
-    icono: 'hourglass_top',
-    color: 'blue'
+    descripcion: 'Añade 30 segundos extras. Tómate tu tiempo para amarrar bien ese conocimiento.',
+    icono: 'hourglass_empty',
+    precio: 200,
+    color: 'bg-[#154212]'
   },
-  comodin: {
+  {
+    id: 'comodin',
     nombre: 'Comodín',
-    descripcion: 'Elimina 2 opciones incorrectas',
-    icono: 'filter_list',
-    color: 'red'
+    descripcion: 'Elimina dos respuestas incorrectas. Como quitarle la cáscara al ajo, más fácil imposible.',
+    icono: 'style',
+    precio: 350,
+    color: 'bg-[#154212]'
   }
-};
+];
+
+// Desafíos disponibles
+const DESAFIOS = [
+  {
+    id: 'reloj_rapido',
+    nombre: 'Reloj Rápido',
+    descripcion: 'El tiempo corre al doble. Solo para expertos que no parpadean al cocinar.',
+    icono: 'timer_off',
+    recompensa: 500,
+    multiplicador: 'x2',
+    color: 'border-[#79001c]'
+  },
+  {
+    id: 'pregunta_dificil',
+    nombre: 'Pregunta Difícil',
+    descripcion: 'Asegura que tu próxima tanda de preguntas sea de nivel "Abuela Nicaragüense".',
+    icono: 'psychology_alt',
+    recompensa: 750,
+    multiplicador: 'x3',
+    color: 'border-[#79001c]'
+  },
+  {
+    id: 'sin_pistas',
+    nombre: 'Sin Pistas',
+    descripcion: 'Desactiva todos tus power-ups activos para un reto de honor puro.',
+    icono: 'visibility_off',
+    recompensa: 300,
+    multiplicador: 'x1.5',
+    color: 'border-[#79001c]'
+  }
+];
+
+// Ingredientes para sidebar
+const INVENTARIO = [
+  { tipo: 'masa', nombre: 'Masa', cantidad: 12, icono: 'bakery_dining', activo: false },
+  { tipo: 'cerdo', nombre: 'Cerdo', cantidad: 4, icono: 'restaurant', activo: false },
+  { tipo: 'arroz', nombre: 'Hojas', cantidad: 8, icono: 'grass', activo: true },
+  { tipo: 'chile', nombre: 'Chile', cantidad: 2, icono: 'hot_tub', activo: false }
+];
 
 export default function Shop() {
   const { currentUser, userData } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
-  const [items, setItems] = useState([]);
-  const [wallet, setWallet] = useState({ coins: {}, mejoras: {}, trabas: {} });
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(false);
+  const [nacatamales, setNacatamales] = useState(1250);
 
-  useEffect(() => {
-    loadItems();
-    loadWallet();
-  }, []);
-
-  async function loadWallet() {
+  async function handleComprar(item) {
+    setLoading(true);
     try {
-      const data = await getUserWallet(currentUser.uid);
-      setWallet(data);
+      // Simulación de compra
+      await new Promise(resolve => setTimeout(resolve, 500));
+      toast.success(`¡${item.nombre} comprado exitosamente!`);
+      setNacatamales(prev => prev - item.precio);
     } catch (error) {
-      console.error('Error al cargar monedero:', error);
-    }
-  }
-
-  async function loadItems() {
-    try {
-      const shopItems = await getShopItems();
-      setItems(shopItems);
-    } catch (error) {
-      console.error('Error al cargar items:', error);
-      toast.error('Error al cargar la pulpería');
+      toast.error('Error al comprar');
     } finally {
       setLoading(false);
     }
   }
 
-  async function handlePurchase(item) {
-    if (!confirm(`¿Canjear 1 Nacatamal completo por ${item.name}?`)) return;
-
+  async function handleDesafio(desafio) {
+    setLoading(true);
     try {
-      await purchaseItem(currentUser.uid, item.id, item.currentPrice, item.type);
-      toast.success(`¡${item.name} adquirido! Revisa tus mejoras en Perfil.`);
-      loadWallet();
-      loadItems();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      toast.success(`¡Desafío ${desafio.nombre} activado!`);
+      navigate('/categories');
     } catch (error) {
-      toast.error(error.message || 'Error al comprar');
+      toast.error('Error al activar desafío');
+    } finally {
+      setLoading(false);
     }
   }
 
-  // Calcular nacatamales completados
-  const monedas = wallet.coins || {};
-  const nacatamalesCount = Math.min(
-    monedas.masa || 0,
-    monedas.cerdo || 0,
-    monedas.arroz || 0,
-    monedas.papa || 0,
-    monedas.chile || 0
-  );
-
-  // Filtrar items
-  let filteredItems = filter === 'all'
-    ? items
-    : items.filter(item => item.type === filter);
-
   return (
-    <div className="min-h-screen pb-12 bg-gradient-to-br from-amber-900/20 via-gray-900 to-amber-900/20">
-      {/* Header */}
-      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-amber-700/30 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <span className="text-4xl">🏪</span>
-              <div>
-                <h1 className="text-3xl font-display text-amber-400">La Pulpería</h1>
-                <p className="text-xs text-gray-400">Mercado Artesanal del Saber</p>
-              </div>
-            </Link>
+    <div className="min-h-screen bg-[#fefccf] text-[#1d1d03] font-body flex flex-col">
+      
+      {/* TopNavBar */}
+      <nav className="bg-[#fefccf] shadow-[0_8px_32px_rgba(29,29,3,0.08)] flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto sticky top-0 z-50 border-none">
+        <Link to="/" className="text-3xl font-black text-[#154212] tracking-tighter font-headline">
+          NicaQuizz
+        </Link>
+        <div className="hidden md:flex space-x-8 items-center">
+          <Link to="/categories" className="text-stone-600 font-medium font-headline hover:text-[#755b00] transition-colors duration-300">
+            Categorías
+          </Link>
+          <Link to="/ranking" className="text-stone-600 font-medium font-headline hover:text-[#755b00] transition-colors duration-300">
+            Ranking
+          </Link>
+          <Link to="/shop" className="text-[#154212] border-b-4 border-[#154212] pb-1 font-headline font-bold tracking-tight">
+            Tienda
+          </Link>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="bg-[#fccc38] text-[#1d1d03] px-4 py-2 rounded-full flex items-center gap-2 font-bold shadow-sm">
+            <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>bakery_dining</span>
+            <span>{nacatamales.toLocaleString()} Nacatamales</span>
           </div>
-          <UserMenu />
+          <Link
+            to={currentUser ? '/profile' : '/auth'}
+            className="text-[#154212] scale-95 active:scale-90 transition-transform"
+          >
+            <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
+          </Link>
         </div>
-      </header>
+      </nav>
 
-      {/* Contenido Principal */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-12">
         
-        {/* Título */}
-        <div className="text-center mb-10">
-          <h1 className="text-6xl font-display text-amber-400 mb-3 gradient-text">
-            <span className="material-symbols-rounded inline-block align-middle mr-2">storefront</span>
-            La Pulpería
-          </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Canjea tus <strong className="text-amber-400">Nacatamales Completos</strong> por mejoras estratégicas
-          </p>
-        </div>
+        {/* Header */}
+        <header className="mb-16 relative">
+          <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#154212]/5 rounded-full blur-3xl"></div>
+          <div className="relative z-10">
+            <h1 className="text-6xl font-black text-[#154212] tracking-tighter font-headline leading-none mb-4">
+              La Pulpería<br/><span className="text-[#755b00]">de Mejoras</span>
+            </h1>
+            <p className="text-xl text-[#42493e] max-w-xl font-medium">
+              Equípate con ingredientes especiales para dominar el arte del Nacatamal Digital. Cada compra te acerca a la maestría culinaria.
+            </p>
+          </div>
+        </header>
 
-        {/* Monedero del Jugador */}
-        <div className="card bg-gradient-to-r from-amber-900/30 to-yellow-900/30 border-2 border-amber-500/50 mb-10">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            {/* Nacatamales Disponibles */}
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-comic">
-                <span className="material-symbols-rounded text-5xl text-white">payments</span>
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Nacatamales Completos</p>
-                <p className="text-4xl font-display text-amber-400 font-bold">{nacatamalesCount}</p>
-              </div>
-            </div>
-
-            {/* Ingredientes Individuales */}
-            <div className="flex flex-wrap justify-center gap-3">
-              {Object.entries(INGREDIENTES).map(([key, value]) => {
-                const cantidad = monedas[value] || 0;
-                const tiene = cantidad > 0;
-                return (
-                  <div
-                    key={value}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all ${
-                      tiene
-                        ? 'bg-gray-800/80 border-amber-500/50'
-                        : 'bg-gray-800/30 border-gray-700 opacity-50'
-                    }`}
+        {/* Power-Ups Section */}
+        <section className="mb-20">
+          <div className="flex items-center gap-4 mb-8">
+            <span className="material-symbols-outlined text-[#154212] text-3xl">flash_on</span>
+            <h2 className="text-3xl font-bold font-headline text-[#154212] tracking-tight">
+              Power-Ups: Ingredientes Secretos
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {POWER_UPS.map((item) => (
+              <div
+                key={item.id}
+                className="bg-[#f8f6c9] p-8 rounded-xl transition-all hover:translate-y-[-4px] hover:shadow-[0_20px_40px_rgba(21,66,18,0.12)] flex flex-col h-full border-b-4 border-transparent hover:border-[#154212]"
+              >
+                <div className="w-16 h-16 bg-[#2D5A27]/10 rounded-2xl flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-[#154212] text-4xl">{item.icono}</span>
+                </div>
+                <h3 className="text-2xl font-bold font-headline mb-2">{item.nombre}</h3>
+                <p className="text-[#42493e] mb-8 flex-grow">{item.descripcion}</p>
+                <div className="flex items-center justify-between mt-auto">
+                  <div className="flex items-center gap-1 text-[#755b00] font-bold">
+                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bakery_dining</span>
+                    <span>{item.precio}</span>
+                  </div>
+                  <button
+                    onClick={() => handleComprar(item)}
+                    disabled={loading || nacatamales < item.precio}
+                    className="bg-[#2D5A27] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#154212] hover:text-white transition-all scale-95 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <div className="w-8 h-8">
-                      <IngredientIcon type={value} className="w-full h-full" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400 capitalize">{key}</p>
-                      <p className={`font-bold ${tiene ? 'text-amber-400' : 'text-gray-600'}`}>
-                        {cantidad}
-                      </p>
+                    Comprar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Desafíos Section */}
+        <section>
+          <div className="flex items-center gap-4 mb-8">
+            <span className="material-symbols-outlined text-[#79001c] text-3xl">local_fire_department</span>
+            <h2 className="text-3xl font-bold font-headline text-[#79001c] tracking-tight">
+              Desafíos: Chile Picante
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {DESAFIOS.map((desafio) => (
+              <div
+                key={desafio.id}
+                className={`bg-[#eceabe] p-8 rounded-xl transition-all border-l-4 ${desafio.color} flex flex-col h-full`}
+              >
+                <div className="w-12 h-12 bg-[#79001c]/10 rounded-full flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-[#79001c] text-2xl">{desafio.icono}</span>
+                </div>
+                <h3 className="text-xl font-bold font-headline mb-2">{desafio.nombre}</h3>
+                <p className="text-[#42493e] text-sm mb-6 flex-grow">{desafio.descripcion}</p>
+                <div className="flex items-center justify-between mt-auto">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase tracking-widest text-[#42493e] font-bold">
+                      Recompensa {desafio.multiplicador}
+                    </span>
+                    <div className="flex items-center gap-1 text-[#755b00] font-bold">
+                      <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bakery_dining</span>
+                      <span>{desafio.recompensa}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  <button
+                    onClick={() => handleDesafio(desafio)}
+                    disabled={loading}
+                    className="bg-[#79001c] text-white px-5 py-2.5 rounded-lg font-bold hover:bg-[#a40029] transition-all scale-95 active:scale-90"
+                  >
+                    Comprar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-            {/* Info */}
-            <div className="text-center md:text-right">
-              <p className="text-gray-400 text-sm mb-2">¿Cómo obtener nacatamales?</p>
-              <p className="text-xs text-gray-500">
-                Completa 1 de cada ingrediente<br/>
-                para formar 1 Nacatamal
+        {/* CTA Section */}
+        <section className="mt-24 p-12 bg-[#154212] rounded-[2rem] text-[#fefccf] relative overflow-hidden">
+          <div className="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10">
+            <span className="material-symbols-outlined text-[20rem]" style={{ fontVariationSettings: "'FILL' 1" }}>restaurant</span>
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-10">
+            <div className="max-w-md text-center md:text-left">
+              <h3 className="text-4xl font-black font-headline mb-4 tracking-tighter">
+                ¿Te faltan Nacatamales?
+              </h3>
+              <p className="text-[#fefccf]/80 text-lg">
+                Sigue respondiendo trivias sobre nuestra cultura para ganar más puntos y canjearlos por estas increíbles mejoras.
               </p>
             </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                to="/categories"
+                className="bg-[#fccc38] text-[#1d1d03] px-8 py-4 rounded-xl font-bold hover:bg-[#ffdf90] hover:text-[#1d1d03] transition-all flex items-center gap-2 group"
+              >
+                Jugar Ahora
+                <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+              </Link>
+              <Link
+                to="/profile"
+                className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-8 py-4 rounded-xl font-bold hover:bg-white/20 transition-all"
+              >
+                Ver Logros
+              </Link>
+            </div>
           </div>
-        </div>
+        </section>
+      </main>
 
-        {/* Filtros */}
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
-              filter === 'all'
-                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-comic'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            <span className="material-symbols-rounded">apps</span>
-            <span>Todos</span>
-          </button>
-          {Object.entries(ITEM_TYPE_CONFIG).map(([type, config]) => (
-            <button
-              key={type}
-              onClick={() => setFilter(type)}
-              className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
-                filter === type
-                  ? `bg-gradient-to-r ${config.color} text-white shadow-comic`
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+      {/* Footer */}
+      <footer className="bg-[#154212] w-full mt-auto py-12 flex flex-col items-center justify-center space-y-6 text-center px-4">
+        <div className="flex space-x-8 flex-wrap justify-center">
+          <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+            Sobre el Proyecto
+          </a>
+          <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+            Cultura Nicaragüense
+          </a>
+          <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+            Contacto
+          </a>
+        </div>
+        <div className="text-[#F4C430] font-bold font-headline text-xl">NicaQuizz</div>
+        <p className="text-[#fefccf]/60 font-headline text-xs font-light tracking-wide">
+          © 2025 NicaQuizz - El Arte del Nacatamal Digital
+        </p>
+      </footer>
+
+      {/* Sidebar - Mi Despensa (Desktop Only) */}
+      <aside className="fixed left-0 top-1/2 -translate-y-1/2 hidden xl:flex flex-col bg-[#fefccf] h-fit py-8 space-y-4 rounded-r-[2rem] shadow-xl z-40 border border-[#154212]/5">
+        <div className="px-6 mb-4">
+          <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#154212]/40 mb-1">Tu Inventario</p>
+          <h4 className="font-headline font-black text-[#154212] text-lg">Mi Despensa</h4>
+        </div>
+        <div className="flex flex-col">
+          {INVENTARIO.map((ing) => (
+            <Link
+              key={ing.tipo}
+              to="/shop"
+              className={`${
+                ing.activo
+                  ? 'bg-[#755b00] text-white rounded-full mx-4 my-1 shadow-lg'
+                  : 'text-[#154212] opacity-70 hover:bg-[#154212]/10'
+              } flex items-center gap-4 px-6 py-3 transition-all cursor-pointer ${
+                !ing.activo && 'translate-x-1 group'
               }`}
             >
-              <span className="material-symbols-rounded">{config.icon}</span>
-              <span>{config.label}</span>
-            </button>
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: ing.activo ? "'FILL' 1" : "'FILL' 0" }}>
+                {ing.icono}
+              </span>
+              <span className="font-headline text-sm uppercase tracking-widest font-bold">
+                {ing.nombre} x{ing.cantidad}
+              </span>
+            </Link>
           ))}
         </div>
-
-        {/* Grid de Productos */}
-        {loading ? (
-          <div className="text-center py-16">
-            <span className="material-symbols-rounded text-6xl text-amber-400 animate-spin inline-block">progress_activity</span>
-            <p className="text-gray-400 mt-4">Cargando productos...</p>
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="card text-center py-16">
-            <span className="material-symbols-rounded text-6xl text-gray-600 mb-4">storefront</span>
-            <p className="text-gray-400 text-lg">No hay productos disponibles en esta categoría</p>
-            <Button onClick={() => setFilter('all')} className="mt-4">
-              Ver todos los productos
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredItems.map((item) => {
-              const typeConfig = ITEM_TYPE_CONFIG[item.type] || ITEM_TYPE_CONFIG[ITEM_TYPES.MEJORA];
-              const isPopular = item.timesPurchased >= 10;
-              const mejoraInfo = MEJORAS_INFO[item.id] || null;
-
-              return (
-                <div
-                  key={item.id}
-                  className="card hover-lift overflow-hidden group relative bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-amber-700/30"
-                >
-                  {/* Badge de Popular */}
-                  {isPopular && (
-                    <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-comic z-10">
-                      <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">local_fire</span>
-                      Popular
-                    </div>
-                  )}
-
-                  {/* Icono del Producto */}
-                  <div className="relative mb-6">
-                    <div className={`w-24 h-24 mx-auto rounded-2xl bg-gradient-to-br ${typeConfig.color} flex items-center justify-center shadow-comic group-hover:scale-110 transition-transform duration-300`}>
-                      <span className="material-symbols-rounded text-5xl text-white">{item.icono || typeConfig.icon}</span>
-                    </div>
-                    {/* Tipo de item */}
-                    <div className={`absolute -bottom-3 left-1/2 transform -translate-x-1/2 ${typeConfig.badge} text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg`}>
-                      {typeConfig.label}
-                    </div>
-                  </div>
-
-                  {/* Información del Producto */}
-                  <div className="text-center mb-4">
-                    <h3 className="text-2xl font-display text-white mb-2">{item.name}</h3>
-                    <p className="text-gray-400 text-sm">{mejoraInfo?.descripcion || item.description}</p>
-                  </div>
-
-                  {/* Precio y Stats */}
-                  <div className="bg-gray-700/50 rounded-xl p-4 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
-                          <span className="material-symbols-rounded text-sm text-white">payments</span>
-                        </div>
-                        <div>
-                          <p className="text-lg font-bold text-amber-400">1 Nacatamal</p>
-                          <p className="text-xs text-gray-500">Completo</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">{item.timesPurchased} canjeados</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Botón de Compra */}
-                  <Button
-                    onClick={() => handlePurchase(item)}
-                    disabled={nacatamalesCount < 1}
-                    variant={nacatamalesCount >= 1 ? 'primary' : 'secondary'}
-                    fullWidth
-                    icon={nacatamalesCount >= 1 ? 'shopping_cart' : 'lock'}
-                  >
-                    {nacatamalesCount >= 1 ? 'Canjear' : 'Necesitas Nacatamal'}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Info Adicional */}
-        <div className="mt-12 grid md:grid-cols-2 gap-6">
-          <div className="card bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border-yellow-700/50">
-            <h3 className="text-xl font-display text-white mb-3 flex items-center gap-2">
-              <span className="material-symbols-rounded text-yellow-400">emoji_events</span>
-              Mejoras
-            </h3>
-            <p className="text-gray-400 text-sm">
-              Las mejoras te dan ventajas estratégicas durante el juego. Úsalas sabiamente para maximizar tu rendimiento y subir en el ranking nacional.
-            </p>
-            <ul className="mt-4 space-y-2 text-sm text-gray-300">
-              <li className="flex items-start gap-2">
-                <span className="material-symbols-rounded text-yellow-400 text-sm">check</span>
-                <span>Se activan automáticamente al usarlas</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="material-symbols-rounded text-yellow-400 text-sm">check</span>
-                <span>Solo 1 mejora por partida</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="material-symbols-rounded text-yellow-400 text-sm">check</span>
-                <span>Recarga gratuita cada 24 horas</span>
-              </li>
-            </ul>
-          </div>
-          <div className="card bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-700/50">
-            <h3 className="text-xl font-display text-white mb-3 flex items-center gap-2">
-              <span className="material-symbols-rounded text-purple-400">do_not_disturb_on</span>
-              Trabas
-            </h3>
-            <p className="text-gray-400 text-sm">
-              Las trabas afectan a tu oponente durante los retos en línea. Úsalas estratégicamente para desequilibrar la balanza a tu favor.
-            </p>
-            <ul className="mt-4 space-y-2 text-sm text-gray-300">
-              <li className="flex items-start gap-2">
-                <span className="material-symbols-rounded text-purple-400 text-sm">check</span>
-                <span>Solo disponibles en retos</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="material-symbols-rounded text-purple-400 text-sm">check</span>
-                <span>Se activan al inicio del reto</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="material-symbols-rounded text-purple-400 text-sm">check</span>
-                <span>Impacto significativo en el juego</span>
-              </li>
-            </ul>
-          </div>
+        <div className="mt-8 px-4">
+          <Link
+            to="/profile"
+            className="w-full bg-[#154212] text-white py-4 rounded-2xl font-bold font-headline text-xs uppercase tracking-widest shadow-lg hover:shadow-[#154212]/20 hover:scale-[1.02] transition-all block text-center"
+          >
+            Cocinar Nacatamal
+          </Link>
         </div>
-
-        {/* Consejo del Día */}
-        <div className="card mt-8 bg-gradient-to-r from-nica-verde/20 to-nica-amarillo/20 border-nica-verde/30">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-nica-verde/30 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-rounded text-3xl text-nica-verde">lightbulb</span>
-            </div>
-            <div>
-              <h4 className="font-display text-white text-lg mb-2">Consejo del Maestro Cocinero</h4>
-              <p className="text-gray-400 text-sm">
-                "Un verdadero maestro no depende solo de las mejoras. Practica sin ellas para mejorar tu conocimiento, y úsalas estratégicamente en los momentos clave. ¡La sabiduría es el mejor ingrediente!"
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
+      </aside>
     </div>
   );
 }

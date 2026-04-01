@@ -1,3 +1,14 @@
+/**
+ * AdminPanel.jsx - Panel de Administración de NicaQuizz
+ * "Herramienta del Maestro Docente"
+ * 
+ * Funcionalidades:
+ * - Gestión de preguntas pendientes (aprobar/rechazar)
+ * - Creación y eliminación de categorías
+ * - Administración de monedas especiales
+ * - Monedas infinitas para testing
+ */
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -16,51 +27,47 @@ import {
   deleteCurrency,
   toggleCurrencyActive
 } from '../services/firestore';
+import Button from '../components/Button';
 
-const MaterialIcon = ({ name, className = '' }) => (
-  <span className={`material-symbols-outlined ${className}`}>{name}</span>
-);
-
-// Iconos disponibles para categorias
+// Iconos disponibles para categorías
 const CATEGORY_ICONS = [
   { name: 'history_edu', label: 'Historia' },
-  { name: 'calculate', label: 'Matematicas' },
-  { name: 'public', label: 'Geografia' },
+  { name: 'calculate', label: 'Matemáticas' },
+  { name: 'public', label: 'Geografía' },
   { name: 'science', label: 'Ciencias' },
   { name: 'menu_book', label: 'Libro' },
   { name: 'emoji_events', label: 'Trofeo' },
   { name: 'lightbulb', label: 'Idea' },
-  { name: 'star', label: 'Estrella' }
+  { name: 'star', label: 'Estrella' },
+  { name: 'art_track', label: 'Arte' },
+  { name: 'music_note', label: 'Música' }
 ];
 
 // Ingredientes disponibles
 const INGREDIENTES = [
-  { value: 'masa', label: 'Masa de masa', icon: 'grain' },
-  { value: 'cerdo', label: 'Carne de Cerdo', icon: 'lunch_dining' },
+  { value: 'masa', label: 'Masa', icon: 'bakery_dining' },
+  { value: 'cerdo', label: 'Cerdo', icon: 'lunch_dining' },
   { value: 'arroz', label: 'Arroz', icon: 'rice_bowl' },
-  { value: 'papa', label: 'Papa', icon: 'potato' },
-  { value: 'chile', label: 'chile', icon: 'olive' }
+  { value: 'papa', label: 'Papa', icon: 'egg' },
+  { value: 'chile', label: 'Chile', icon: 'local_fire_department' }
 ];
 
 export default function AdminPanel() {
   const { userData, currentUser, logout } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const [activeTab, setActiveTab] = useState('questions'); // 'questions', 'categories', 'currencies', 'coins'
+  const [activeTab, setActiveTab] = useState('questions');
   const [pendingQuestions, setPendingQuestions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [currencies, setCurrencies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newCategory, setNewCategory] = useState({ name: '', description: '', ingrediente: 'masa', icon: 'history_edu' });
-  const [newCurrency, setNewCurrency] = useState({ name: '', description: '', icon: 'monetization_on', defaultAmount: 0 });
+  const [newCurrency, setNewCurrency] = useState({ name: '', description: '', icon: 'payments', defaultAmount: 0 });
   const [editingCurrency, setEditingCurrency] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    // Verificar si es admin
-    if (!userData?.isAdmin) {
-      return;
-    }
+    if (!userData?.isAdmin) return;
     loadData();
   }, []);
 
@@ -104,7 +111,6 @@ export default function AdminPanel() {
 
   async function handleReject(questionId) {
     if (!confirm('¿Estás seguro de rechazar esta pregunta?')) return;
-    
     setActionLoading(true);
     try {
       await rejectQuestion(questionId);
@@ -124,7 +130,6 @@ export default function AdminPanel() {
       showMessage('error', 'El nombre de la categoría es requerido');
       return;
     }
-
     setActionLoading(true);
     try {
       await createCategoryAdmin(newCategory.name, newCategory.description, newCategory.ingrediente, newCategory.icon);
@@ -142,7 +147,6 @@ export default function AdminPanel() {
 
   async function handleDeleteCategory(categoryId) {
     if (!confirm('¿Estás seguro de eliminar esta categoría? Las preguntas asociadas permanecerán en la BD.')) return;
-
     setActionLoading(true);
     try {
       await deleteCategory(categoryId);
@@ -158,8 +162,7 @@ export default function AdminPanel() {
   }
 
   async function handleAddInfiniteCoins() {
-    if (!confirm('¿Estas seguro de agregar monedas infinitas? Esta accion es permanente.')) return;
-
+    if (!confirm('¿Estás seguro de agregar monedas infinitas? Esta acción es permanente.')) return;
     setActionLoading(true);
     try {
       await addInfiniteCoins(currentUser.uid);
@@ -178,11 +181,10 @@ export default function AdminPanel() {
       showMessage('error', 'El nombre de la moneda es requerido');
       return;
     }
-
     setActionLoading(true);
     try {
       await createCurrency(newCurrency.name, newCurrency.description, newCurrency.icon, newCurrency.defaultAmount);
-      setNewCurrency({ name: '', description: '', icon: 'monetization_on', defaultAmount: 0 });
+      setNewCurrency({ name: '', description: '', icon: 'payments', defaultAmount: 0 });
       const curr = await fetchCurrencies();
       setCurrencies(curr);
       showMessage('success', 'Moneda creada exitosamente');
@@ -204,7 +206,6 @@ export default function AdminPanel() {
       showMessage('error', 'El nombre de la moneda es requerido');
       return;
     }
-
     setActionLoading(true);
     try {
       await updateCurrency(editingCurrency.id, {
@@ -225,13 +226,8 @@ export default function AdminPanel() {
     }
   }
 
-  async function handleCancelEdit() {
-    setEditingCurrency(null);
-  }
-
   async function handleDeleteCurrency(currencyId) {
     if (!confirm('¿Estás seguro de eliminar esta moneda?')) return;
-
     setActionLoading(true);
     try {
       await deleteCurrency(currencyId);
@@ -265,12 +261,14 @@ export default function AdminPanel() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card text-center max-w-md">
-          <h1 className="text-3xl font-bold text-red-600 mb-4"><MaterialIcon name="block" className="text-5xl" /></h1>
-          <p className="text-gray-600 mb-6">
+        <div className="card text-center max-w-md border-red-700 bg-red-900/20">
+          <span className="material-symbols-rounded text-6xl text-red-500 mb-4">block</span>
+          <h1 className="text-2xl font-display text-white mb-4">Acceso Denegado</h1>
+          <p className="text-gray-400 mb-6">
             No tienes permisos de administrador para acceder a esta página.
           </p>
-          <Link to="/dashboard" className="btn-primary">
+          <Link to="/play" className="btn-primary inline-block">
+            <span className="material-symbols-rounded inline-block align-middle mr-1">home</span>
             Volver al inicio
           </Link>
         </div>
@@ -279,131 +277,170 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="min-h-screen pb-12">
+    <div className="min-h-screen pb-12 bg-gradient-to-br from-gray-900 via-nica-verde/10 to-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-lg">
+      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-nica-amarillo/30 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-primary-600"><MaterialIcon name="flag" className="text-red-500" /> NicaQuizz</h1>
-            <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold">
-              Panel de Administrador
+            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <span className="text-4xl">🇳🇮</span>
+              <div>
+                <h1 className="text-3xl font-display text-nica-amarillo">NicaQuizz</h1>
+                <p className="text-xs text-gray-400">Panel de Administrador</p>
+              </div>
+            </Link>
+            <span className="bg-nica-rojo/30 text-nica-rojo px-4 py-1.5 rounded-xl text-sm font-bold border border-nica-rojo/50">
+              <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">admin_panel_settings</span>
+              Admin
             </span>
           </div>
           <button
             onClick={logout}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+            className="bg-nica-rojo/20 hover:bg-nica-rojo/30 text-nica-rojo border border-nica-rojo/50 px-4 py-2 rounded-xl transition-colors flex items-center gap-2 font-bold"
           >
+            <span className="material-symbols-rounded">logout</span>
             Salir
           </button>
         </div>
       </header>
 
       {/* Contenido */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        
+        {/* Mensajes */}
         {message.text && (
-          <div className={`p-4 rounded-lg mb-6 ${
-            message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          <div className={`p-4 rounded-xl mb-6 flex items-center gap-3 ${
+            message.type === 'success'
+              ? 'bg-green-900/30 text-green-400 border border-green-700/50'
+              : 'bg-red-900/30 text-red-400 border border-red-700/50'
           }`}>
+            <span className="material-symbols-rounded text-2xl">
+              {message.type === 'success' ? 'check_circle' : 'error'}
+            </span>
             {message.text}
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        {/* Tabs de Navegación */}
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('questions')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               activeTab === 'questions'
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="fact_check" className="inline-block align-middle mr-1" /> Preguntas Pendientes ({pendingQuestions.length})
+            <span className="material-symbols-rounded">fact_check</span>
+            <span>Preguntas ({pendingQuestions.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('categories')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               activeTab === 'categories'
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="folder" className="inline-block align-middle mr-1" /> Categorías
+            <span className="material-symbols-rounded">folder</span>
+            <span>Categorías</span>
           </button>
           <button
             onClick={() => setActiveTab('currencies')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               activeTab === 'currencies'
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="payments" className="inline-block align-middle mr-1" /> Monedas
+            <span className="material-symbols-rounded">payments</span>
+            <span>Monedas</span>
           </button>
           <button
             onClick={() => setActiveTab('coins')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               activeTab === 'coins'
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="grain" className="inline-block align-middle mr-1" /> Monedas Infinitas
+            <span className="material-symbols-rounded">grain</span>
+            <span>Monedas Infinitas</span>
           </button>
         </div>
 
         {/* Tab: Preguntas Pendientes */}
         {activeTab === 'questions' && (
           <div className="card">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Preguntas Pendientes de Aprobacion
-            </h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-display text-white flex items-center gap-3">
+                <span className="material-symbols-rounded text-nica-amarillo">fact_check</span>
+                Preguntas Pendientes de Aprobación
+              </h2>
+              <span className="bg-nica-amarillo/20 text-nica-amarillo px-4 py-1.5 rounded-xl font-bold border border-nica-amarillo/50">
+                {pendingQuestions.length} pendientes
+              </span>
+            </div>
 
             {loading ? (
-              <div className="text-center py-8 text-gray-500 animate-pulse">
-                Cargando preguntas...
+              <div className="text-center py-12">
+                <span className="material-symbols-rounded text-6xl text-nica-amarillo animate-spin inline-block">progress_activity</span>
+                <p className="text-gray-400 mt-4">Cargando preguntas...</p>
               </div>
             ) : pendingQuestions.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <MaterialIcon name="check_circle" className="inline-block align-middle text-green-500 mr-1" /> No hay preguntas pendientes de aprobacion
+              <div className="text-center py-12">
+                <span className="material-symbols-rounded text-6xl text-green-400 mb-4">check_circle</span>
+                <p className="text-gray-400 text-lg">¡No hay preguntas pendientes!</p>
+                <p className="text-gray-500 text-sm mt-2">Todas las preguntas han sido revisadas</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {pendingQuestions.map(question => (
                   <div
                     key={question.id}
-                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                    className="border border-gray-700 rounded-xl p-6 hover:border-nica-amarillo/50 hover:bg-gray-800/50 transition-all"
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {question.text}
-                      </h3>
-                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                        ID: {question.id.slice(-6)}
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-white mb-2">
+                          {question.text}
+                        </h3>
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-400">
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-rounded text-sm">check</span>
+                            <strong>Respuesta:</strong> {question.correctAnswer}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-rounded text-sm">folder</span>
+                            <strong>Categoría:</strong> {question.categoryId}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-rounded text-sm">person</span>
+                            <strong>Por:</strong> {question.createdBy?.slice(0, 8)}...
+                          </span>
+                        </div>
+                      </div>
+                      <span className="bg-gray-800 text-gray-500 px-3 py-1 rounded-lg text-xs font-mono">
+                        {question.id.slice(-6)}
                       </span>
                     </div>
-                    <p className="text-gray-600 mb-2">
-                      <strong>Respuesta:</strong> {question.correctAnswer}
-                    </p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      <strong>Categoría:</strong> {question.categoryId} • 
-                      <strong> Por:</strong> {question.createdBy}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
+                    <div className="flex gap-3">
+                      <Button
                         onClick={() => handleApprove(question.id)}
                         disabled={actionLoading}
-                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                        variant="success"
+                        icon="check"
                       >
-                        <MaterialIcon name="check" className="inline-block align-middle mr-1" /> Aprobar
-                      </button>
-                      <button
+                        Aprobar
+                      </Button>
+                      <Button
                         onClick={() => handleReject(question.id)}
                         disabled={actionLoading}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                        variant="danger"
+                        icon="close"
                       >
-                        <MaterialIcon name="close" className="inline-block align-middle mr-1" /> Rechazar
-                      </button>
+                        Rechazar
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -417,16 +454,16 @@ export default function AdminPanel() {
           <div className="grid gap-6">
             {/* Formulario para crear categoría */}
             <div className="card">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
+                <span className="material-symbols-rounded text-nica-amarillo">add_circle</span>
                 Crear Nueva Categoría
               </h2>
-              <form onSubmit={handleCreateCategory} className="space-y-4">
+              <form onSubmit={handleCreateCategory} className="space-y-6">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
                     Nombre de la categoría *
                   </label>
                   <input
-                    id="name"
                     type="text"
                     value={newCategory.name}
                     onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
@@ -437,11 +474,10 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
                     Descripción
                   </label>
                   <textarea
-                    id="description"
                     value={newCategory.description}
                     onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
                     className="input-field min-h-[80px]"
@@ -450,93 +486,104 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-gray-300 mb-3">
                     Ingrediente asociado *
                   </label>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-5 gap-3">
                     {INGREDIENTES.map(ing => (
                       <button
                         key={ing.value}
                         type="button"
                         onClick={() => setNewCategory(prev => ({ ...prev, ingrediente: ing.value }))}
-                        className={`p-3 rounded-lg border-2 transition-all ${
+                        className={`p-4 rounded-xl border-2 transition-all hover-lift ${
                           newCategory.ingrediente === ing.value
-                            ? 'border-primary-600 bg-primary-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-nica-amarillo bg-nica-amarillo/20'
+                            : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
                         }`}
                       >
-                        <MaterialIcon name={ing.icon} className={`block mx-auto text-2xl ${
-                          newCategory.ingrediente === ing.value ? 'text-primary-600' : 'text-gray-400'
-                        }`} />
-                        <p className="text-xs text-center mt-1">{ing.label}</p>
+                        <span className={`material-symbols-rounded text-3xl block mx-auto ${
+                          newCategory.ingrediente === ing.value ? 'text-nica-amarillo' : 'text-gray-500'
+                        }`}>
+                          {ing.icon}
+                        </span>
+                        <p className={`text-xs text-center mt-2 font-bold ${
+                          newCategory.ingrediente === ing.value ? 'text-nica-amarillo' : 'text-gray-500'
+                        }`}>
+                          {ing.label}
+                        </p>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-gray-300 mb-3">
                     Icono de la categoría *
                   </label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-3">
                     {CATEGORY_ICONS.map(icon => (
                       <button
                         key={icon.name}
                         type="button"
                         onClick={() => setNewCategory(prev => ({ ...prev, icon: icon.name }))}
-                        className={`p-3 rounded-lg border-2 transition-all ${
+                        className={`p-4 rounded-xl border-2 transition-all hover-lift ${
                           newCategory.icon === icon.name
-                            ? 'border-primary-600 bg-primary-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-nica-amarillo bg-nica-amarillo/20'
+                            : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
                         }`}
                       >
-                        <MaterialIcon name={icon.name} className={`block mx-auto text-2xl ${
-                          newCategory.icon === icon.name ? 'text-primary-600' : 'text-gray-400'
-                        }`} />
-                        <p className="text-xs text-center mt-1">{icon.label}</p>
+                        <span className={`material-symbols-rounded text-3xl block mx-auto ${
+                          newCategory.icon === icon.name ? 'text-nica-amarillo' : 'text-gray-500'
+                        }`}>
+                          {icon.name}
+                        </span>
+                        <p className={`text-xs text-center mt-2 font-bold ${
+                          newCategory.icon === icon.name ? 'text-nica-amarillo' : 'text-gray-500'
+                        }`}>
+                          {icon.label}
+                        </p>
                       </button>
                     ))}
                   </div>
                 </div>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="btn-primary"
-                >
+                <Button type="submit" disabled={actionLoading} variant="primary" icon="add">
                   {actionLoading ? 'Creando...' : 'Crear Categoría'}
-                </button>
+                </Button>
               </form>
             </div>
 
             {/* Lista de categorías existentes */}
             <div className="card">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
+                <span className="material-symbols-rounded text-nica-amarillo">folder</span>
                 Categorías Existentes ({categories.length})
               </h2>
               {categories.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
+                <p className="text-gray-500 text-center py-8">
                   No hay categorías creadas aún
                 </p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {categories.map(cat => (
                     <div
                       key={cat.id}
-                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                      className="flex justify-between items-center p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:border-nica-amarillo/30 transition-all"
                     >
-                      <div className="flex items-center gap-3">
-                        <MaterialIcon name={cat.icon || 'folder'} className="text-2xl text-gray-600" />
+                      <div className="flex items-center gap-4">
+                        <span className="material-symbols-rounded text-3xl text-nica-amarillo">
+                          {cat.icon || 'folder'}
+                        </span>
                         <div>
-                          <h3 className="font-semibold text-gray-800">{cat.name}</h3>
-                          <p className="text-sm text-gray-500">{cat.description}</p>
+                          <h3 className="font-bold text-white">{cat.name}</h3>
+                          <p className="text-sm text-gray-500">{cat.description || 'Sin descripción'}</p>
                         </div>
                       </div>
                       <button
                         onClick={() => handleDeleteCategory(cat.id)}
                         disabled={actionLoading}
-                        className="text-red-500 hover:text-red-700 p-2"
+                        className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/30 rounded-lg transition-all"
                         title="Eliminar categoría"
                       >
-                        <MaterialIcon name="delete" className="text-xl" />
+                        <span className="material-symbols-rounded text-xl">delete</span>
                       </button>
                     </div>
                   ))}
@@ -551,19 +598,21 @@ export default function AdminPanel() {
           <div className="grid gap-6">
             {/* Formulario para crear/editar moneda */}
             <div className="card">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
+                <span className="material-symbols-rounded text-nica-amarillo">
+                  {editingCurrency ? 'edit' : 'add_circle'}
+                </span>
                 {editingCurrency ? 'Editar Moneda' : 'Crear Nueva Moneda'}
               </h2>
-              <form onSubmit={editingCurrency ? handleUpdateCurrency : handleCreateCurrency} className="space-y-4">
+              <form onSubmit={editingCurrency ? handleUpdateCurrency : handleCreateCurrency} className="space-y-6">
                 <div>
-                  <label htmlFor="currencyName" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
                     Nombre de la moneda *
                   </label>
                   <input
-                    id="currencyName"
                     type="text"
                     value={editingCurrency ? editingCurrency.name : newCurrency.name}
-                    onChange={(e) => editingCurrency 
+                    onChange={(e) => editingCurrency
                       ? setEditingCurrency(prev => ({ ...prev, name: e.target.value }))
                       : setNewCurrency(prev => ({ ...prev, name: e.target.value }))
                     }
@@ -574,11 +623,10 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="currencyDesc" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
                     Descripción
                   </label>
                   <textarea
-                    id="currencyDesc"
                     value={editingCurrency ? editingCurrency.description : newCurrency.description}
                     onChange={(e) => editingCurrency
                       ? setEditingCurrency(prev => ({ ...prev, description: e.target.value }))
@@ -590,11 +638,10 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="currencyAmount" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
                     Cantidad por defecto
                   </label>
                   <input
-                    id="currencyAmount"
                     type="number"
                     value={editingCurrency ? editingCurrency.defaultAmount : newCurrency.defaultAmount}
                     onChange={(e) => editingCurrency
@@ -606,65 +653,14 @@ export default function AdminPanel() {
                     disabled={actionLoading}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Icono de la moneda *
-                  </label>
-                  <div className="grid grid-cols-6 gap-2">
-                    {[
-                      { name: 'payments', label: 'Moneda' },
-                      { name: 'account_balance_wallet', label: 'Billetera' },
-                      { name: 'attach_money', label: 'Dinero' },
-                      { name: 'monetization_on', label: 'Monetización' },
-                      { name: 'paid', label: 'Pagado' },
-                      { name: 'price_check', label: 'Precio' },
-                      { name: 'shopping_bag', label: 'Bolsa' },
-                      { name: 'card_giftcard', label: 'Regalo' },
-                      { name: 'diamond', label: 'Diamante' },
-                      { name: 'star', label: 'Estrella' },
-                      { name: 'emoji_events', label: 'Trofeo' },
-                      { name: 'local_fire_department', label: 'Fuego' }
-                    ].map(icon => (
-                      <button
-                        key={icon.name}
-                        type="button"
-                        onClick={() => editingCurrency
-                          ? setEditingCurrency(prev => ({ ...prev, icon: icon.name }))
-                          : setNewCurrency(prev => ({ ...prev, icon: icon.name }))
-                        }
-                        className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center ${
-                          (editingCurrency ? editingCurrency.icon : newCurrency.icon) === icon.name
-                            ? 'border-primary-600 bg-primary-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <MaterialIcon name={icon.name} className={`text-2xl ${
-                          (editingCurrency ? editingCurrency.icon : newCurrency.icon) === icon.name
-                            ? 'text-primary-600'
-                            : 'text-gray-400'
-                        }`} />
-                        <p className="text-xs text-center mt-1">{icon.label}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={actionLoading}
-                    className="btn-primary"
-                  >
-                    {actionLoading ? 'Guardando...' : (editingCurrency ? 'Actualizar' : 'Crear Moneda')}
-                  </button>
+                <div className="flex gap-3">
+                  <Button type="submit" disabled={actionLoading} variant="primary" icon={editingCurrency ? 'edit' : 'add'}>
+                    {actionLoading ? 'Guardando...' : editingCurrency ? 'Actualizar Moneda' : 'Crear Moneda'}
+                  </Button>
                   {editingCurrency && (
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      disabled={actionLoading}
-                      className="px-6 py-3 rounded-lg font-semibold border-2 border-gray-300 hover:bg-gray-100 transition-colors"
-                    >
+                    <Button type="button" onClick={() => setEditingCurrency(null)} variant="secondary" icon="close">
                       Cancelar
-                    </button>
+                    </Button>
                   )}
                 </div>
               </form>
@@ -672,67 +668,55 @@ export default function AdminPanel() {
 
             {/* Lista de monedas existentes */}
             <div className="card">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
+                <span className="material-symbols-rounded text-nica-amarillo">payments</span>
                 Monedas Existentes ({currencies.length})
               </h2>
               {currencies.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
+                <p className="text-gray-500 text-center py-8">
                   No hay monedas creadas aún
                 </p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {currencies.map(currency => (
                     <div
                       key={currency.id}
-                      className={`flex justify-between items-center p-3 rounded-lg border-2 ${
-                        currency.active ? 'bg-gray-50 border-gray-200' : 'bg-red-50 border-red-200'
-                      }`}
+                      className="flex justify-between items-center p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:border-nica-amarillo/30 transition-all"
                     >
-                      <div className="flex items-center gap-3">
-                        <MaterialIcon name={currency.icon || 'payments'} className={`text-3xl ${
-                          currency.active ? 'text-gray-600' : 'text-red-400'
-                        }`} />
+                      <div className="flex items-center gap-4">
+                        <span className="material-symbols-rounded text-3xl text-nica-amarillo">
+                          {currency.icon || 'payments'}
+                        </span>
                         <div>
-                          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                            {currency.name}
-                            {!currency.active && (
-                              <span className="bg-red-200 text-red-700 px-2 py-0.5 rounded text-xs">Inactiva</span>
-                            )}
-                          </h3>
+                          <h3 className="font-bold text-white">{currency.name}</h3>
                           <p className="text-sm text-gray-500">{currency.description || 'Sin descripción'}</p>
-                          <p className="text-xs text-gray-400">
-                            Cantidad por defecto: <strong>{currency.defaultAmount || 0}</strong>
-                          </p>
+                          <p className="text-xs text-gray-600">Por defecto: {currency.defaultAmount}</p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleToggleCurrencyActive(currency.id, currency.active)}
-                          disabled={actionLoading}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                             currency.active
-                              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              ? 'bg-green-900/30 text-green-400 border border-green-700/50'
+                              : 'bg-gray-700 text-gray-500 border border-gray-600'
                           }`}
-                          title={currency.active ? 'Desactivar' : 'Activar'}
                         >
-                          <MaterialIcon name={currency.active ? 'toggle_off' : 'toggle_on'} className="text-lg align-middle" />
+                          {currency.active ? 'Activa' : 'Inactiva'}
                         </button>
                         <button
                           onClick={() => handleEditCurrency(currency)}
-                          disabled={actionLoading}
-                          className="text-blue-500 hover:text-blue-700 p-2"
+                          className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-900/30 rounded-lg transition-all"
                           title="Editar moneda"
                         >
-                          <MaterialIcon name="edit" className="text-xl" />
+                          <span className="material-symbols-rounded text-xl">edit</span>
                         </button>
                         <button
                           onClick={() => handleDeleteCurrency(currency.id)}
-                          disabled={actionLoading}
-                          className="text-red-500 hover:text-red-700 p-2"
+                          className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/30 rounded-lg transition-all"
                           title="Eliminar moneda"
                         >
-                          <MaterialIcon name="delete" className="text-xl" />
+                          <span className="material-symbols-rounded text-xl">delete</span>
                         </button>
                       </div>
                     </div>
@@ -745,46 +729,45 @@ export default function AdminPanel() {
 
         {/* Tab: Monedas Infinitas */}
         {activeTab === 'coins' && (
-          <div className="card max-w-2xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              <MaterialIcon name="grain" className="inline-block align-middle mr-2" />
-              Monedas Infinitas para Administrador
-            </h2>
-            <div className="bg-primary-50 border-l-4 border-primary-600 p-4 mb-6">
-              <p className="text-primary-700">
-                <strong>Nota:</strong> Esta función solo está disponible para usuarios administradores.
-                Al hacer clic en el botón, recibirás 9999 de cada ingrediente del nacatamal.
+          <div className="card bg-gradient-to-br from-nica-amarillo/20 to-yellow-900/20 border-nica-amarillo/50">
+            <div className="text-center mb-8">
+              <span className="material-symbols-rounded text-7xl text-nica-amarillo mb-4">grain</span>
+              <h2 className="text-3xl font-display text-white mb-3">Monedas Infinitas</h2>
+              <p className="text-gray-400 max-w-2xl mx-auto">
+                Esta sección es exclusiva para administradores. Al hacer clic en el botón, recibirás 9999 de cada ingrediente del nacatamal.
               </p>
             </div>
-            <div className="grid grid-cols-5 gap-4 mb-6">
+
+            <div className="grid grid-cols-5 gap-4 mb-8 max-w-3xl mx-auto">
               {INGREDIENTES.map(ing => (
-                <div key={ing.value} className="text-center p-4 bg-gray-50 rounded-lg">
-                  <MaterialIcon name={ing.icon} className="text-4xl text-gray-600 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-700">{ing.label}</p>
-                  <p className="text-2xl font-bold text-primary-600">9999</p>
+                <div key={ing.value} className="text-center p-4 bg-gray-800/50 rounded-xl border border-gray-700">
+                  <span className="material-symbols-rounded text-4xl text-nica-amarillo block mb-2">
+                    {ing.icon}
+                  </span>
+                  <p className="text-sm text-gray-400">{ing.label}</p>
+                  <p className="text-2xl font-display text-nica-amarillo font-bold">9999</p>
                 </div>
               ))}
             </div>
-            <button
-              onClick={handleAddInfiniteCoins}
-              disabled={actionLoading}
-              className="btn-primary w-full"
-            >
-              {actionLoading ? (
-                'Agregando monedas...'
-              ) : (
-                <>
-                  <MaterialIcon name="add_circle" className="inline-block align-middle mr-2" />
-                  Agregar Monedas Infinitas
-                </>
-              )}
-            </button>
+
+            <div className="text-center">
+              <Button
+                onClick={handleAddInfiniteCoins}
+                disabled={actionLoading}
+                variant="primary"
+                icon="grain"
+                className="px-8 py-4 text-lg"
+              >
+                {actionLoading ? 'Agregando...' : 'Agregar Monedas Infinitas'}
+              </Button>
+              <p className="text-gray-500 text-sm mt-4">
+                <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">info</span>
+                Esta acción es permanente y solo disponible para administradores
+              </p>
+            </div>
           </div>
         )}
       </main>
     </div>
   );
 }
-
-
-

@@ -15,11 +15,14 @@ Este documento describe la suite completa de tests para las nuevas interfaces de
 ```
 test/
 ├── unitarios/
-│   └── componentes-nuevos.test.jsx    # Tests de componentes
+│   ├── constantes.test.js         # Tests de constantes del juego
+│   └── componentes-nuevos.test.jsx # Tests de lógica de componentes
 ├── integracion/
-│   └── servicios-nuevos.test.js       # Tests de servicios Firestore
+│   ├── firestore.test.js          # Tests de servicios Firestore existentes
+│   └── servicios-nuevos.test.js   # Tests de firestore-extensions
 └── e2e/
-    └── flujos-nuevos.test.js          # Tests de flujos completos
+    ├── flujos.test.js             # Tests E2E existentes
+    └── flujos-nuevos.test.js      # Tests de nuevos flujos
 ```
 
 ---
@@ -49,49 +52,76 @@ npm run test:coverage
 npm run test:run
 ```
 
-### Ejecutar Tests Específicos
+---
 
-```bash
-# Tests unitarios de componentes
-npm test -- componentes-nuevos
+## 📊 Resultados Actuales
 
-# Tests de integración de servicios
-npm test -- servicios-nuevos
+### ✅ Todos los Tests Pasan
 
-# Tests E2E de flujos
-npm test -- flujos-nuevos
 ```
+ Test Files  6 passed (6)
+      Tests  107 passed (107)
+   Duration  ~4s
+```
+
+### Cobertura por Categoría
+
+| Categoría | Tests | Estado |
+|-----------|-------|--------|
+| **E2E** | 34 | ✅ 100% |
+| **Integración** | 22 | ✅ 100% |
+| **Unitarios** | 51 | ✅ 100% |
+
+### Detalle por Archivo
+
+| Archivo | Tests | Descripción |
+|---------|-------|-------------|
+| `e2e/flujos.test.js` | 14 | Flujos E2E existentes |
+| `e2e/flujos-nuevos.test.js` | 20 | Nuevos flujos (Mapa, Trade, Notifications, Challenge) |
+| `integracion/firestore.test.js` | 20 | Servicios Firestore existentes |
+| `integracion/servicios-nuevos.test.js` | 2 | Verificación de exportaciones |
+| `unitarios/constantes.test.js` | 17 | Constantes del juego |
+| `unitarios/componentes-nuevos.test.jsx` | 34 | Lógica de componentes |
 
 ---
 
-## 📊 Cobertura de Tests
+## 📝 Tipos de Tests
 
-### Tests Unitarios (20+ tests)
+### Tests E2E (34 tests)
 
-| Componente | Tests | Descripción |
-|------------|-------|-------------|
-| **Map.jsx** | 8 | Mapa de Conquista, líderes, progreso |
-| **Trade.jsx** | 6 | Mercado de Trueques, ingredientes |
-| **Notifications.jsx** | 6 | Centro de Avisos, filtros |
-| **Challenge.jsx** | 6 | Configuración de Duelo |
+Prueban flujos completos de usuario:
 
-### Tests de Integración (15+ tests)
+| Flujo | Tests |
+|-------|-------|
+| Mapa de Conquista | 4 |
+| Mercado de Trueques | 3 |
+| Centro de Avisos | 4 |
+| Configuración de Duelo | 2 |
+| Flujos Cruzados | 3 |
+| Estados y Errores | 4 |
+| Flujos Existentes | 14 |
 
-| Servicio | Tests | Descripción |
-|----------|-------|-------------|
-| **Mapa** | 6 | departments, regionalLeaders, conquestProgress |
-| **Notificaciones** | 9 | CRUD completo de notifications |
+### Tests de Integración (22 tests)
 
-### Tests E2E (20+ tests)
+Prueban la integración con Firestore:
 
-| Flujo | Tests | Descripción |
-|-------|-------|-------------|
-| **Mapa de Conquista** | 4 | Explorar, desafiar, iniciar conquista |
-| **Mercado de Trueques** | 3 | Ver ingredientes, aceptar trueque |
-| **Centro de Avisos** | 4 | Filtrar, aceptar desafío, reclamar |
-| **Configuración de Duelo** | 2 | Seleccionar categoría, duelo libre |
-| **Flujos Cruzados** | 3 | Integración entre interfaces |
-| **Estados y Errores** | 4 | Manejo de loading, errores |
+| Servicio | Tests |
+|----------|-------|
+| Firestore (existente) | 20 |
+| Firestore-extensions | 2 |
+
+### Tests Unitarios (51 tests)
+
+Prueban lógica de negocio y componentes:
+
+| Categoría | Tests |
+|-----------|-------|
+| Constantes | 17 |
+| Mapa de Conquista | 6 |
+| Mercado de Trueques | 7 |
+| Centro de Avisos | 8 |
+| Configuración de Duelo | 8 |
+| Lógica de Negocio | 5 |
 
 ---
 

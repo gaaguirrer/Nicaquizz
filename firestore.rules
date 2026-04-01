@@ -1,0 +1,317 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==================== HELPER FUNCTIONS ====================
+    
+    // Verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Verificar si el usuario es el dueño del recurso
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Verificar si el usuario es admin
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Verificar si un campo existe en el request
+    function hasField(field) {
+      return request.resource.data.keys().hasAll([field]);
+    }
+    
+    // Verificar que un campo no haya cambiado (para updates parciales)
+    function unchanged(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+    
+    // Validar que un string no esté vacío
+    function isValidString(str) {
+      return str is string && str.size() > 0 && str.size() < 500;
+    }
+    
+    // Validar que un número esté en rango
+    function isValidNumber(num, min, max) {
+      return num is int && num >= min && num <= max;
+    }
+    
+    // ==================== USERS COLLECTION ====================
+    
+    match /users/{userId} {
+      // Allow read if public profile or owner
+      allow read: if true || isOwner(userId);
+      
+      // Allow create only if creating own profile
+      allow create: if isAuthenticated() && isOwner(userId)
+                    && hasField('email')
+                    && request.resource.data.email == request.auth.token.email;
+      
+      // Allow update if owner or admin
+      allow update: if (isAuthenticated() && isOwner(userId)
+                       // Owner can update limited fields
+                       && request.resource.data.keys().hasOnly([
+                          'displayName', 'bio', 'photoURL', 'coins', 'stats',
+                          'mejoras', 'trabas', 'friends', 'isPublicProfile',
+                          'allowOpenChallenges', 'lastSeen', 'isOnline'
+                        ]))
+                      || (isAuthenticated() && isAdmin());
+      
+      // Prevent deletion (soft delete preferred)
+      allow delete: if false;
+    }
+    
+    // ==================== CATEGORIES COLLECTION ====================
+    
+    match /categories/{categoryId} {
+      // Anyone can read categories
+      allow read: if true;
+      
+      // Only admins can write
+      allow create, update, delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ==================== QUESTIONS COLLECTION ====================
+    
+    match /questions/{questionId} {
+      // Anyone can read approved questions
+      allow read: if resource.data.status == 'approved'
+                  || (isAuthenticated() && isAdmin());
+      
+      // Users can propose questions
+      allow create: if isAuthenticated()
+                    && hasField('text')
+                    && hasField('correctAnswer')
+                    && hasField('options')
+                    && request.resource.data.status == 'pending';
+      
+      // Only admins can approve/reject
+      allow update: if isAuthenticated() && isAdmin();
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ==================== ANSWERS COLLECTION ====================
+    
+    match /answers/{answerId} {
+      // Only owner or admin can read
+      allow read: if isAuthenticated() 
+                  && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Users can create their own answers
+      allow create: if isAuthenticated()
+                    && hasField('userId')
+                    && isOwner(request.resource.data.userId)
+                    && hasField('questionId')
+                    && hasField('isCorrect');
+      
+      // No updates allowed
+      allow update: if false;
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ==================== CHALLENGES COLLECTION ====================
+    
+    match /challenges/{challengeId} {
+      // Participants can read
+      allow read: if isAuthenticated()
+                  && (resource.data.challengerId == request.auth.uid
+                      || resource.data.challengedId == request.auth.uid
+                      || isAdmin());
+      
+      // Authenticated users can create challenges
+      allow create: if isAuthenticated()
+                    && hasField('challengerId')
+                    && isOwner(request.resource.data.challengerId)
+                    && hasField('challengedId');
+      
+      // Only challenged user can accept/reject
+      allow update: if isAuthenticated()
+                    && isOwner(resource.data.challengedId)
+                    && request.resource.data.keys().hasOnly(['status', 'startedAt']);
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ==================== FRIEND REQUESTS COLLECTION ====================
+    
+    match /friendRequests/{requestId} {
+      // Sender and receiver can read
+      allow read: if isAuthenticated()
+                  && (resource.data.senderId == request.auth.uid
+                      || resource.data.receiverId == request.auth.uid);
+      
+      // Authenticated users can send requests
+      allow create: if isAuthenticated()
+                    && hasField('senderId')
+                    && isOwner(request.resource.data.senderId)
+                    && hasField('receiverId')
+                    && request.resource.data.senderId != request.resource.data.receiverId;
+      
+      // Only receiver can update (accept/reject)
+      allow update: if isAuthenticated()
+                    && isOwner(resource.data.receiverId)
+                    && request.resource.data.keys().hasOnly(['status']);
+      
+      // Sender or admin can delete
+      allow delete: if isAuthenticated()
+                    && (resource.data.senderId == request.auth.uid || isAdmin());
+    }
+    
+    // ==================== TRADES COLLECTION ====================
+    
+    match /trades/{tradeId} {
+      // Participants can read
+      allow read: if isAuthenticated()
+                  && (resource.data.senderId == request.auth.uid
+                      || resource.data.receiverId == request.auth.uid);
+      
+      // Authenticated users can create trades
+      allow create: if isAuthenticated()
+                    && hasField('senderId')
+                    && isOwner(request.resource.data.senderId)
+                    && hasField('offeredIngredient')
+                    && hasField('requestedIngredient');
+      
+      // Only receiver can accept/reject
+      allow update: if isAuthenticated()
+                    && isOwner(resource.data.receiverId)
+                    && request.resource.data.keys().hasOnly(['status', 'completedAt']);
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ==================== GIFTS COLLECTION ====================
+    
+    match /gifts/{giftId} {
+      // Participants can read
+      allow read: if isAuthenticated()
+                  && (resource.data.senderId == request.auth.uid
+                      || resource.data.receiverId == request.auth.uid);
+      
+      // Authenticated users can send gifts
+      allow create: if isAuthenticated()
+                    && hasField('senderId')
+                    && isOwner(request.resource.data.senderId)
+                    && hasField('receiverId')
+                    && hasField('ingredient')
+                    && hasField('amount');
+      
+      // No updates allowed
+      allow update: if false;
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ==================== EXCHANGES COLLECTION ====================
+    
+    match /exchanges/{exchangeId} {
+      // Only owner can read
+      allow read: if isAuthenticated()
+                  && resource.data.userId == request.auth.uid;
+      
+      // System creates exchanges (validated via Cloud Function)
+      allow create: if false;
+      
+      // No updates or deletes
+      allow update, delete: if false;
+    }
+    
+    // ==================== DAILY STATS COLLECTION ====================
+    
+    match /dailyStats/{date} {
+      // Anyone can read daily stats
+      allow read: if true;
+      
+      // Only system can write (via Cloud Function)
+      allow create, update, delete: if false;
+    }
+    
+    // ==================== DAILY CHALLENGES COLLECTION ====================
+    
+    match /dailyChallenges/{date} {
+      // Anyone can read daily challenges
+      allow read: if true;
+      
+      // Only system can write (via Cloud Function)
+      allow create, update, delete: if false;
+    }
+    
+    // ==================== SHOP ITEMS COLLECTION ====================
+    
+    match /shopItems/{itemId} {
+      // Anyone can read shop items
+      allow read: if true;
+      
+      // Only admins can write
+      allow create, update, delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ==================== NOTIFICATIONS COLLECTION ====================
+    
+    match /notifications/{notificationId} {
+      // Only recipient can read
+      allow read: if isAuthenticated()
+                  && resource.data.userId == request.auth.uid;
+      
+      // System creates notifications (via Cloud Function)
+      allow create: if false;
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['read']);
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ==================== BATTLE HISTORY COLLECTION ====================
+    
+    match /battleHistory/{historyId} {
+      // Participants can read
+      allow read: if isAuthenticated()
+                  && (resource.data.userId == request.auth.uid
+                      || resource.data.opponentId == request.auth.uid);
+      
+      // System creates battle history (via Cloud Function)
+      allow create: if false;
+      
+      // No updates or deletes
+      allow update, delete: if false;
+    }
+    
+    // ==================== USER ACHIEVEMENTS COLLECTION ====================
+    
+    match /userAchievements/{achievementId} {
+      // Only owner can read
+      allow read: if isAuthenticated()
+                  && resource.data.userId == request.auth.uid;
+      
+      // System creates achievements (via Cloud Function)
+      allow create: if false;
+      
+      // No updates or deletes
+      allow update, delete: if false;
+    }
+    
+    // ==================== CURRENCIES COLLECTION (Admin Only) ====================
+    
+    match /currencies/{currencyId} {
+      // Anyone can read active currencies
+      allow read: if resource.data.active == true || (isAuthenticated() && isAdmin());
+      
+      // Only admins can write
+      allow create, update, delete: if isAuthenticated() && isAdmin();
+    }
+  }
+}

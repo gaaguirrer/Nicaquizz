@@ -75,60 +75,8 @@ export default function Account() {
       </header>
 
       <div className="flex min-h-screen pt-20">
-        
-        {/* SideNavBar (Desktop Only) */}
-        <aside className="hidden lg:flex fixed left-0 top-0 h-full z-40 w-64 flex-col pt-24 bg-[#fefccf] border-r font-headline text-sm font-semibold">
-          <div className="px-6 mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-[#ffdf90] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[#1d1d03]">cooking</span>
-              </div>
-              <div>
-                <p className="text-[#154212]">Mi Diario</p>
-                <p className="text-[10px] text-stone-500 font-normal">Nivel: Maestro Achiote</p>
-              </div>
-            </div>
-          </div>
-          <nav className="flex flex-col gap-1 pr-4">
-            <Link
-              to="/categories"
-              className="flex items-center gap-3 px-6 py-3 text-stone-500 hover:translate-x-1 transition-transform"
-            >
-              <span className="material-symbols-outlined">explore</span>
-              Explorar
-            </Link>
-            <Link
-              to="/challenge"
-              className="flex items-center gap-3 px-6 py-3 text-stone-500 hover:translate-x-1 transition-transform"
-            >
-              <span className="material-symbols-outlined">swords</span>
-              Batallas
-            </Link>
-            <Link
-              to="/history"
-              className="flex items-center gap-3 px-6 py-3 text-stone-500 hover:translate-x-1 transition-transform"
-            >
-              <span className="material-symbols-outlined">insights</span>
-              Progreso
-            </Link>
-            <Link
-              to="/account"
-              className="flex items-center gap-3 px-6 py-3 text-[#154212] bg-[#2D5A27]/10 rounded-r-full"
-            >
-              <span className="material-symbols-outlined">settings</span>
-              Configuración
-            </Link>
-          </nav>
-          <div className="mt-auto px-6 pb-10">
-            <button className="w-full bg-[#2D5A27] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg active:opacity-80 transition-opacity">
-              <span className="material-symbols-outlined">add</span>
-              Nueva Trivia
-            </button>
-          </div>
-        </aside>
-
         {/* Main Content Canvas */}
-        <main className="flex-1 lg:ml-64 p-6 md:p-12 max-w-5xl mx-auto">
+        <main className="flex-1 p-6 md:p-12 max-w-5xl mx-auto">
           
           {/* Header */}
           <header className="mb-12">

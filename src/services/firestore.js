@@ -26,7 +26,8 @@ export const INGREDIENTES = {
   CERDO: 'cerdo',         // Carne de cerdo
   ARROZ: 'arroz',         // Arroz
   PAPA: 'papa',           // Papa
-  CHILE: 'chile'          // Chile (antes aceituna)
+  CHILE: 'chile',         // Chile (antes aceituna)
+  ACHIOTE: 'achiote'      // Achiote - moneda especial de retos diarios
 };
 
 export const INGREDIENTE_NAMES = {
@@ -34,7 +35,8 @@ export const INGREDIENTE_NAMES = {
   [INGREDIENTES.CERDO]: 'Carne de Cerdo',
   [INGREDIENTES.ARROZ]: 'Arroz',
   [INGREDIENTES.PAPA]: 'Papa',
-  [INGREDIENTES.CHILE]: 'Chile'
+  [INGREDIENTES.CHILE]: 'Chile',
+  [INGREDIENTES.ACHIOTE]: 'Achiote'
 };
 
 // Categorías con sus ingredientes asignados
@@ -42,7 +44,8 @@ export const CATEGORIA_INGREDIENTE = {
   historia: INGREDIENTES.MASA,
   matematicas: INGREDIENTES.CERDO,
   geografia: INGREDIENTES.ARROZ,
-  ciencias: INGREDIENTES.PAPA
+  ciencias: INGREDIENTES.PAPA,
+  retos: INGREDIENTES.ACHIOTE  // Categoría de retos diarios
 };
 
 // Tipos de items de la tienda (solo mejoras y trabas)
@@ -159,14 +162,22 @@ export async function checkNacatamalComplete(uid) {
   try {
     const userRef = doc(db, 'users', uid);
     const docSnap = await getDoc(userRef);
-    
+
     if (!docSnap.exists()) return false;
-    
+
     const coins = docSnap.data().coins || {};
-    const isComplete = Object.values(INGREDIENTES).every(
+    // Solo los 5 ingredientes base del nacatamal (no incluye achiote)
+    const ingredientesBase = [
+      INGREDIENTES.MASA,
+      INGREDIENTES.CERDO,
+      INGREDIENTES.ARROZ,
+      INGREDIENTES.PAPA,
+      INGREDIENTES.CHILE
+    ];
+    const isComplete = ingredientesBase.every(
       ing => (coins[ing] || 0) >= 1
     );
-    
+
     return isComplete;
   } catch (error) {
     console.error('Error al verificar nacatamal:', error);
@@ -264,7 +275,15 @@ export async function purchaseItem(uid, itemId, currentPrice, itemType) {
     // Verificar si tiene un nacatamal completo
     const userSnap = await getDoc(userRef);
     const coins = userSnap.data().coins || {};
-    const hasNacatamal = Object.values(INGREDIENTES).every(
+    // Solo los 5 ingredientes base del nacatamal (no incluye achiote)
+    const ingredientesBase = [
+      INGREDIENTES.MASA,
+      INGREDIENTES.CERDO,
+      INGREDIENTES.ARROZ,
+      INGREDIENTES.PAPA,
+      INGREDIENTES.CHILE
+    ];
+    const hasNacatamal = ingredientesBase.every(
       ing => (coins[ing] || 0) >= 1
     );
 
@@ -1768,7 +1787,7 @@ export async function purchasePowerUp(uid, powerUpType, cost) {
   try {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
-    
+
     if (!userSnap.exists()) {
       throw new Error('Usuario no encontrado');
     }
@@ -1792,6 +1811,388 @@ export async function purchasePowerUp(uid, powerUpType, cost) {
   } catch (error) {
     console.error('Error al comprar mejora:', error);
     throw error;
+  }
+}
+
+// ==================== ESTADÍSTICAS DIARIAS ====================
+
+/**
+ * Obtiene la fecha actual en formato YYYY-MM-DD (zona horaria local)
+ */
+export function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Obtiene las estadísticas de nacatamales completados hoy
+ */
+export async function getTodayNacatamalesCount() {
+  try {
+    const today = getTodayDateString();
+    const docRef = doc(db, 'dailyStats', today);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return docSnap.data().nacatamalesCompleted || 0;
+    }
+    return 0;
+  } catch (error) {
+    console.error('Error al obtener estadísticas diarias:', error);
+    return 0;
+  }
+}
+
+/**
+ * Incrementa el contador de nacatamales completados hoy
+ */
+export async function incrementDailyNacatamales() {
+  try {
+    const today = getTodayDateString();
+    const docRef = doc(db, 'dailyStats', today);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      // Crear documento si no existe
+      await addDoc(collection(db, 'dailyStats'), {
+        date: today,
+        nacatamalesCompleted: 1,
+        activeUsers: [],
+        createdAt: serverTimestamp()
+      });
+    } else {
+      await updateDoc(docRef, {
+        nacatamalesCompleted: increment(1)
+      });
+    }
+  } catch (error) {
+    console.error('Error al incrementar nacatamales:', error);
+    throw error;
+  }
+}
+
+/**
+ * Registra usuario activo hoy
+ */
+export async function registerActiveUserToday(uid) {
+  try {
+    const today = getTodayDateString();
+    const docRef = doc(db, 'dailyStats', today);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      await addDoc(collection(db, 'dailyStats'), {
+        date: today,
+        nacatamalesCompleted: 0,
+        activeUsers: [uid],
+        createdAt: serverTimestamp()
+      });
+    } else {
+      const activeUsers = docSnap.data().activeUsers || [];
+      if (!activeUsers.includes(uid)) {
+        await updateDoc(docRef, {
+          activeUsers: arrayUnion(uid)
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error al registrar usuario activo:', error);
+  }
+}
+
+/**
+ * Obtiene usuarios activos hoy (para mostrar avatares)
+ */
+export async function getTodayActiveUsers(limitCount = 4) {
+  try {
+    const today = getTodayDateString();
+    const docRef = doc(db, 'dailyStats', today);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) return [];
+
+    const activeUserIds = docSnap.data().activeUsers || [];
+    if (activeUserIds.length === 0) return [];
+
+    // Obtener perfiles de usuarios activos
+    const usersRef = collection(db, 'users');
+    const snapshot = await getDocs(usersRef);
+    
+    const activeUsers = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(user => activeUserIds.includes(user.id))
+      .slice(0, limitCount);
+
+    return activeUsers;
+  } catch (error) {
+    console.error('Error al obtener usuarios activos:', error);
+    return [];
+  }
+}
+
+// ==================== RETOS DIARIOS ====================
+
+/**
+ * Obtiene el reto diario actual
+ */
+export async function getTodayChallenge() {
+  try {
+    const today = getTodayDateString();
+    const docRef = doc(db, 'dailyChallenges', today);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error al obtener reto diario:', error);
+    return null;
+  }
+}
+
+/**
+ * Verifica si un usuario ya completó el reto diario
+ */
+export async function hasUserCompletedDailyChallenge(uid) {
+  try {
+    const today = getTodayDateString();
+    const docRef = doc(db, 'dailyChallenges', today);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) return false;
+
+    const completedBy = docSnap.data().completedBy || [];
+    return completedBy.includes(uid);
+  } catch (error) {
+    console.error('Error al verificar reto completado:', error);
+    return false;
+  }
+}
+
+/**
+ * Marca el reto diario como completado por un usuario
+ */
+export async function completeDailyChallenge(uid) {
+  try {
+    const today = getTodayDateString();
+    const docRef = doc(db, 'dailyChallenges', today);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      throw new Error('No hay reto diario disponible');
+    }
+
+    const completedBy = docSnap.data().completedBy || [];
+    if (completedBy.includes(uid)) {
+      throw new Error('Ya completaste el reto diario hoy');
+    }
+
+    await updateDoc(docRef, {
+      completedBy: arrayUnion(uid)
+    });
+
+    // Recompensar con achiote
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      [`coins.${INGREDIENTES.ACHIOTE}`]: increment(1),
+      'stats.dailyChallengesCompleted': increment(1)
+    });
+  } catch (error) {
+    console.error('Error al completar reto diario:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene el número de usuarios que completaron el reto diario hoy
+ */
+export async function getDailyChallengeCompletedCount() {
+  try {
+    const today = getTodayDateString();
+    const docRef = doc(db, 'dailyChallenges', today);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) return 0;
+
+    const completedBy = docSnap.data().completedBy || [];
+    return completedBy.length;
+  } catch (error) {
+    console.error('Error al obtener contador de retos:', error);
+    return 0;
+  }
+}
+
+// ==================== SISTEMA DE CANJE ====================
+
+/**
+ * Canjea achiote por otra moneda (excepto nacatamal)
+ * 1 achiote = 1 moneda de tu elección
+ */
+export async function exchangeAchiote(uid, targetIngredient, amount = 1) {
+  try {
+    // Validar que el ingrediente objetivo no sea nacatamal completo
+    const validIngredients = Object.values(INGREDIENTES).filter(
+      ing => ing !== INGREDIENTES.ACHIOTE
+    );
+
+    if (!validIngredients.includes(targetIngredient)) {
+      throw new Error('Ingrediente no válido para canje');
+    }
+
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    const userData = userSnap.data();
+    const achioteCount = userData.coins?.[INGREDIENTES.ACHIOTE] || 0;
+
+    if (achioteCount < amount) {
+      throw new Error('No tienes suficientes achiotes para canjear');
+    }
+
+    // Realizar el canje
+    await updateDoc(userRef, {
+      [`coins.${INGREDIENTES.ACHIOTE}`]: increment(-amount),
+      [`coins.${targetIngredient}`]: increment(amount),
+      'stats.totalExchanges': increment(1)
+    });
+
+    // Registrar transacción
+    await addDoc(collection(db, 'exchanges'), {
+      userId: uid,
+      type: TRADE_TYPES.EXCHANGE,
+      from: INGREDIENTES.ACHIOTE,
+      to: targetIngredient,
+      amount,
+      createdAt: serverTimestamp()
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error al canjear achiote:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene el historial de canjes de un usuario
+ */
+export async function getUserExchangeHistory(uid, limitCount = 10) {
+  try {
+    const exchangesRef = collection(db, 'exchanges');
+    const q = query(
+      exchangesRef,
+      where('userId', '==', uid),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error al obtener historial de canjes:', error);
+    return [];
+  }
+}
+
+// ==================== HISTORIAL DE BATALLAS ====================
+
+/**
+ * Obtiene el historial de batallas de un usuario
+ */
+export async function getUserBattleHistory(uid, limitCount = 20) {
+  try {
+    const historyRef = collection(db, 'battleHistory');
+    const q = query(
+      historyRef,
+      where('userId', '==', uid),
+      orderBy('completedAt', 'desc'),
+      limit(limitCount)
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error al obtener historial de batallas:', error);
+    return [];
+  }
+}
+
+/**
+ * Registra una batalla completada
+ */
+export async function recordBattle(data) {
+  try {
+    const historyRef = collection(db, 'battleHistory');
+    await addDoc(historyRef, {
+      userId: data.userId,
+      opponentId: data.opponentId || 'ia',
+      opponentName: data.opponentName || 'IA',
+      categoryId: data.categoryId,
+      categoryName: data.categoryName || data.categoryId,
+      userScore: data.userScore,
+      opponentScore: data.opponentScore,
+      userCorrect: data.userCorrect,
+      opponentCorrect: data.opponentCorrect,
+      totalQuestions: data.totalQuestions,
+      won: data.won,
+      earnedCoins: data.earnedCoins || {},
+      completedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error al registrar batalla:', error);
+  }
+}
+
+/**
+ * Obtiene estadísticas de batallas de un usuario
+ */
+export async function getBattleStats(uid) {
+  try {
+    const history = await getUserBattleHistory(uid, 100);
+    
+    const stats = {
+      totalBattles: history.length,
+      wins: history.filter(h => h.won).length,
+      losses: history.filter(h => !h.won).length,
+      winRate: 0,
+      averageScore: 0,
+      favoriteCategory: null
+    };
+
+    if (history.length > 0) {
+      stats.winRate = Math.round((stats.wins / history.length) * 100);
+      stats.averageScore = Math.round(
+        history.reduce((sum, h) => sum + (h.userScore || 0), 0) / history.length
+      );
+
+      // Categoría favorita
+      const categoryCount = {};
+      history.forEach(h => {
+        const cat = h.categoryId || 'general';
+        categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+      });
+      stats.favoriteCategory = Object.entries(categoryCount)
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || 'general';
+    }
+
+    return stats;
+  } catch (error) {
+    console.error('Error al obtener estadísticas de batallas:', error);
+    return null;
   }
 }
 

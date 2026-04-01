@@ -1,3 +1,9 @@
+/**
+ * ToastContext.jsx - Notificaciones Globales
+ * 
+ * Métodos: success, error, info, warning, handleError
+ * handleError muestra mensaje amigable y opcionalmente loguea en consola.
+ */
 import { createContext, useContext, useState, useCallback } from 'react';
 
 const ToastContext = createContext(null);
@@ -31,6 +37,15 @@ export function ToastProvider({ children }) {
     error: (message, duration) => addToast(message, 'error', duration),
     info: (message, duration) => addToast(message, 'info', duration),
     warning: (message, duration) => addToast(message, 'warning', duration),
+    // handleError: Maneja errores de forma amigable
+    handleError: (error, userMessage = 'Ocurrió un error', shouldLog = true) => {
+      // Opcionalmente loguear el error completo para debugging
+      if (shouldLog) {
+        console.error(`${userMessage}:`, error);
+      }
+      // Mostrar mensaje amigable al usuario
+      addToast(userMessage, 'error', 6000);
+    }
   };
 
   // Iconos para cada tipo de notificación

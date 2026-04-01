@@ -77,91 +77,56 @@ export default function Ranking() {
     jugador.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  // Ingredientes para sidebar
-  const ingredientes = [
-    { tipo: 'masa', nombre: 'Masa', icono: 'bakery_dining', activo: false },
-    { tipo: 'cerdo', nombre: 'Cerdo', icono: 'restaurant', activo: true },
-    { tipo: 'arroz', nombre: 'Arroz', icono: 'grass', activo: false },
-    { tipo: 'papa', nombre: 'Papa', icono: 'breakfast_dining', activo: false },
-    { tipo: 'chile', nombre: 'Chile', icono: 'hot_tub', activo: false }
-  ];
-
   return (
     <div className="min-h-screen bg-[#fefccf] text-[#1d1d03] font-body">
       
       {/* TopNavBar */}
-      <header className="bg-[#fefccf] border-none shadow-[0_8px_32px_rgba(29,29,3,0.08)] sticky top-0 z-50">
-        <div className="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
-          <Link to="/" className="text-3xl font-black text-[#154212] tracking-tighter font-headline">
-            NicaQuizz
-          </Link>
+      <header className="bg-[#fefccf] border-b-2 border-[#154212]/10 shadow-[0_8px_32px_rgba(29,29,3,0.08)] sticky top-0 z-50">
+        <div className="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-4xl">🇳🇮</span>
+            <div>
+              <h1 className="text-2xl font-headline font-black text-[#154212] uppercase tracking-tight">NicaQuizz</h1>
+              <p className="text-[10px] text-[#154212]/60 font-medium">El Nacatamal del Conocimiento</p>
+            </div>
+          </div>
           <nav className="hidden md:flex space-x-8 items-center">
-            <Link to="/categories" className="text-stone-600 font-medium font-headline hover:text-[#755b00] transition-colors duration-300">
+            <Link to="/categories" className="text-[#154212]/70 hover:text-[#154212] transition-colors font-headline font-bold tracking-tight">
               Categorías
             </Link>
             <Link to="/ranking" className="text-[#154212] border-b-4 border-[#154212] pb-1 font-bold tracking-tight font-headline hover:text-[#755b00] transition-colors duration-300">
               Ranking
             </Link>
-            <Link to="/shop" className="text-stone-600 font-medium font-headline hover:text-[#755b00] transition-colors duration-300">
+            <Link to="/shop" className="text-[#154212]/70 hover:text-[#154212] transition-colors font-headline font-bold tracking-tight">
               Tienda
             </Link>
           </nav>
-          <div className="flex items-center space-x-4">
-            <Link
-              to={currentUser ? '/profile' : '/auth'}
-              className="scale-95 active:scale-90 transition-transform text-[#154212]"
-            >
-              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
-            </Link>
+          <div className="flex items-center gap-4">
+            <button className="p-2 hover:bg-[#154212]/5 rounded-lg transition-all scale-95 active:scale-90 duration-200">
+              <span className="material-symbols-outlined text-[#2D5A27]">notifications</span>
+            </button>
+            {currentUser ? (
+              <Link
+                to="/play"
+                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
+                <span className="font-bold">Mi Cuenta</span>
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>login</span>
+                <span className="font-bold">Iniciar Sesión</span>
+              </Link>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="max-w-screen-2xl mx-auto flex min-h-screen">
-        
-        {/* SideNavBar - Mi Despensa (Desktop Only) */}
-        <aside className="hidden lg:flex flex-col h-screen w-72 bg-[#fefccf] sticky top-[72px] py-8 space-y-4 shadow-xl border-r border-[#154212]/5">
-          <div className="px-8 mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-[#fccc38] flex items-center justify-center border-2 border-[#154212]">
-                <span className="material-symbols-outlined text-[#1d1d03]">skillet</span>
-              </div>
-              <div>
-                <p className="font-headline font-bold text-[#154212] leading-tight">Mi Despensa</p>
-                <p className="text-[10px] text-[#154212]/60 uppercase tracking-widest">Ingredientes recolectados</p>
-              </div>
-            </div>
-          </div>
-          <nav className="flex flex-col space-y-1 flex-grow">
-            {ingredientes.map((ing) => (
-              <Link
-                key={ing.tipo}
-                to="/shop"
-                className={`${
-                  ing.activo
-                    ? 'bg-[#755b00] text-white rounded-full mx-4 my-1'
-                    : 'text-[#154212] opacity-70 hover:bg-[#154212]/10'
-                } px-6 py-3 font-headline text-sm uppercase tracking-widest transition-all flex items-center gap-4 ${
-                  !ing.activo && 'translate-x-1'
-                }`}
-              >
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: ing.activo ? "'FILL' 1" : "'FILL' 0" }}>
-                  {ing.icono}
-                </span>
-                {ing.nombre}
-              </Link>
-            ))}
-          </nav>
-          <div className="mt-auto px-6 pb-8">
-            <Link
-              to="/shop"
-              className="w-full py-4 bg-[#154212] text-white font-headline font-bold rounded-xl shadow-lg hover:bg-[#2D5A27] transition-all active:scale-95 block text-center"
-            >
-              Cocinar Nacatamal
-            </Link>
-          </div>
-        </aside>
-
+      <div className="max-w-screen-2xl mx-auto">
         {/* Content Canvas */}
         <section className="flex-1 px-8 py-12 md:px-16 overflow-x-hidden">
           

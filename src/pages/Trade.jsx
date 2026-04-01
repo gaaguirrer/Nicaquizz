@@ -94,56 +94,8 @@ export default function Trade() {
         </div>
       </header>
 
-      {/* SideNavBar Shell (Desktop) */}
-      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 bg-[#fefccf] flex flex-col p-4 z-40 hidden md:flex font-headline font-medium transition-all">
-        <div className="mb-8 px-4 pt-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#fccc38] flex items-center justify-center overflow-hidden">
-              <img
-                alt="Artisanal profile avatar"
-                className="w-full h-full object-cover"
-                src="https://i.pravatar.cc/100?img=1"
-              />
-            </div>
-            <div>
-              <p className="text-[#154212] font-black text-sm">Mi Perfil</p>
-              <p className="text-stone-500 text-xs">Maestro del Trueque</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-1">
-          <Link
-            to="/trade"
-            className="flex items-center gap-3 px-4 py-3 bg-[#154212] text-[#fefccf] rounded-r-full my-1 transition-transform"
-          >
-            <span className="material-symbols-outlined">storefront</span>
-            <span>Mercado</span>
-          </Link>
-          <Link
-            to="/friends"
-            className="flex items-center gap-3 px-4 py-3 text-stone-700 hover:bg-stone-200/50 my-1 hover:translate-x-1 transition-transform"
-          >
-            <span className="material-symbols-outlined">group</span>
-            <span>Amigos</span>
-          </Link>
-          <Link
-            to="/challenge"
-            className="flex items-center gap-3 px-4 py-3 text-stone-700 hover:bg-stone-200/50 my-1 hover:translate-x-1 transition-transform"
-          >
-            <span className="material-symbols-outlined">military_tech</span>
-            <span>Desafíos</span>
-          </Link>
-        </nav>
-        <div className="mt-auto p-4">
-          <button className="w-full py-3 bg-[#154212] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
-            <span className="material-symbols-outlined">add_circle</span>
-            Nuevo Intercambio
-          </button>
-        </div>
-      </aside>
-
       {/* Main Content Canvas */}
-      <main className="pt-24 pb-12 px-6 md:ml-64">
+      <main className="pt-24 pb-12 px-6">
         <div className="max-w-6xl mx-auto space-y-10">
           
           {/* Header Section with Asymmetry */}

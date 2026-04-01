@@ -1,68 +1,22 @@
 /**
- * PlayMode.jsx - Dashboard / Selección de Categorías de NicaQuizz
- * "Mi Alacena del Saber" - Diseño Claro Modern Mestizaje
+ * PlayMode.jsx - Dashboard Principal
  * 
- * Características:
- * - Header Sticky con nivel y avatar
- * - Sidebar "Mi Alacena" derecha fija con ingredientes
- * - Grid de Categorías tipo Bento
- * - Footer con enlaces
+ * Página principal después de login.
+ * Muestra categorías, reto diario y retos pendientes.
+ * 
+ * El diseño es responsive: 1 columna en móvil, 2 en desktop.
  */
 
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchCategories, CATEGORIA_INGREDIENTE } from '../services/firestore';
+import { useToast } from '../context/ToastContext';
+import { fetchCategories, CATEGORIA_INGREDIENTE, getTodayChallenge, hasUserCompletedDailyChallenge } from '../services/firestore';
 import { getUserChallenges, getAvailableChallengers } from '../services/firestore';
 import UserMenu from '../components/UserMenu';
 
-// Iconos SVG para ingredientes
-const IngredientIcon = ({ type, className = '' }) => {
-  const icons = {
-    masa: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="32" rx="12" ry="20" fill="#F4C430" stroke="#D4A017" strokeWidth="2"/>
-        <circle cx="28" cy="28" r="3" fill="#E8B830"/>
-        <circle cx="36" cy="28" r="3" fill="#E8B830"/>
-        <circle cx="28" cy="36" r="3" fill="#E8B830"/>
-        <circle cx="36" cy="36" r="3" fill="#E8B830"/>
-        <circle cx="32" cy="32" r="3" fill="#E8B830"/>
-      </svg>
-    ),
-    cerdo: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <rect x="16" y="20" width="32" height="24" rx="4" fill="#FF6B6B" stroke="#CC5555" strokeWidth="2"/>
-        <rect x="20" y="24" width="10" height="8" rx="2" fill="#FF8888"/>
-        <rect x="34" y="24" width="10" height="8" rx="2" fill="#FF8888"/>
-      </svg>
-    ),
-    arroz: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="40" rx="24" ry="12" fill="#F5F5F5" stroke="#DDD" strokeWidth="2"/>
-        <ellipse cx="24" cy="38" rx="4" ry="8" fill="#FFF" transform="rotate(-30 24 38)"/>
-        <ellipse cx="32" cy="36" rx="4" ry="8" fill="#FFF"/>
-        <ellipse cx="40" cy="38" rx="4" ry="8" fill="#FFF" transform="rotate(30 40 38)"/>
-      </svg>
-    ),
-    papa: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="34" rx="20" ry="16" fill="#C9A959" stroke="#9A7B4A" strokeWidth="2"/>
-        <circle cx="26" cy="30" r="3" fill="#8B6F47"/>
-        <circle cx="38" cy="32" r="2" fill="#8B6F47"/>
-        <circle cx="32" cy="40" r="2" fill="#8B6F47"/>
-      </svg>
-    ),
-    chile: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <path d="M32 12 Q36 8 40 12 L44 18 Q48 24 44 34 Q40 46 34 52 Q28 56 26 52 Q24 48 28 40 Q32 30 34 22 Q36 16 32 12Z" fill="#E74C3C" stroke="#C0392B" strokeWidth="2"/>
-        <path d="M32 12 Q30 8 28 10 L26 14 Q28 16 32 12Z" fill="#27AE60"/>
-      </svg>
-    )
-  };
-  return icons[type] || null;
-};
-
-// Configuración de categorías con colores
+// Configuración de categorías
+// Colores, íconos e ingredientes de cada categoría
 const CATEGORY_CONFIG = {
   historia: {
     nombre: 'Historia',
@@ -103,14 +57,27 @@ const CATEGORY_CONFIG = {
     color: 'bg-[#8B5FBF]',
     colorClaro: 'bg-[#8B5FBF]/5',
     borde: 'border-[#8B5FBF]/20'
+  },
+  retos: {
+    nombre: 'Retos',
+    subtitulo: 'Desafío Diario',
+    ingrediente: 'achiote',
+    ingredienteNombre: 'Achiote',
+    icono: 'emoji_events',
+    color: 'bg-[#D9531E]',
+    colorClaro: 'bg-[#D9531E]/5',
+    borde: 'border-[#D9531E]/20'
   }
 };
 
 export default function PlayMode() {
   const { currentUser, userData } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const [categorias, setCategorias] = useState([]);
   const [retosPendientes, setRetosPendientes] = useState([]);
+  const [dailyChallenge, setDailyChallenge] = useState(null);
+  const [dailyChallengeCompleted, setDailyChallengeCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -124,7 +91,18 @@ export default function PlayMode() {
 
       const retos = await getUserChallenges(currentUser.uid, 'pending');
       setRetosPendientes(retos);
+
+      // Cargar reto diario
+      const challenge = await getTodayChallenge();
+      setDailyChallenge(challenge);
+
+      // Verificar si ya completó el reto diario
+      if (challenge) {
+        const completed = await hasUserCompletedDailyChallenge(currentUser.uid);
+        setDailyChallengeCompleted(completed);
+      }
     } catch (error) {
+      toast.error('Error al cargar datos del juego');
       console.error('Error al cargar datos del juego:', error);
     } finally {
       setLoading(false);
@@ -134,15 +112,6 @@ export default function PlayMode() {
   // Calcular estadísticas de usuario
   const monedas = userData?.coins || {};
   const stats = userData?.stats || {};
-  
-  const totalIngredientes = Object.values(monedas).reduce((sum, val) => sum + (val || 0), 0);
-  const nacatamalesCount = Math.min(
-    monedas.masa || 0,
-    monedas.cerdo || 0,
-    monedas.arroz || 0,
-    monedas.papa || 0,
-    monedas.chile || 0
-  );
 
   const nivel = Math.floor((stats.totalQuestionsAnswered || 0) / 10) + 1;
   const tituloNivel = nivel >= 50 ? 'Maestro Supremo' : nivel >= 20 ? 'Maestro Cocinero' : nivel >= 10 ? 'Chef Experto' : 'Aprendiz';
@@ -158,14 +127,6 @@ export default function PlayMode() {
 
     return { ...catStats, precision };
   }
-
-  const ingredientes = [
-    { tipo: 'masa', nombre: 'Masa', cantidad: monedas.masa || 0, icono: 'bakery_dining', color: 'bg-[#F4C430]' },
-    { tipo: 'cerdo', nombre: 'Cerdo', cantidad: monedas.cerdo || 0, icono: 'lunch_dining', color: 'bg-[#FF6B6B]' },
-    { tipo: 'arroz', nombre: 'Arroz', cantidad: monedas.arroz || 0, icono: 'rice_bowl', color: 'bg-[#F5F5F5]' },
-    { tipo: 'papa', nombre: 'Papa', cantidad: monedas.papa || 0, icono: 'egg', color: 'bg-[#C9A959]' },
-    { tipo: 'chile', nombre: 'Chile', cantidad: monedas.chile || 0, icono: 'local_fire_department', color: 'bg-[#E74C3C]' }
-  ];
 
   return (
     <div className="min-h-screen bg-[#fefccf] text-[#1d1d03] font-body">
@@ -263,6 +224,72 @@ export default function PlayMode() {
             </section>
           )}
 
+          {/* Reto Diario - Achiote */}
+          {!loading && dailyChallenge && (
+            <section className="mb-8">
+              <div className={`group relative bg-gradient-to-br from-[#D9531E] to-[#B93B0E] rounded-xl p-8 transition-all hover:translate-y-[-4px] shadow-lg overflow-hidden border border-[#D9531E]/20 ${dailyChallengeCompleted ? 'opacity-75' : ''}`}>
+                {/* Icono decorativo de fondo */}
+                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <span className="material-symbols-outlined text-9xl text-white">emoji_events</span>
+                </div>
+
+                <div className="relative z-10">
+                  {/* Header de tarjeta */}
+                  <div className="flex justify-between items-start mb-6">
+                    <span className="bg-white text-[#D9531E] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
+                      {dailyChallengeCompleted ? 'Completado' : 'Disponible'}
+                    </span>
+                    <div className="flex flex-col items-end">
+                      <span className="text-xs font-bold text-white/90 mb-1">Recompensa:</span>
+                      <div className="flex items-center gap-2 bg-white/20 backdrop-blur text-white px-3 py-1.5 rounded-lg border border-white/30">
+                        <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                        <span className="text-sm font-bold uppercase">1 Achiote</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Título y descripción */}
+                  <h3 className="text-2xl font-headline font-bold text-white mb-2">
+                    Desafío Diario
+                  </h3>
+                  <p className="text-white/90 text-sm mb-6">
+                    {dailyChallengeCompleted 
+                      ? '¡Felicidades! Ya completaste el reto de hoy. Vuelve mañana.' 
+                      : `Responde correctamente ${dailyChallenge.totalQuestions || 10} preguntas de diversas categorías y gana un Achiote.`}
+                  </p>
+
+                  {/* Progreso */}
+                  {dailyChallengeCompleted && (
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-2 text-white">
+                        <span className="material-symbols-outlined">check_circle</span>
+                        <span className="font-bold">¡Reto completado!</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botón Jugar */}
+                  <Link
+                    to={dailyChallengeCompleted ? '/play' : `/questions/retos`}
+                    className={`w-full bg-white hover:bg-white/90 text-[#D9531E] font-headline font-bold py-4 rounded-xl transition-all active:scale-[0.98] shadow-sm hover:shadow-md flex items-center justify-center gap-2 ${dailyChallengeCompleted ? 'cursor-default pointer-events-none' : ''}`}
+                  >
+                    {dailyChallengeCompleted ? (
+                      <>
+                        <span className="material-symbols-outlined">check_circle</span>
+                        Ya Completado
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined">play_arrow</span>
+                        Jugar Reto Diario
+                      </>
+                    )}
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Categories Bento Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {categorias.map((categoria) => {
@@ -273,7 +300,7 @@ export default function PlayMode() {
               return (
                 <div
                   key={categoria.id}
-                  className="group relative bg-white rounded-xl p-8 transition-all hover:translate-y-[-4px] shadow-sm overflow-hidden border border-[#154212]/5 hover:shadow-[0_8px_32px_rgba(29,29,3,0.08)]"}
+                  className="group relative bg-white rounded-xl p-8 transition-all hover:translate-y-[-4px] shadow-sm overflow-hidden border border-[#154212]/5 hover:shadow-[0_8px_32px_rgba(29,29,3,0.08)]"
                 >
                   {/* Icono decorativo de fondo */}
                   <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -365,77 +392,6 @@ export default function PlayMode() {
             </div>
           </footer>
         </main>
-
-        {/* Sidebar "Mi Alacena" */}
-        <aside className="fixed right-0 top-20 h-[calc(100vh-5rem)] w-72 bg-[#fefccf]/90 backdrop-blur-xl flex flex-col p-6 border-l border-[#154212]/5 shadow-xl overflow-y-auto">
-          
-          {/* Header de Alacena */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#2D5A27] flex items-center justify-center text-white font-bold shadow-lg">
-                <span className="material-symbols-outlined">kitchen</span>
-              </div>
-              <div>
-                <h4 className="text-[#154212] font-bold font-headline">Mi Alacena</h4>
-                <p className="text-xs text-[#755b00] font-medium uppercase tracking-wider">Ingredientes recolectados</p>
-              </div>
-            </div>
-            
-            {/* Progreso Total */}
-            <div className="p-4 bg-[#2D5A27]/5 rounded-xl border border-[#2D5A27]/10">
-              <div className="flex justify-between text-xs mb-2 font-bold text-[#154212]">
-                <span>Total ingredientes</span>
-                <span>{totalIngredientes}/25</span>
-              </div>
-              <div className="h-2 bg-[#e6e5b9] rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-[#2D5A27] rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min((totalIngredientes / 25) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Lista de Ingredientes */}
-          <nav className="flex-grow space-y-2">
-            {ingredientes.map((ing) => (
-              <div
-                key={ing.tipo}
-                className={`${ing.color} text-[#1d1d03] rounded-xl px-4 py-3 flex items-center gap-3 transition-transform hover:translate-x-[-4px] shadow-sm ${
-                  ing.cantidad === 0 ? 'opacity-50 grayscale' : ''
-                }`}
-              >
-                <span className="material-symbols-outlined text-xl">{ing.icono}</span>
-                <span className="font-headline text-sm font-bold flex-grow">{ing.nombre}</span>
-                <span className="font-bold text-xs bg-white/50 px-2 py-1 rounded">
-                  {ing.cantidad}
-                </span>
-              </div>
-            ))}
-          </nav>
-
-          {/* Nacatamales Completados */}
-          <div className="mt-4 p-4 bg-gradient-to-r from-[#F4C430]/30 to-[#ffdf90]/30 rounded-xl border-2 border-[#F4C430]/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F4C430] to-[#DAA520] flex items-center justify-center shadow-md">
-                <span className="material-symbols-outlined text-white text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>payments</span>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-[#154212] uppercase">Nacatamales</p>
-                <p className="text-2xl font-headline font-bold text-[#154212]">{nacatamalesCount}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Botón Ver Recetario */}
-          <Link
-            to="/shop"
-            className="mt-4 bg-[#2D5A27] hover:bg-[#154212] text-white font-headline font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
-          >
-            <span className="material-symbols-outlined">menu_book</span>
-            Ver Recetario
-          </Link>
-        </aside>
       </div>
     </div>
   );

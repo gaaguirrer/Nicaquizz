@@ -1,145 +1,100 @@
 /**
- * Shop.jsx - La Pulpería de Mejoras de NicaQuizz
- * "Ingredientes Secretos del Sabor"
+ * ShopConnected.jsx - Tienda y Casa de Cambio
  * 
- * Características:
- * - Power-Ups: Saltador, Reloj de Arena, Comodín
- * - Desafíos: Reloj Rápido, Pregunta Difícil, Sin Pistas
- * - Sidebar Mi Despensa (inventario)
- * - CTA final para jugar
+ * - Compra de mejoras y trabas con nacatamales
+ * - Canje de achiotes por ingredientes (1:1)
+ * 
+ * Para comprar se requiere 1 nacatamal completo.
+ * El canje de achiote es 1:1 (1 achiote = 1 ingrediente).
  */
 
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import {
   getShopItems,
   purchaseItem,
-  INGREDIENTES,
-  ITEM_TYPES,
-  getUserWallet,
   exchangeAchiote,
-  getUserExchangeHistory
+  getUserExchangeHistory,
+  getUserWallet,
+  INGREDIENTES,
+  ITEM_TYPES
 } from '../services/firestore';
+import TopNavBar from '../components/TopNavBar';
 
-// Power-Ups disponibles
-const POWER_UPS = [
-  {
-    id: 'saltador',
-    nombre: 'Saltador',
-    descripcion: 'Salta esa pregunta que te quema como el achiote puro. No pierdes puntos ni racha.',
-    icono: 'step_over',
-    precio: 150,
-    color: 'bg-[#154212]'
-  },
-  {
-    id: 'reloj_arena',
-    nombre: 'Reloj de Arena',
-    descripcion: 'Añade 30 segundos extras. Tómate tu tiempo para amarrar bien ese conocimiento.',
-    icono: 'hourglass_empty',
-    precio: 200,
-    color: 'bg-[#154212]'
-  },
-  {
-    id: 'comodin',
-    nombre: 'Comodín',
-    descripcion: 'Elimina dos respuestas incorrectas. Como quitarle la cáscara al ajo, más fácil imposible.',
-    icono: 'style',
-    precio: 350,
-    color: 'bg-[#154212]'
-  }
-];
-
-// Desafíos disponibles
-const DESAFIOS = [
-  {
-    id: 'reloj_rapido',
-    nombre: 'Reloj Rápido',
-    descripcion: 'El tiempo corre al doble. Solo para expertos que no parpadean al cocinar.',
-    icono: 'timer_off',
-    recompensa: 500,
-    multiplicador: 'x2',
-    color: 'border-[#79001c]'
-  },
-  {
-    id: 'pregunta_dificil',
-    nombre: 'Pregunta Difícil',
-    descripcion: 'Asegura que tu próxima tanda de preguntas sea de nivel "Abuela Nicaragüense".',
-    icono: 'psychology_alt',
-    recompensa: 750,
-    multiplicador: 'x3',
-    color: 'border-[#79001c]'
-  },
-  {
-    id: 'sin_pistas',
-    nombre: 'Sin Pistas',
-    descripcion: 'Desactiva todos tus power-ups activos para un reto de honor puro.',
-    icono: 'visibility_off',
-    recompensa: 300,
-    multiplicador: 'x1.5',
-    color: 'border-[#79001c]'
-  }
-];
-
-// Power-Ups y Desafíos se cargan desde Firestore
-
-export default function Shop() {
+export default function ShopConnected() {
   const { currentUser, userData } = useAuth();
-  const navigate = useNavigate();
   const toast = useToast();
-  const [loading, setLoading] = useState(false);
-  const [nacatamales, setNacatamales] = useState(1250);
+  
+  // Estados
+  const [shopItems, setShopItems] = useState([]);
+  const [wallet, setWallet] = useState({ coins: {}, mejoras: {}, trabas: {} });
+  const [exchangeHistory, setExchangeHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Estados para canje
   const [exchangeAmount, setExchangeAmount] = useState(1);
   const [targetIngredient, setTargetIngredient] = useState('masa');
-  const [exchangeHistory, setExchangeHistory] = useState([]);
 
-  const monedas = userData?.coins || {};
-  const achioteCount = monedas.achiote || 0;
+  // Cargar datos
+  useEffect(() => {
+    loadData();
+  }, [currentUser]);
 
-  // Ingredientes disponibles para canje
-  const exchangeOptions = [
-    { id: 'masa', nombre: 'Masa', icono: 'bakery_dining', color: 'bg-[#F4C430]' },
-    { id: 'cerdo', nombre: 'Cerdo', icono: 'lunch_dining', color: 'bg-[#FF6B6B]' },
-    { id: 'arroz', nombre: 'Arroz', icono: 'rice_bowl', color: 'bg-[#F5F5F5]' },
-    { id: 'papa', nombre: 'Papa', icono: 'egg', color: 'bg-[#C9A959]' },
-    { id: 'chile', nombre: 'Chile', icono: 'local_fire_department', color: 'bg-[#E74C3C]' }
-  ];
+  async function loadData() {
+    if (!currentUser) return;
+    
+    try {
+      setLoading(true);
+      
+      // Cargar items de la tienda
+      const items = await getShopItems();
+      setShopItems(items);
 
+      // Cargar monedero del usuario
+      const walletData = await getUserWallet(currentUser.uid);
+      setWallet(walletData);
+
+      // Cargar historial de canjes
+      const history = await getUserExchangeHistory(currentUser.uid, 5);
+      setExchangeHistory(history);
+    } catch (error) {
+      console.error('Error al cargar tienda:', error);
+      toast.error('Error al cargar la tienda');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Comprar item
   async function handleComprar(item) {
-    setLoading(true);
-    try {
-      // Simulación de compra
-      await new Promise(resolve => setTimeout(resolve, 500));
-      toast.success(`¡${item.nombre} comprado exitosamente!`);
-      setNacatamales(prev => prev - item.precio);
-    } catch (error) {
-      toast.error('Error al comprar');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDesafio(desafio) {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      toast.success(`¡Desafío ${desafio.nombre} activado!`);
-      navigate('/categories');
-    } catch (error) {
-      toast.error('Error al activar desafío');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleExchange(e) {
-    e.preventDefault();
     if (!currentUser) {
-      toast.error('Debes iniciar sesión para canjear');
+      toast.error('Debes iniciar sesión');
       return;
     }
 
+    setLoading(true);
+    try {
+      await purchaseItem(currentUser.uid, item.id, item.currentPrice, item.type);
+      toast.success(`¡${item.name} comprado exitosamente!`);
+      loadData(); // Recargar datos
+    } catch (error) {
+      toast.error(error.message || 'Error al comprar item');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Canjear achiote
+  async function handleExchange(e) {
+    e.preventDefault();
+    if (!currentUser) {
+      toast.error('Debes iniciar sesión');
+      return;
+    }
+
+    const achioteCount = wallet.coins?.[INGREDIENTES.ACHIOTE] || 0;
     if (achioteCount < exchangeAmount) {
       toast.error('No tienes suficientes achiotes');
       return;
@@ -148,11 +103,9 @@ export default function Shop() {
     setLoading(true);
     try {
       await exchangeAchiote(currentUser.uid, targetIngredient, exchangeAmount);
-      toast.success(`¡Canjeaste ${exchangeAmount} achiote(s) por ${exchangeAmount} ${targetIngredient}!`);
+      toast.success(`¡Canjeaste ${exchangeAmount} achiote(s) por ${exchangeAmount} ${getIngredientName(targetIngredient)}!`);
       setExchangeAmount(1);
-      // Recargar historial
-      const history = await getUserExchangeHistory(currentUser.uid, 5);
-      setExchangeHistory(history);
+      loadData();
     } catch (error) {
       toast.error(error.message || 'Error al canjear');
     } finally {
@@ -160,63 +113,77 @@ export default function Shop() {
     }
   }
 
+  function getIngredientName(key) {
+    const names = {
+      masa: 'Masa',
+      cerdo: 'Cerdo',
+      arroz: 'Arroz',
+      papa: 'Papa',
+      chile: 'Chile'
+    };
+    return names[key] || key;
+  }
+
+  function getIngredientIcon(key) {
+    const icons = {
+      masa: 'bakery_dining',
+      cerdo: 'lunch_dining',
+      arroz: 'rice_bowl',
+      papa: 'egg',
+      chile: 'local_fire_department',
+      achiote: 'auto_awesome'
+    };
+    return icons[key] || 'circle';
+  }
+
+  function getIngredientColor(key) {
+    const colors = {
+      masa: 'bg-[#F4C430]',
+      cerdo: 'bg-[#FF6B6B]',
+      arroz: 'bg-[#F5F5F5]',
+      papa: 'bg-[#C9A959]',
+      chile: 'bg-[#E74C3C]',
+      achiote: 'bg-[#D9531E]'
+    };
+    return colors[key] || 'bg-gray-400';
+  }
+
+  // Calcular nacatamales completados
+  const monedas = wallet.coins || {};
+  const nacatamalesCount = Math.min(
+    monedas.masa || 0,
+    monedas.cerdo || 0,
+    monedas.arroz || 0,
+    monedas.papa || 0,
+    monedas.chile || 0
+  );
+
+  const achioteCount = monedas.achiote || 0;
+
+  // Filtrar items por tipo
+  const mejoras = shopItems.filter(item => item.type === ITEM_TYPES.MEJORA);
+  const trabas = shopItems.filter(item => item.type === ITEM_TYPES.TRABA);
+
+  // Opciones para canje
+  const exchangeOptions = [
+    { id: 'masa', nombre: 'Masa', icono: 'bakery_dining', color: 'bg-[#F4C430]' },
+    { id: 'cerdo', nombre: 'Cerdo', icono: 'lunch_dining', color: 'bg-[#FF6B6B]' },
+    { id: 'arroz', nombre: 'Arroz', icono: 'rice_bowl', color: 'bg-[#F5F5F5]' },
+    { id: 'papa', nombre: 'Papa', icono: 'egg', color: 'bg-[#C9A959]' },
+    { id: 'chile', nombre: 'Chile', icono: 'local_fire_department', color: 'bg-[#E74C3C]' }
+  ];
+
   return (
     <div className="min-h-screen bg-[#fefccf] text-[#1d1d03] font-body flex flex-col">
-      
       {/* TopNavBar */}
-      <nav className="bg-[#fefccf] border-b-2 border-[#154212]/10 sticky top-0 z-50 shadow-[0_8px_32px_rgba(29,29,3,0.08)]">
-        <div className="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
-            <span className="text-4xl">🇳🇮</span>
-            <div>
-              <h1 className="text-2xl font-headline font-black text-[#154212] uppercase tracking-tight">NicaQuizz</h1>
-              <p className="text-[10px] text-[#154212]/60 font-medium">El Nacatamal del Conocimiento</p>
-            </div>
-          </div>
-          <div className="hidden md:flex items-center gap-8 font-headline font-bold tracking-tight">
-            <Link to="/categories" className="text-[#154212]/70 hover:text-[#154212] transition-colors">
-              Categorías
-            </Link>
-            <Link to="/ranking" className="text-[#154212]/70 hover:text-[#154212] transition-colors">
-              Ranking
-            </Link>
-            <Link to="/shop" className="text-[#154212] border-b-4 border-[#154212] pb-1 font-headline font-bold tracking-tight">
-              Tienda
-            </Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-[#154212]/5 rounded-lg transition-all scale-95 active:scale-90 duration-200">
-              <span className="material-symbols-outlined text-[#2D5A27]">notifications</span>
-            </button>
-            {currentUser ? (
-              <>
-                <div className="bg-[#fccc38] text-[#1d1d03] px-4 py-2 rounded-full flex items-center gap-2 font-bold shadow-sm">
-                  <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>bakery_dining</span>
-                  <span>{nacatamales.toLocaleString()} Nacatamales</span>
-                </div>
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
-                >
-                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
-                  <span className="font-bold">Mi Cuenta</span>
-                </Link>
-              </>
-            ) : (
-              <Link
-                to="/auth"
-                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
-              >
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>login</span>
-                <span className="font-bold">Iniciar Sesión</span>
-              </Link>
-            )}
-          </div>
-        </div>
-      </nav>
+      <TopNavBar 
+        currentPage="shop" 
+        showNacatamales={true} 
+        nacatamalesCount={nacatamalesCount} 
+      />
 
       <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-12">
-        
+
         {/* Header */}
         <header className="mb-16 relative">
           <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#154212]/5 rounded-full blur-3xl"></div>
@@ -229,85 +196,6 @@ export default function Shop() {
             </p>
           </div>
         </header>
-
-        {/* Power-Ups Section */}
-        <section className="mb-20">
-          <div className="flex items-center gap-4 mb-8">
-            <span className="material-symbols-outlined text-[#154212] text-3xl">flash_on</span>
-            <h2 className="text-3xl font-bold font-headline text-[#154212] tracking-tight">
-              Power-Ups: Ingredientes Secretos
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {POWER_UPS.map((item) => (
-              <div
-                key={item.id}
-                className="bg-[#f8f6c9] p-8 rounded-xl transition-all hover:translate-y-[-4px] hover:shadow-[0_20px_40px_rgba(21,66,18,0.12)] flex flex-col h-full border-b-4 border-transparent hover:border-[#154212]"
-              >
-                <div className="w-16 h-16 bg-[#2D5A27]/10 rounded-2xl flex items-center justify-center mb-6">
-                  <span className="material-symbols-outlined text-[#154212] text-4xl">{item.icono}</span>
-                </div>
-                <h3 className="text-2xl font-bold font-headline mb-2">{item.nombre}</h3>
-                <p className="text-[#42493e] mb-8 flex-grow">{item.descripcion}</p>
-                <div className="flex items-center justify-between mt-auto">
-                  <div className="flex items-center gap-1 text-[#755b00] font-bold">
-                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bakery_dining</span>
-                    <span>{item.precio}</span>
-                  </div>
-                  <button
-                    onClick={() => handleComprar(item)}
-                    disabled={loading || nacatamales < item.precio}
-                    className="bg-[#2D5A27] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#154212] hover:text-white transition-all scale-95 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Comprar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Desafíos Section */}
-        <section>
-          <div className="flex items-center gap-4 mb-8">
-            <span className="material-symbols-outlined text-[#79001c] text-3xl">local_fire_department</span>
-            <h2 className="text-3xl font-bold font-headline text-[#79001c] tracking-tight">
-              Desafíos: Chile Picante
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {DESAFIOS.map((desafio) => (
-              <div
-                key={desafio.id}
-                className={`bg-[#eceabe] p-8 rounded-xl transition-all border-l-4 ${desafio.color} flex flex-col h-full`}
-              >
-                <div className="w-12 h-12 bg-[#79001c]/10 rounded-full flex items-center justify-center mb-6">
-                  <span className="material-symbols-outlined text-[#79001c] text-2xl">{desafio.icono}</span>
-                </div>
-                <h3 className="text-xl font-bold font-headline mb-2">{desafio.nombre}</h3>
-                <p className="text-[#42493e] text-sm mb-6 flex-grow">{desafio.descripcion}</p>
-                <div className="flex items-center justify-between mt-auto">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase tracking-widest text-[#42493e] font-bold">
-                      Recompensa {desafio.multiplicador}
-                    </span>
-                    <div className="flex items-center gap-1 text-[#755b00] font-bold">
-                      <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bakery_dining</span>
-                      <span>{desafio.recompensa}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDesafio(desafio)}
-                    disabled={loading}
-                    className="bg-[#79001c] text-white px-5 py-2.5 rounded-lg font-bold hover:bg-[#a40029] transition-all scale-95 active:scale-90"
-                  >
-                    Comprar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* Casa de Cambio - Achiote */}
         <section className="mb-20">
@@ -380,7 +268,7 @@ export default function Shop() {
                   <div className="bg-white/60 rounded-xl p-4 border border-[#154212]/10">
                     <p className="text-sm text-[#42493e] mb-1">Recibirás:</p>
                     <p className="text-xl font-black text-[#154212]">
-                      {exchangeAmount} {targetIngredient === 'chile' ? 'Chile' : targetIngredient === 'papa' ? 'Papa' : targetIngredient === 'arroz' ? 'Arroz' : targetIngredient === 'cerdo' ? 'Cerdo' : 'Masa'}
+                      {exchangeAmount} {getIngredientName(targetIngredient)}
                     </p>
                   </div>
 
@@ -440,7 +328,7 @@ export default function Shop() {
                         <div key={exchange.id} className="flex items-center justify-between text-xs p-2 bg-[#154212]/5 rounded-lg">
                           <span className="text-[#D9531E] font-bold">-1 Achiote</span>
                           <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                          <span className="font-bold text-[#154212]">+1 {exchange.to}</span>
+                          <span className="font-bold text-[#154212]">+1 {getIngredientName(exchange.to)}</span>
                         </div>
                       ))}
                     </div>
@@ -449,6 +337,104 @@ export default function Shop() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* Power-Ups Section */}
+        <section className="mb-20">
+          <div className="flex items-center gap-4 mb-8">
+            <span className="material-symbols-outlined text-[#154212] text-3xl">flash_on</span>
+            <h2 className="text-3xl font-bold font-headline text-[#154212] tracking-tight">
+              Power-Ups: Ingredientes Secretos
+            </h2>
+          </div>
+          
+          {loading ? (
+            <div className="text-center py-12">
+              <span className="material-symbols-outlined text-4xl text-[#154212]/40 animate-spin inline-block">progress_activity</span>
+              <p className="text-[#42493e]/60 mt-4">Cargando items...</p>
+            </div>
+          ) : mejoras.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl border-2 border-[#154212]/5">
+              <p className="text-[#42493e]/60">No hay power-ups disponibles en este momento</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {mejoras.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-[#f8f6c9] p-8 rounded-xl transition-all hover:translate-y-[-4px] hover:shadow-[0_20px_40px_rgba(21,66,18,0.12)] flex flex-col h-full border-b-4 border-transparent hover:border-[#154212]"
+                >
+                  <div className="w-16 h-16 bg-[#2D5A27]/10 rounded-2xl flex items-center justify-center mb-6">
+                    <span className="material-symbols-outlined text-[#154212] text-4xl">{item.icon || 'star'}</span>
+                  </div>
+                  <h3 className="text-2xl font-bold font-headline mb-2">{item.name}</h3>
+                  <p className="text-[#42493e] mb-8 flex-grow">{item.description || 'Mejora tu rendimiento en el juego'}</p>
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className="flex items-center gap-1 text-[#755b00] font-bold">
+                      <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bakery_dining</span>
+                      <span>{item.currentPrice || item.basePrice}</span>
+                    </div>
+                    <button
+                      onClick={() => handleComprar(item)}
+                      disabled={loading || nacatamalesCount < 1}
+                      className="bg-[#2D5A27] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#154212] hover:text-white transition-all scale-95 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {nacatamalesCount < 1 ? 'Sin nacatamales' : 'Comprar'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Desafíos Section (Trabas) */}
+        <section className="mb-20">
+          <div className="flex items-center gap-4 mb-8">
+            <span className="material-symbols-outlined text-[#79001c] text-3xl">local_fire_department</span>
+            <h2 className="text-3xl font-bold font-headline text-[#79001c] tracking-tight">
+              Desafíos: Chile Picante
+            </h2>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-12">
+              <span className="material-symbols-outlined text-4xl text-[#154212]/40 animate-spin inline-block">progress_activity</span>
+              <p className="text-[#42493e]/60 mt-4">Cargando items...</p>
+            </div>
+          ) : trabas.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl border-2 border-[#154212]/5">
+              <p className="text-[#42493e]/60">No hay desafíos disponibles en este momento</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {trabas.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-[#ffdad9] p-8 rounded-xl transition-all hover:translate-y-[-4px] hover:shadow-[0_20px_40px_rgba(121,0,28,0.12)] flex flex-col h-full border-b-4 border-transparent hover:border-[#79001c]"
+                >
+                  <div className="w-16 h-16 bg-[#79001c]/10 rounded-2xl flex items-center justify-center mb-6">
+                    <span className="material-symbols-outlined text-[#79001c] text-4xl">{item.icon || 'fire'}</span>
+                  </div>
+                  <h3 className="text-2xl font-bold font-headline mb-2">{item.name}</h3>
+                  <p className="text-[#42493e] mb-8 flex-grow">{item.description || 'Aumenta la dificultad para mayor recompensa'}</p>
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className="flex items-center gap-1 text-[#79001c] font-bold">
+                      <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+                      <span>{item.reward || 'Bonus'}</span>
+                    </div>
+                    <button
+                      onClick={() => handleComprar(item)}
+                      disabled={loading || nacatamalesCount < 1}
+                      className="bg-[#79001c] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#a40029] hover:text-white transition-all scale-95 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {nacatamalesCount < 1 ? 'Sin nacatamales' : 'Aceptar'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* CTA Section */}

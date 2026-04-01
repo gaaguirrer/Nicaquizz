@@ -1,21 +1,44 @@
 /**
- * Landing.jsx - Página de Aterrizaje de NicaQuizz
- * "Maestro del Nacatamal" - Diseño Comic Style
+ * Landing.jsx - Página de Aterrizaje
  * 
- * Características:
- * - Hero con título grande y CTAs estilo cómic
- * - Prueba Social (Nacatamales hoy + avatares)
- * - Tu Receta al Éxito (3 pasos con cards comic)
- * - Inventario Cultural (ingredientes)
- * - CTA Final
- * - Footer
+ * Primera página para usuarios no autenticados.
+ * Muestra estadísticas en tiempo real de nacatamales completados.
  */
 
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getTodayNacatamalesCount, getTodayActiveUsers, registerActiveUserToday } from '../services/firestore';
 
 export default function Landing() {
   const { currentUser } = useAuth();
+  const [nacatamalesCount, setNacatamalesCount] = useState(1284); // Valor por defecto
+  const [activeUsers, setActiveUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDailyStats() {
+      try {
+        // Registrar usuario activo si está logueado
+        if (currentUser) {
+          await registerActiveUserToday(currentUser.uid);
+        }
+
+        // Cargar estadísticas
+        const count = await getTodayNacatamalesCount();
+        const users = await getTodayActiveUsers(4);
+
+        setNacatamalesCount(count > 0 ? count : 1284); // Usar dato real o default
+        setActiveUsers(users);
+      } catch (error) {
+        console.error('Error al cargar estadísticas:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDailyStats();
+  }, [currentUser]);
 
   return (
     <div className="min-h-screen bg-[#FFFDD0] text-[#1d1d03] font-body">
@@ -23,8 +46,12 @@ export default function Landing() {
       {/* TopNavBar */}
       <nav className="bg-[#fefccf] border-b-2 border-[#154212]/10 sticky top-0 z-50 shadow-[0_8px_32px_rgba(29,29,3,0.08)]">
         <div className="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
-          <div className="text-2xl font-black text-[#154212] uppercase font-headline tracking-tight">
-            NicaQuizz
+          <div className="flex items-center gap-2">
+            <span className="text-4xl">🇳🇮</span>
+            <div>
+              <h1 className="text-2xl font-headline font-black text-[#154212] uppercase tracking-tight">NicaQuizz</h1>
+              <p className="text-[10px] text-[#154212]/60 font-medium">El Nacatamal del Conocimiento</p>
+            </div>
           </div>
           <div className="hidden md:flex items-center gap-8 font-headline font-bold tracking-tight">
             <Link to="/categories" className="text-[#154212]/70 hover:text-[#154212] transition-colors">
@@ -38,16 +65,26 @@ export default function Landing() {
             </Link>
           </div>
           <div className="flex items-center gap-4">
-            <button className="p-2 text-[#154212] hover:bg-[#154212]/5 rounded-lg transition-all scale-95 active:scale-90 duration-200">
-              <span className="material-symbols-outlined">notifications</span>
+            <button className="p-2 hover:bg-[#154212]/5 rounded-lg transition-all scale-95 active:scale-90 duration-200">
+              <span className="material-symbols-outlined text-[#2D5A27]">notifications</span>
             </button>
-            <Link
-              to={currentUser ? '/play' : '/auth'}
-              className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
-            >
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
-              <span className="font-bold">{currentUser ? 'Mi Cuenta' : 'Ingresar'}</span>
-            </Link>
+            {currentUser ? (
+              <Link
+                to="/play"
+                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
+                <span className="font-bold">Mi Cuenta</span>
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>login</span>
+                <span className="font-bold">Iniciar Sesión</span>
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -111,29 +148,44 @@ export default function Landing() {
               </div>
               <div>
                 <p className="text-[#F4C430] font-bold tracking-widest text-sm mb-1 uppercase">Sabor Comunitario</p>
-                <h4 className="text-4xl font-game text-white tracking-wider">1,284 Nacatamales completados hoy</h4>
+                <h4 className="text-4xl font-game text-white tracking-wider">
+                  {loading ? 'Cargando...' : `${nacatamalesCount.toLocaleString()} Nacatamales completados hoy`}
+                </h4>
               </div>
             </div>
             <div className="flex items-center gap-6">
               <div className="flex -space-x-4">
-                <img
-                  alt="Jugador"
-                  className="w-14 h-14 rounded-full border-4 border-black object-cover"
-                  src="https://i.pravatar.cc/100?img=1"
-                />
-                <img
-                  alt="Jugador"
-                  className="w-14 h-14 rounded-full border-4 border-black object-cover"
-                  src="https://i.pravatar.cc/100?img=2"
-                />
-                <img
-                  alt="Jugador"
-                  className="w-14 h-14 rounded-full border-4 border-black object-cover"
-                  src="https://i.pravatar.cc/100?img=3"
-                />
-                <div className="w-14 h-14 rounded-full border-4 border-black bg-[#C41E3A] text-white flex items-center justify-center font-bold text-sm">
-                  +4k
-                </div>
+                {activeUsers.length > 0 ? (
+                  activeUsers.map((user, index) => (
+                    <img
+                      key={user.id || index}
+                      alt={user.displayName || 'Jugador'}
+                      className="w-14 h-14 rounded-full border-4 border-black object-cover"
+                      src={user.photoURL || `https://i.pravatar.cc/100?img=${index + 1}`}
+                    />
+                  ))
+                ) : (
+                  <>
+                    <img
+                      alt="Jugador"
+                      className="w-14 h-14 rounded-full border-4 border-black object-cover"
+                      src="https://i.pravatar.cc/100?img=1"
+                    />
+                    <img
+                      alt="Jugador"
+                      className="w-14 h-14 rounded-full border-4 border-black object-cover"
+                      src="https://i.pravatar.cc/100?img=2"
+                    />
+                    <img
+                      alt="Jugador"
+                      className="w-14 h-14 rounded-full border-4 border-black object-cover"
+                      src="https://i.pravatar.cc/100?img=3"
+                    />
+                    <div className="w-14 h-14 rounded-full border-4 border-black bg-[#C41E3A] text-white flex items-center justify-center font-bold text-sm">
+                      +4k
+                    </div>
+                  </>
+                )}
               </div>
               <p className="text-white/80 italic font-medium hidden lg:block">
                 "¡El sabor de la victoria es <br/>mejor que el del achiote!"

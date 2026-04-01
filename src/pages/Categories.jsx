@@ -10,7 +10,7 @@ const MaterialIcon = ({ name, className = '' }) => (
 export default function Categories() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { userData } = useAuth();
+  const { currentUser, userData } = useAuth();
 
   useEffect(() => {
     loadCategories();
@@ -31,99 +31,112 @@ export default function Categories() {
   function getCategoryStats(categoryId) {
     const catStats = userData?.stats?.categoryStats?.[categoryId];
     if (!catStats) return { total: 0, correct: 0, accuracy: 0 };
-    
-    const accuracy = catStats.total > 0 
-      ? Math.round((catStats.correct / catStats.total) * 100) 
+
+    const accuracy = catStats.total > 0
+      ? Math.round((catStats.correct / catStats.total) * 100)
       : 0;
-    
+
     return { ...catStats, accuracy };
   }
 
   return (
-    <div className="min-h-screen pb-12">
-      {/* Header */}
-      <header className="bg-gray-900/80 backdrop-blur-md shadow-lg border-b border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+    <div className="min-h-screen bg-[#fefccf] text-[#1d1d03] font-body">
+      {/* TopNavBar */}
+      <nav className="bg-[#fefccf] border-b-2 border-[#154212]/10 sticky top-0 z-50 shadow-[0_8px_32px_rgba(29,29,3,0.08)]">
+        <div className="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-4xl">🇳🇮</span>
+            <div>
+              <h1 className="text-2xl font-headline font-black text-[#154212] uppercase tracking-tight">NicaQuizz</h1>
+              <p className="text-[10px] text-[#154212]/60 font-medium">El Nacatamal del Conocimiento</p>
+            </div>
+          </div>
+          <div className="hidden md:flex items-center gap-8 font-headline font-bold tracking-tight">
+            <Link to="/categories" className="text-[#154212] border-b-4 border-[#154212] pb-1 transition-colors">
+              Categorías
+            </Link>
+            <Link to="/ranking" className="text-[#154212]/70 hover:text-[#154212] transition-colors">
+              Ranking
+            </Link>
+            <Link to="/shop" className="text-[#154212]/70 hover:text-[#154212] transition-colors">
+              Tienda
+            </Link>
+          </div>
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold gradient-text"><span className="text-3xl">��</span> NicaQuizz</h1>
-            <nav className="hidden md:flex gap-4">
-              <Link to="/dashboard" className="text-gray-400 hover:text-indigo-400 font-medium transition-colors">
-                Inicio
+            <button className="p-2 hover:bg-[#154212]/5 rounded-lg transition-all scale-95 active:scale-90 duration-200">
+              <span className="material-symbols-outlined text-[#2D5A27]">notifications</span>
+            </button>
+            {currentUser ? (
+              <Link
+                to="/play"
+                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
+                <span className="font-bold">Mi Cuenta</span>
               </Link>
-              <Link to="/categories" className="text-indigo-400 font-medium transition-colors">
-                Categorías
+            ) : (
+              <Link
+                to="/auth"
+                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>login</span>
+                <span className="font-bold">Iniciar Sesión</span>
               </Link>
-              <Link to="/ranking" className="text-gray-400 hover:text-indigo-400 font-medium transition-colors">
-                Ranking
-              </Link>
-              <Link to="/propose" className="text-gray-400 hover:text-indigo-400 font-medium transition-colors">
-                Proponer Pregunta
-              </Link>
-              {userData?.isAdmin && (
-                <Link to="/admin" className="text-red-400 hover:text-red-300 font-medium transition-colors">
-                  Panel Admin
-                </Link>
-              )}
-            </nav>
+            )}
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Contenido */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-white mb-8 gradient-text">Categorías</h1>
+      <main className="max-w-7xl mx-auto px-8 py-12">
+        <h1 className="text-5xl font-headline font-black text-[#154212] mb-4 tracking-tight">Categorías</h1>
+        <p className="text-xl text-[#42493e] mb-12 max-w-2xl">
+          Elige tu especialidad culinaria y domina el arte del Nacatamal Digital
+        </p>
 
         {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-pulse text-gray-400">Cargando categorías...</div>
+          <div className="text-center py-12">
+            <div className="animate-pulse text-[#42493e] text-lg">Cargando categorías...</div>
           </div>
         ) : categories.length === 0 ? (
-          <div className="card text-center text-gray-400">
-            No hay categorías disponibles aún.
+          <div className="bg-white rounded-2xl p-12 text-center border-2 border-[#154212]/10">
+            <p className="text-[#42493e] text-lg">No hay categorías disponibles aún.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {categories.map((category) => {
               const stats = getCategoryStats(category.id);
               return (
                 <Link
                   key={category.id}
                   to={`/questions/${category.id}`}
-                  className="card hover-lift"
+                  className="bg-white rounded-2xl p-8 transition-all hover:translate-y-[-4px] hover:shadow-[0_20px_40px_rgba(21,66,18,0.12)] border-2 border-[#154212]/5 hover:border-[#154212]/20"
                 >
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-3">
-                      <MaterialIcon name="menu_book" className="text-indigo-400 text-3xl" />
-                      <h3 className="text-xl font-bold text-indigo-400">
-                        {category.name}
-                      </h3>
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-14 h-14 bg-[#2D5A27]/10 rounded-xl flex items-center justify-center">
+                      <MaterialIcon name="menu_book" className="text-[#2D5A27] text-3xl" />
                     </div>
-                    <span className="bg-indigo-900/50 text-indigo-300 px-3 py-1 rounded-full text-sm font-medium border border-indigo-700/50">
-                      {stats.total} preguntas
-                    </span>
+                    <h3 className="text-2xl font-headline font-bold text-[#154212]">
+                      {category.name}
+                    </h3>
                   </div>
-                  <p className="text-gray-400 mb-4">
+                  <p className="text-[#42493e] mb-6">
                     {category.description}
                   </p>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">
-                      Aciertos: {stats.correct}/{stats.total}
-                    </span>
-                    <span className={`font-bold ${
-                      stats.accuracy >= 70 ? 'text-green-400' :
-                      stats.accuracy >= 40 ? 'text-yellow-400' : 'text-red-400'
-                    }`}>
-                      {stats.accuracy}%
-                    </span>
-                  </div>
-                  <div className="mt-2 bg-gray-700 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-2 rounded-full transition-all ${
-                        stats.accuracy >= 70 ? 'bg-green-500' :
-                        stats.accuracy >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${stats.accuracy}%` }}
-                    />
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm font-bold">
+                      <span className="text-[#42493e]">Progreso</span>
+                      <span className="text-[#2D5A27]">{stats.accuracy}%</span>
+                    </div>
+                    <div className="h-2 bg-[#e6e5b9] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#2D5A27] rounded-full transition-all"
+                        style={{ width: `${stats.accuracy}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-[#42493e]/60">
+                      <span>Aciertos: {stats.correct}/{stats.total}</span>
+                    </div>
                   </div>
                 </Link>
               );
@@ -131,8 +144,30 @@ export default function Categories() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="bg-[#154212] w-full mt-auto py-12 flex flex-col items-center gap-6 px-4 text-center">
+        <div className="font-headline font-bold text-[#F4C430] text-xl tracking-tight">
+          NicaQuizz
+        </div>
+        <div className="flex flex-wrap justify-center gap-8 font-body text-xs tracking-wide text-[#fefccf]/80">
+          <a href="#" className="hover:text-[#F4C430] transition-colors">
+            Sobre el Proyecto
+          </a>
+          <a href="#" className="hover:text-[#F4C430] transition-colors">
+            Contacto
+          </a>
+          <a href="#" className="hover:text-[#F4C430] transition-colors">
+            Términos
+          </a>
+          <a href="#" className="hover:text-[#F4C430] transition-colors">
+            Privacidad
+          </a>
+        </div>
+        <p className="text-[#fefccf]/60 text-xs tracking-wide">
+          © 2025 NicaQuizz - El Arte del Nacatamal Digital
+        </p>
+      </footer>
     </div>
   );
 }
-
-

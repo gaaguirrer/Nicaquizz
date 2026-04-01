@@ -1,77 +1,69 @@
 /**
- * Button - Componente de Botón estilo cómic para NicaQuizz
- * Con sombras pronunciadas y esquinas redondeadas
+ * Button.jsx - Botón Reutilizable
+ * 
+ * Variantes: primary, secondary, outline, ghost, danger
+ * Tamaños: sm, md, lg, xl
  */
 
 export default function Button({
   children,
-  onClick,
-  type = 'button',
-  variant = 'primary',
-  size = 'md',
+  variant = 'primary', // primary, secondary, outline, ghost, danger
+  size = 'md', // sm, md, lg, xl
   disabled = false,
   loading = false,
+  leftIcon,
+  rightIcon,
+  onClick,
+  type = 'button',
   fullWidth = false,
-  icon,
-  className = '',
-  ...props
+  className = ''
 }) {
-  // Configuración de variantes
   const variants = {
-    primary: 'btn-primary',
-    secondary: 'btn-secondary',
-    comic: 'btn-comic',
-    success: 'bg-green-600 hover:bg-green-500 text-white shadow-comic',
-    danger: 'bg-nica-rojo hover:bg-red-600 text-white shadow-comic',
-    ghost: 'bg-transparent hover:bg-gray-700/50 text-gray-300 border border-gray-600'
+    primary: 'bg-[#2D5A27] text-white hover:bg-[#154212] focus:ring-[#2D5A27]',
+    secondary: 'bg-[#F4C430] text-[#1d1d03] hover:bg-[#ffdf90] focus:ring-[#F4C430]',
+    outline: 'border-2 border-[#2D5A27] text-[#2D5A27] hover:bg-[#2D5A27]/10 focus:ring-[#2D5A27]',
+    ghost: 'text-[#2D5A27] hover:bg-[#2D5A27]/10 focus:ring-[#2D5A27]',
+    danger: 'bg-[#C41E3A] text-white hover:bg-[#a40029] focus:ring-[#C41E3A]'
   };
 
-  // Configuración de tamaños
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-6 py-3 text-base',
-    lg: 'px-8 py-4 text-lg',
-    xl: 'px-10 py-5 text-xl'
+    sm: 'px-4 py-2 text-sm gap-1.5',
+    md: 'px-6 py-3 text-base gap-2',
+    lg: 'px-8 py-4 text-lg gap-2.5',
+    xl: 'px-10 py-5 text-xl gap-3'
   };
-
-  const baseClasses = `
-    font-display font-bold rounded-xl
-    transition-all duration-300
-    flex items-center justify-center gap-2
-    disabled:opacity-50 disabled:cursor-not-allowed
-    active:scale-95 hover:-translate-y-0.5
-    ${variants[variant] || variants.primary}
-    ${sizes[size] || sizes.md}
-    ${fullWidth ? 'w-full' : ''}
-    ${className}
-  `.trim();
 
   return (
     <button
       type={type}
-      onClick={onClick}
       disabled={disabled || loading}
-      className={baseClasses}
-      {...props}
+      onClick={onClick}
+      className={`
+        inline-flex items-center justify-center
+        rounded-xl font-bold font-headline
+        transition-all duration-200
+        disabled:opacity-50 disabled:cursor-not-allowed
+        focus:outline-none focus:ring-2 focus:ring-offset-2
+        active:scale-[0.98]
+        ${variants[variant]}
+        ${sizes[size]}
+        ${fullWidth ? 'w-full' : ''}
+        ${className}
+      `}
     >
-      {loading && (
-        <span className="material-symbols-rounded animate-spin">progress_activity</span>
+      {loading ? (
+        <span className="material-symbols-outlined animate-spin">progress_activity</span>
+      ) : (
+        <>
+          {leftIcon && (
+            <span className="material-symbols-outlined">{leftIcon}</span>
+          )}
+          {children}
+          {rightIcon && (
+            <span className="material-symbols-outlined">{rightIcon}</span>
+          )}
+        </>
       )}
-      {icon && !loading && (
-        <span className="material-symbols-rounded">{icon}</span>
-      )}
-      {children}
     </button>
-  );
-}
-
-/**
- * ButtonGroup - Grupo de botones relacionados
- */
-export function ButtonGroup({ children, className = '' }) {
-  return (
-    <div className={`flex flex-wrap gap-2 ${className}`}>
-      {children}
-    </div>
   );
 }

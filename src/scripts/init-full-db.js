@@ -325,7 +325,7 @@ async function inicializarDepartamentos() {
   const existingSnapshot = await getDocs(existingQuery);
   
   if (!existingSnapshot.empty) {
-    console.log('✅ Los departamentos ya existen. Saltando...');
+    console.log('✓ Los departamentos ya existen. Saltando...');
     return;
   }
   
@@ -342,7 +342,7 @@ async function inicializarDepartamentos() {
     }
   }
   
-  console.log('✅ Departamentos inicializados correctamente');
+  console.log('✓ Departamentos inicializados correctamente');
 }
 
 async function inicializarLideresRegionales() {
@@ -370,29 +370,29 @@ async function inicializarLideresRegionales() {
     }
   }
   
-  console.log('✅ Líderes regionales inicializados correctamente');
+  console.log('✓ Líderes regionales inicializados correctamente');
 }
 
 async function inicializarNotificacionesEjemplo() {
-  console.log('\n🔔 Inicializando Notificaciones de Ejemplo...');
-  
+  console.log('\nℹ Inicializando Notificaciones de Ejemplo...');
+
   // Las notificaciones se crean por usuario, esto es solo para testing
-  console.log('ℹ️ Las notificaciones se generan dinámicamente por usuario');
-  console.log('✅ Sistema de notificaciones listo');
+  console.log('ℹ Las notificaciones se generan dinámicamente por usuario');
+  console.log('✓ Sistema de notificaciones listo');
 }
 
 async function verificarShopItems() {
   console.log('\n🛒 Verificando Items de Tienda...');
-  
+
   const existingQuery = query(collection(db, 'shopItems'));
   const existingSnapshot = await getDocs(existingQuery);
-  
+
   if (existingSnapshot.empty) {
-    console.log('⚠️ No hay items en la tienda. Ejecuta init-db.js primero');
+    console.log('⚠ No hay items en la tienda. Ejecuta init-db.js primero');
     return;
   }
-  
-  console.log(`✅ ${existingSnapshot.size} items en tienda verificados`);
+
+  console.log(`✓ ${existingSnapshot.size} items en tienda verificados`);
 }
 
 async function verificarCategorias() {
@@ -402,11 +402,11 @@ async function verificarCategorias() {
   const existingSnapshot = await getDocs(existingQuery);
   
   if (existingSnapshot.empty) {
-    console.log('⚠️ No hay categorías. Ejecuta init-db.js primero');
+    console.log('⚠ No hay categorías. Ejecuta init-db.js primero');
     return;
   }
   
-  console.log(`✅ ${existingSnapshot.size} categorías verificadas`);
+  console.log(`✓ ${existingSnapshot.size} categorías verificadas`);
 }
 
 // ==================== FUNCIÓN PRINCIPAL ====================
@@ -416,26 +416,26 @@ async function main() {
   console.log('🇳🇮  NicaQuizz - Inicialización de Base de Datos');
   console.log('   "Mestizaje Digital"');
   console.log('='.repeat(60));
-  
+
   try {
     await inicializarDepartamentos();
     await inicializarLideresRegionales();
     await inicializarNotificacionesEjemplo();
     await verificarShopItems();
     await verificarCategorias();
-    
+
     console.log('\n' + '='.repeat(60));
-    console.log('✅ ¡Inicialización completada exitosamente!');
+    console.log('✓ ¡Inicialización completada exitosamente!');
     console.log('='.repeat(60) + '\n');
-    
-    console.log('📊 Resumen:');
-    console.log(`   • ${DEPARTAMENTOS.length} departamentos disponibles`);
-    console.log(`   • ${LIDERES_REGIONALES.length} líderes regionales`);
-    console.log(`   • Sistema de notificaciones listo`);
-    console.log('\n🎮 ¡Listo para jugar!\n');
+
+    console.log('Resumen:');
+    console.log(`   - ${DEPARTAMENTOS.length} departamentos disponibles`);
+    console.log(`   - ${LIDERES_REGIONALES.length} líderes regionales`);
+    console.log(`   - Sistema de notificaciones listo`);
+    console.log('\n¡Listo para jugar!\n');
     
   } catch (error) {
-    console.error('\n❌ Error durante la inicialización:', error.message);
+    console.error('\n✗ Error durante la inicialización:', error.message);
     console.error(error);
     process.exit(1);
   }

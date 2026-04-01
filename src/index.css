@@ -279,15 +279,15 @@ h1, h2, h3, h4, h5, h6, .display-font {
 }
 
 .bg-categoria-historia {
-  @apply bg-gradient-to-br from-ocre-500 to-ocre-700;
+  @apply bg-gradient-to-br from-nica-ocre to-nica-marron;
 }
 
 .bg-categoria-matematicas {
-  @apply bg-gradient-to-br from-nica-azul to-blue-700;
+  @apply bg-gradient-to-br from-nica-rojo to-red-700;
 }
 
 .bg-categoria-geografia {
-  @apply bg-gradient-to-br from-nica-turquesa to-teal-700;
+  @apply bg-gradient-to-br from-nica-verde to-green-700;
 }
 
 .bg-categoria-ciencias {

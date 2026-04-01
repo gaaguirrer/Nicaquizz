@@ -1,157 +1,70 @@
 /**
- * Ranking.jsx - Tabla de Clasificación Nacional de NicaQuizz
- * "El Maestro Cocinero Supremo"
+ * Ranking.jsx - Ranking de Maestros Cocineros de NicaQuizz
+ * "El Fogón Supremo"
  * 
  * Características:
- * - Ranking nacional dinámico
- * - Filtros por materia
- * - Misión del Día destacada
- * - Posición del usuario en tiempo real
+ * - Tabla de ranking con Top 3 estilizado
+ * - Filtros por categoría
+ * - Buscador de jugadores
+ * - Misión del Día highlight card
+ * - Top por categoría bento
+ * - Sidebar Mi Despensa
  */
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchGlobalRanking, fetchCategoryRanking, fetchCategories } from '../services/firestore';
-import UserMenu from '../components/UserMenu';
+import { fetchGlobalRanking, fetchCategoryRanking } from '../services/firestore';
 
-// Iconos SVG para ingredientes
-const IngredientIcon = ({ type, className = '' }) => {
-  const icons = {
-    masa: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="32" rx="12" ry="20" fill="#F4C430" stroke="#D4A017" strokeWidth="2"/>
-        <circle cx="28" cy="28" r="3" fill="#E8B830"/>
-        <circle cx="36" cy="28" r="3" fill="#E8B830"/>
-        <circle cx="28" cy="36" r="3" fill="#E8B830"/>
-        <circle cx="36" cy="36" r="3" fill="#E8B830"/>
-        <circle cx="32" cy="32" r="3" fill="#E8B830"/>
-      </svg>
-    ),
-    cerdo: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <rect x="16" y="20" width="32" height="24" rx="4" fill="#FF6B6B" stroke="#CC5555" strokeWidth="2"/>
-        <rect x="20" y="24" width="10" height="8" rx="2" fill="#FF8888"/>
-        <rect x="34" y="24" width="10" height="8" rx="2" fill="#FF8888"/>
-      </svg>
-    ),
-    arroz: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="40" rx="24" ry="12" fill="#F5F5F5" stroke="#DDD" strokeWidth="2"/>
-        <ellipse cx="24" cy="38" rx="4" ry="8" fill="#FFF" transform="rotate(-30 24 38)"/>
-        <ellipse cx="32" cy="36" rx="4" ry="8" fill="#FFF"/>
-        <ellipse cx="40" cy="38" rx="4" ry="8" fill="#FFF" transform="rotate(30 40 38)"/>
-      </svg>
-    ),
-    papa: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="34" rx="20" ry="16" fill="#C9A959" stroke="#9A7B4A" strokeWidth="2"/>
-        <circle cx="26" cy="30" r="3" fill="#8B6F47"/>
-        <circle cx="38" cy="32" r="2" fill="#8B6F47"/>
-        <circle cx="32" cy="40" r="2" fill="#8B6F47"/>
-      </svg>
-    ),
-    chile: (
-      <svg viewBox="0 0 64 64" className={className}>
-        <path d="M32 12 Q36 8 40 12 L44 18 Q48 24 44 34 Q40 46 34 52 Q28 56 26 52 Q24 48 28 40 Q32 30 34 22 Q36 16 32 12Z" fill="#E74C3C" stroke="#C0392B" strokeWidth="2"/>
-        <path d="M32 12 Q30 8 28 10 L26 14 Q28 16 32 12Z" fill="#27AE60"/>
-      </svg>
-    )
-  };
-  return icons[type] || null;
-};
-
-// Misiones del Día predefinidas
-const MISIONES_DEL_DIA = [
-  {
-    id: 1,
-    titulo: 'Maestro de Historia',
-    descripcion: 'Gana 3 partidas en Historia hoy',
-    ingrediente: 'masa',
-    recompensa: '2 Masa de Maíz',
-    progreso: 0,
-    total: 3
-  },
-  {
-    id: 2,
-    titulo: 'Velocista Matemático',
-    descripcion: 'Responde 10 preguntas en menos de 10s cada una',
-    ingrediente: 'cerdo',
-    recompensa: '2 Carne de Cerdo',
-    progreso: 0,
-    total: 10
-  },
-  {
-    id: 3,
-    titulo: 'Explorador Geográfico',
-    descripcion: 'Completa 5 categorías de Geografía',
-    ingrediente: 'arroz',
-    recompensa: '3 Arroz',
-    progreso: 0,
-    total: 5
-  },
-  {
-    id: 4,
-    titulo: 'Científico del Día',
-    descripcion: 'Obtén 100% de precisión en Ciencias',
-    ingrediente: 'papa',
-    recompensa: '2 Papa',
-    progreso: 0,
-    total: 1
-  },
-  {
-    id: 5,
-    titulo: 'Retador Supremo',
-    descripcion: 'Gana 3 retos en línea',
-    ingrediente: 'chile',
-    recompensa: '3 Chile',
-    progreso: 0,
-    total: 3
-  }
+// Datos simulados para el ranking
+const RANKING_DATA = [
+  { id: 1, nombre: 'Rodrigo Zelaya', nivel: 84, aciertos: 12402, precision: 98.4, titulo: 'Súper Chef', avatar: 'https://i.pravatar.cc/100?img=1', badge: 'workspace_premium' },
+  { id: 2, nombre: 'Elena Murillo', nivel: 79, aciertos: 10850, precision: 96.2, titulo: 'Maestra Arrocera', avatar: 'https://i.pravatar.cc/100?img=2', badge: null },
+  { id: 3, nombre: 'Juan C. García', nivel: 75, aciertos: 9921, precision: 94.8, titulo: 'Cocinero Experto', avatar: 'https://i.pravatar.cc/100?img=3', badge: null },
+  { id: 4, nombre: 'María Fernández', nivel: 72, aciertos: 9456, precision: 93.5, titulo: 'Chef Senior', avatar: 'https://i.pravatar.cc/100?img=4', badge: null },
+  { id: 5, nombre: 'Carlos Sánchez', nivel: 68, aciertos: 8923, precision: 92.1, titulo: 'Chef Senior', avatar: 'https://i.pravatar.cc/100?img=5', badge: null },
+  { id: 6, nombre: 'Ana López', nivel: 65, aciertos: 8234, precision: 91.3, titulo: 'Chef', avatar: 'https://i.pravatar.cc/100?img=6', badge: null },
+  { id: 7, nombre: 'Luis Martínez', nivel: 62, aciertos: 7845, precision: 90.7, titulo: 'Chef', avatar: 'https://i.pravatar.cc/100?img=7', badge: null },
+  { id: 8, nombre: 'Carmen Ruiz', nivel: 59, aciertos: 7456, precision: 89.9, titulo: 'Chef', avatar: 'https://i.pravatar.cc/100?img=8', badge: null },
+  { id: 9, nombre: 'Pedro González', nivel: 56, aciertos: 7123, precision: 89.2, titulo: 'Cocinero', avatar: 'https://i.pravatar.cc/100?img=9', badge: null },
+  { id: 10, nombre: 'Sofía Hernández', nivel: 53, aciertos: 6789, precision: 88.5, titulo: 'Cocinero', avatar: 'https://i.pravatar.cc/100?img=10', badge: null }
 ];
 
-// Configuración de categorías con colores
-const CATEGORY_COLORS = {
-  historia: { bg: 'bg-amber-500', text: 'text-amber-400', border: 'border-amber-600' },
-  matematicas: { bg: 'bg-blue-500', text: 'text-blue-400', border: 'border-blue-600' },
-  geografia: { bg: 'bg-green-500', text: 'text-green-400', border: 'border-green-600' },
-  ciencias: { bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-600' }
-};
+// Categorías para filtros
+const CATEGORIAS = [
+  { id: 'general', nombre: 'General' },
+  { id: 'historia', nombre: 'Historia' },
+  { id: 'geografia', nombre: 'Geografía' },
+  { id: 'ciencias', nombre: 'Ciencias' },
+  { id: 'matematicas', nombre: 'Matemáticas' }
+];
+
+// Top por categoría
+const TOP_CATEGORIAS = [
+  { categoria: 'Historia', icono: 'history_edu', color: 'text-tertiary', bg: 'bg-tertiary-container/10', jugador: '@marcos_12' },
+  { categoria: 'Geografía', icono: 'map', color: 'text-primary', bg: 'bg-primary-container/10', jugador: '@luisa_nic' },
+  { categoria: 'Ciencias', icono: 'science', color: 'text-purple-600', bg: 'bg-purple-500/10', jugador: '@ciencia_nica' },
+  { categoria: 'Matemáticas', icono: 'calculate', color: 'text-blue-600', bg: 'bg-blue-500/10', jugador: '@mate_master' }
+];
 
 export default function Ranking() {
-  const { userData } = useAuth();
-  const [filtro, setFiltro] = useState('nacional'); // 'nacional', 'historia', 'matematicas', 'geografia', 'ciencias'
-  const [ranking, setRanking] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const { currentUser } = useAuth();
+  const [filtro, setFiltro] = useState('general');
+  const [busqueda, setBusqueda] = useState('');
+  const [ranking, setRanking] = useState(RANKING_DATA);
   const [loading, setLoading] = useState(true);
-  const [userRank, setUserRank] = useState(null);
-  const [misionDelDia, setMisionDelDia] = useState(MISIONES_DEL_DIA[0]);
 
   useEffect(() => {
-    loadData();
-    // Seleccionar misión del día aleatoria
-    const misionAleatoria = MISIONES_DEL_DIA[Math.floor(Math.random() * MISIONES_DEL_DIA.length)];
-    setMisionDelDia(misionAleatoria);
+    cargarRanking();
   }, [filtro]);
 
-  async function loadData() {
+  async function cargarRanking() {
     setLoading(true);
     try {
-      const cats = await fetchCategories();
-      setCategories(cats);
-
-      let rankingData;
-      if (filtro === 'nacional') {
-        rankingData = await fetchGlobalRanking(100);
-      } else {
-        rankingData = await fetchCategoryRanking(filtro, 100);
-      }
-
-      setRanking(rankingData);
-
-      // Encontrar posición del usuario
-      const userIndex = rankingData.findIndex(u => u.id === userData?.id);
-      setUserRank(userIndex >= 0 ? userIndex + 1 : null);
+      // En producción, usar fetchGlobalRanking o fetchCategoryRanking
+      // Por ahora usamos datos simulados
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setRanking(RANKING_DATA);
     } catch (error) {
       console.error('Error al cargar ranking:', error);
     } finally {
@@ -159,274 +72,333 @@ export default function Ranking() {
     }
   }
 
-  // Medallas para top 3
-  const getMedal = (position) => {
-    if (position === 1) return { icon: '🥇', color: 'text-yellow-400', bg: 'bg-yellow-900/30' };
-    if (position === 2) return { icon: '🥈', color: 'text-gray-400', bg: 'bg-gray-900/30' };
-    if (position === 3) return { icon: '🥉', color: 'text-amber-700', bg: 'bg-amber-900/30' };
-    return null;
-  };
+  // Filtrar ranking por búsqueda
+  const rankingFiltrado = ranking.filter(jugador =>
+    jugador.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  // Ingredientes para sidebar
+  const ingredientes = [
+    { tipo: 'masa', nombre: 'Masa', icono: 'bakery_dining', activo: false },
+    { tipo: 'cerdo', nombre: 'Cerdo', icono: 'restaurant', activo: true },
+    { tipo: 'arroz', nombre: 'Arroz', icono: 'grass', activo: false },
+    { tipo: 'papa', nombre: 'Papa', icono: 'breakfast_dining', activo: false },
+    { tipo: 'chile', nombre: 'Chile', icono: 'hot_tub', activo: false }
+  ];
 
   return (
-    <div className="min-h-screen pb-12 bg-gradient-to-br from-nica-verde/20 via-gray-900 to-nica-verde/20">
-      {/* Header */}
-      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-gray-700/50 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <span className="text-4xl">🇳🇮</span>
-              <div>
-                <h1 className="text-3xl font-display text-nica-amarillo">NicaQuizz</h1>
-                <p className="text-xs text-gray-400">El Nacatamal del Conocimiento</p>
-              </div>
+    <div className="min-h-screen bg-[#fefccf] text-[#1d1d03] font-body">
+      
+      {/* TopNavBar */}
+      <header className="bg-[#fefccf] border-none shadow-[0_8px_32px_rgba(29,29,3,0.08)] sticky top-0 z-50">
+        <div className="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+          <Link to="/" className="text-3xl font-black text-[#154212] tracking-tighter font-headline">
+            NicaQuizz
+          </Link>
+          <nav className="hidden md:flex space-x-8 items-center">
+            <Link to="/categories" className="text-stone-600 font-medium font-headline hover:text-[#755b00] transition-colors duration-300">
+              Categorías
+            </Link>
+            <Link to="/ranking" className="text-[#154212] border-b-4 border-[#154212] pb-1 font-bold tracking-tight font-headline hover:text-[#755b00] transition-colors duration-300">
+              Ranking
+            </Link>
+            <Link to="/shop" className="text-stone-600 font-medium font-headline hover:text-[#755b00] transition-colors duration-300">
+              Tienda
+            </Link>
+          </nav>
+          <div className="flex items-center space-x-4">
+            <Link
+              to={currentUser ? '/profile' : '/auth'}
+              className="scale-95 active:scale-90 transition-transform text-[#154212]"
+            >
+              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
             </Link>
           </div>
-          <UserMenu />
         </div>
       </header>
 
-      {/* Contenido Principal */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-screen-2xl mx-auto flex min-h-screen">
         
-        {/* Título y Misión del Día */}
-        <div className="mb-8">
-          <h1 className="text-5xl font-display text-center text-nica-amarillo mb-6 gradient-text">
-            <span className="material-symbols-rounded inline-block align-middle mr-2">emoji_events</span>
-            Ranking Nacional
-          </h1>
-          <p className="text-center text-gray-400 text-lg mb-8">
-            Compite por ser el <strong className="text-nica-amarillo">Maestro Cocinero Supremo</strong>
-          </p>
-
-          {/* Misión del Día */}
-          <div className="card bg-gradient-to-r from-nica-verde/30 to-nica-amarillo/30 border-2 border-nica-amarillo/50 max-w-2xl mx-auto">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-nica-amarillo/30 flex items-center justify-center">
-                <span className="material-symbols-rounded text-4xl text-nica-amarillo">task_alt</span>
+        {/* SideNavBar - Mi Despensa (Desktop Only) */}
+        <aside className="hidden lg:flex flex-col h-screen w-72 bg-[#fefccf] sticky top-[72px] py-8 space-y-4 shadow-xl border-r border-[#154212]/5">
+          <div className="px-8 mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-[#fccc38] flex items-center justify-center border-2 border-[#154212]">
+                <span className="material-symbols-outlined text-[#1d1d03]">skillet</span>
               </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-display text-white">Misión del Día</h2>
-                <p className="text-gray-400 text-sm">Completa la misión para ganar ingredientes extra</p>
+              <div>
+                <p className="font-headline font-bold text-[#154212] leading-tight">Mi Despensa</p>
+                <p className="text-[10px] text-[#154212]/60 uppercase tracking-widest">Ingredientes recolectados</p>
               </div>
             </div>
+          </div>
+          <nav className="flex flex-col space-y-1 flex-grow">
+            {ingredientes.map((ing) => (
+              <Link
+                key={ing.tipo}
+                to="/shop"
+                className={`${
+                  ing.activo
+                    ? 'bg-[#755b00] text-white rounded-full mx-4 my-1'
+                    : 'text-[#154212] opacity-70 hover:bg-[#154212]/10'
+                } px-6 py-3 font-headline text-sm uppercase tracking-widest transition-all flex items-center gap-4 ${
+                  !ing.activo && 'translate-x-1'
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: ing.activo ? "'FILL' 1" : "'FILL' 0" }}>
+                  {ing.icono}
+                </span>
+                {ing.nombre}
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-auto px-6 pb-8">
+            <Link
+              to="/shop"
+              className="w-full py-4 bg-[#154212] text-white font-headline font-bold rounded-xl shadow-lg hover:bg-[#2D5A27] transition-all active:scale-95 block text-center"
+            >
+              Cocinar Nacatamal
+            </Link>
+          </div>
+        </aside>
 
-            <div className="bg-gray-800/50 rounded-xl p-4 mb-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="text-lg font-bold text-white">{misionDelDia.titulo}</h3>
-                  <p className="text-gray-400 text-sm">{misionDelDia.descripcion}</p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-2 justify-end mb-1">
-                    <div className="w-8 h-8">
-                      <IngredientIcon type={misionDelDia.ingrediente} className="w-full h-full" />
-                    </div>
-                    <span className="text-nica-amarillo font-bold">{misionDelDia.recompensa}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Barra de progreso */}
-              <div className="mt-3">
-                <div className="flex justify-between text-xs text-gray-400 mb-1">
-                  <span>Progreso</span>
-                  <span>{misionDelDia.progreso}/{misionDelDia.total}</span>
-                </div>
-                <div className="bg-gray-700 rounded-full h-3 overflow-hidden">
-                  <div 
-                    className="bg-gradient-to-r from-nica-verde to-nica-amarillo h-full rounded-full transition-all duration-500"
-                    style={{ width: `${(misionDelDia.progreso / misionDelDia.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <p className="text-xs text-gray-500 text-center">
-              <span className="material-symbols-rounded text-xs inline-block align-middle mr-1">schedule</span>
-              La misión se reinicia en 24 horas
+        {/* Content Canvas */}
+        <section className="flex-1 px-8 py-12 md:px-16 overflow-x-hidden">
+          
+          {/* Header Section */}
+          <div className="mb-12 relative">
+            <div className="absolute -top-12 -right-8 w-64 h-64 vapor-progress rounded-full blur-3xl opacity-60"></div>
+            <h1 className="text-5xl md:text-6xl font-black text-[#154212] font-headline tracking-tighter mb-4 leading-none">
+              Ranking de <br/><span className="text-[#755b00]">Maestros Cocineros</span>
+            </h1>
+            <p className="text-[#42493e] font-body max-w-xl text-lg">
+              Los alquimistas del sabor que han dominado el arte del conocimiento nicaragüense. ¿Tienes lo necesario para alcanzar el fogón supremo?
             </p>
           </div>
-        </div>
 
-        {/* Filtros por Materia */}
-        <div className="card mb-8">
-          <h2 className="text-xl font-display text-white mb-4 flex items-center gap-2">
-            <span className="material-symbols-rounded">filter_list</span>
-            Filtrar por Materia
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setFiltro('nacional')}
-              className={`px-5 py-3 rounded-xl font-bold transition-all hover-lift flex items-center gap-2 ${
-                filtro === 'nacional'
-                  ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              <span className="material-symbols-rounded">public</span>
-              Nacional
-            </button>
-            {categories.map((cat) => {
-              const colors = CATEGORY_COLORS[cat.id] || CATEGORY_COLORS.historia;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setFiltro(cat.id)}
-                  className={`px-5 py-3 rounded-xl font-bold transition-all hover-lift flex items-center gap-2 ${
-                    filtro === cat.id
-                      ? `${colors.bg} text-white shadow-comic`
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  <span className="material-symbols-rounded">{cat.icono || 'menu_book'}</span>
-                  {cat.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+            
+            {/* Main Ranking Table Container */}
+            <div className="xl:col-span-2 space-y-8">
+              
+              {/* Filters & Search */}
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="relative w-full md:w-72">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#72796e]">search</span>
+                  <input
+                    type="text"
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-[#f8f6c9] border-b-2 border-[#c2c9bb]/20 focus:border-[#154212] focus:ring-0 rounded-t-xl font-body transition-all outline-none"
+                    placeholder="Buscar cocinero..."
+                  />
+                </div>
+                <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                  {CATEGORIAS.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setFiltro(cat.id)}
+                      className={`px-4 py-2 rounded-full text-xs font-bold font-headline whitespace-nowrap cursor-pointer transition-colors ${
+                        filtro === cat.id
+                          ? 'bg-[#fccc38] text-[#1d1d03]'
+                          : 'bg-[#ffdf90] text-[#584400] hover:bg-[#fccc38]'
+                      }`}
+                    >
+                      {cat.nombre}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-        {/* Tabla de Ranking */}
-        <div className="card overflow-hidden">
-          <div className="bg-gradient-to-r from-nica-verde/50 to-nica-amarillo/50 px-6 py-4 border-b border-nica-amarillo/30">
-            <h2 className="text-2xl font-display text-white flex items-center gap-3">
-              <span className="material-symbols-rounded text-nica-amarillo">leaderboard</span>
-              {filtro === 'nacional' ? 'Tabla de Clasificación Nacional' : `Ranking de ${filtro}`}
-            </h2>
-          </div>
+              {/* Ranking Table */}
+              {loading ? (
+                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(29,29,3,0.06)] overflow-hidden p-12 text-center">
+                  <span className="material-symbols-outlined text-6xl text-[#154212] animate-spin inline-block">progress_activity</span>
+                  <p className="text-[#42493e] mt-4">Cargando ranking...</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(29,29,3,0.06)] overflow-hidden">
+                  {/* Header de tabla */}
+                  <div className="grid grid-cols-12 gap-4 p-6 border-b border-[#f2f0c4] text-xs font-black uppercase tracking-widest text-[#154212]/50 font-headline">
+                    <div className="col-span-1">#</div>
+                    <div className="col-span-5">Maestro</div>
+                    <div className="col-span-2 text-center">Nivel</div>
+                    <div className="col-span-2 text-center">Aciertos</div>
+                    <div className="col-span-2 text-right">Precisión</div>
+                  </div>
 
-          {loading ? (
-            <div className="text-center py-12">
-              <span className="material-symbols-rounded text-6xl text-nica-amarillo animate-spin inline-block">progress_activity</span>
-              <p className="text-gray-400 mt-4">Cargando ranking...</p>
-            </div>
-          ) : ranking.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <span className="material-symbols-rounded text-6xl inline-block mb-4">leaderboard_off</span>
-              <p className="text-lg">Aún no hay participantes en esta categoría</p>
-              <p className="text-sm mt-2">¡Sé el primero en competir!</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-800/80">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">
-                      Posición
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">
-                      Jugador
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-bold text-gray-400 uppercase tracking-wider">
-                      {filtro === 'nacional' ? 'Aciertos Totales' : 'Aciertos'}
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-bold text-gray-400 uppercase tracking-wider">
-                      Respondidas
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-bold text-gray-400 uppercase tracking-wider">
-                      Precisión
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-bold text-gray-400 uppercase tracking-wider">
-                      Victorias
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700/50">
-                  {ranking.map((user, index) => {
-                    const isCurrentUser = user.id === userData?.id;
-                    const position = index + 1;
-                    const medal = getMedal(position);
+                  {/* Lista de jugadores */}
+                  <div className="divide-y divide-[#f2f0c4]">
+                    {rankingFiltrado.map((jugador, index) => {
+                      const esTop1 = index === 0;
+                      const esTop2 = index === 1;
+                      const esTop3 = index === 2;
 
-                    return (
-                      <tr
-                        key={user.id}
-                        className={`transition-colors ${
-                          isCurrentUser
-                            ? 'bg-nica-amarillo/20 border-l-4 border-nica-amarillo'
-                            : medal?.bg || 'hover:bg-gray-800/50'
-                        }`}
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            {medal ? (
-                              <span className="text-3xl">{medal.icon}</span>
+                      return (
+                        <div
+                          key={jugador.id}
+                          className={`grid grid-cols-12 gap-4 p-6 items-center group transition-colors ${
+                            esTop1 ? 'bg-[#fccc38]/10 hover:bg-[#fccc38]/20' : 'hover:bg-[#f8f6c9]'
+                          }`}
+                        >
+                          {/* Ranking Number */}
+                          <div className="col-span-1">
+                            {esTop1 ? (
+                              <span className="text-2xl font-black text-[#755b00]">01</span>
+                            ) : esTop2 ? (
+                              <span className="text-xl font-bold text-stone-400">02</span>
+                            ) : esTop3 ? (
+                              <span className="text-xl font-bold text-stone-300">03</span>
                             ) : (
-                              <span className={`w-10 h-10 flex items-center justify-center rounded-full font-bold ${
-                                position < 10 ? 'bg-nica-verde/30 text-nica-verde' : 'bg-gray-700 text-gray-400'
-                              }`}>
-                                {position}
-                              </span>
+                              <span className="text-lg font-bold text-[#154212]/50">#{index + 1}</span>
                             )}
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                              isCurrentUser 
-                                ? 'bg-nica-amarillo text-gray-900' 
-                                : 'bg-gradient-to-br from-nica-verde to-nica-amarillo text-white'
-                            }`}>
-                              {user.displayName?.charAt(0) || 'U'}
+
+                          {/* Jugador Info */}
+                          <div className="col-span-5 flex items-center gap-4">
+                            <div className="relative">
+                              <img
+                                alt={jugador.nombre}
+                                className={`w-12 h-12 rounded-full object-cover ${
+                                  esTop1 ? 'border-2 border-[#755b00]' : 'border-2 border-stone-200'
+                                }`}
+                                src={jugador.avatar}
+                              />
+                              {esTop1 && (
+                                <span className="absolute -bottom-1 -right-1 bg-[#755b00] text-white rounded-full p-0.5 scale-75">
+                                  <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                                </span>
+                              )}
                             </div>
                             <div>
-                              <span className={`font-bold ${
-                                isCurrentUser ? 'text-nica-amarillo' : 'text-white'
-                              }`}>
-                                {user.displayName}
-                              </span>
-                              {isCurrentUser && (
-                                <span className="text-gray-400 text-xs block">Tú</span>
+                              <h3 className="font-headline font-bold text-[#1d1d03] group-hover:text-[#154212] transition-colors">
+                                {jugador.nombre}
+                              </h3>
+                              {jugador.titulo && (
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                  esTop1
+                                    ? 'bg-[#bcf0ae] text-[#23501e]'
+                                    : 'bg-[#e6e5b9] text-[#42493e]'
+                                }`}>
+                                  {jugador.titulo}
+                                </span>
                               )}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-2xl font-display text-green-400 font-bold">
-                            {user.correct || user.totalCorrect}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center text-gray-400">
-                          {user.total || user.totalQuestionsAnswered}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`inline-block px-4 py-2 rounded-xl text-sm font-bold ${
-                            user.accuracy >= 70
-                              ? 'bg-green-900/50 text-green-400 border border-green-700/50'
-                              : user.accuracy >= 40
-                              ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-700/50'
-                              : 'bg-red-900/30 text-red-400 border border-red-700/50'
-                          }`}>
-                            {user.accuracy}%
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="material-symbols-rounded text-green-400 text-sm">emoji_events</span>
-                            <span className="text-white font-bold">{user.wins || 0}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
 
-        {/* Posición del usuario si no está en el top 100 */}
-        {userRank && userRank > 100 && (
-          <div className="card mt-6 bg-nica-verde/20 border-2 border-nica-verde/50">
-            <div className="flex items-center justify-center gap-4">
-              <span className="material-symbols-rounded text-nica-verde text-3xl">trending_up</span>
-              <p className="text-gray-300 text-lg">
-                Tu posición actual: <span className="font-bold text-nica-verde text-xl">#{userRank}</span>
-              </p>
-              <span className="material-symbols-rounded text-nica-verde text-3xl">trending_up</span>
+                          {/* Nivel */}
+                          <div className="col-span-2 text-center font-bold font-headline text-[#154212]">
+                            Nvl {jugador.nivel}
+                          </div>
+
+                          {/* Aciertos */}
+                          <div className="col-span-2 text-center font-body text-[#42493e]">
+                            {jugador.aciertos.toLocaleString()}
+                          </div>
+
+                          {/* Precisión */}
+                          <div className="col-span-2 text-right font-headline font-black text-lg">
+                            <span className={esTop1 ? 'text-[#755b00]' : 'text-[#154212]'}>
+                              {jugador.precision}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar Missions & Highlights */}
+            <div className="space-y-8">
+              
+              {/* Misión del Día Highlight Card */}
+              <div className="bg-[#154212] text-white rounded-3xl p-8 relative overflow-hidden shadow-2xl group">
+                <div className="absolute -bottom-8 -right-8 opacity-20 transition-transform group-hover:scale-110 duration-500">
+                  <span className="material-symbols-outlined text-[160px]" style={{ fontVariationSettings: "'FILL' 1" }}>restaurant_menu</span>
+                </div>
+                <div className="relative z-10">
+                  <span className="bg-[#fccc38] text-[#1d1d03] text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-6 inline-block">
+                    Misión del Día
+                  </span>
+                  <h2 className="text-3xl font-black font-headline leading-tight mb-4 tracking-tighter">
+                    El Secreto del Achiote
+                  </h2>
+                  <p className="text-[#a1d494] text-sm font-body mb-8 opacity-90 leading-relaxed">
+                    Completa 5 quizzes de la categoría "Cultura" con una precisión mayor al 90% para obtener el ingrediente secreto.
+                  </p>
+                  <div className="mb-8">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest mb-2">
+                      <span>Progreso</span>
+                      <span>3/5</span>
+                    </div>
+                    <div className="h-2 bg-[#2D5A27] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#fccc38] w-[60%]"></div>
+                    </div>
+                  </div>
+                  <Link
+                    to="/categories"
+                    className="w-full py-4 bg-[#fccc38] text-[#1d1d03] font-headline font-bold rounded-2xl shadow-lg hover:scale-[1.02] transition-all active:scale-95 block text-center"
+                  >
+                    Continuar Desafío
+                  </Link>
+                </div>
+              </div>
+
+              {/* Category Mastery Bento Small */}
+              <div className="bg-[#f2f0c4] rounded-3xl p-6 border border-[#154212]/5">
+                <h4 className="font-headline font-black text-[#154212] text-sm uppercase tracking-widest mb-4">
+                  Top por Categoría
+                </h4>
+                <div className="space-y-4">
+                  {TOP_CATEGORIAS.map((top) => (
+                    <div
+                      key={top.categoria}
+                      className="flex items-center justify-between p-3 bg-white rounded-2xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full ${top.bg} flex items-center justify-center`}>
+                          <span className={`material-symbols-outlined ${top.color} text-lg`}>
+                            {top.icono}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold font-headline text-[#154212]">
+                          {top.categoria}
+                        </span>
+                      </div>
+                      <span className="text-xs text-[#42493e] italic">
+                        {top.jugador}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        )}
-      </main>
+        </section>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-[#154212] py-12 text-center w-full">
+        <div className="flex flex-col items-center justify-center space-y-6 max-w-screen-xl mx-auto px-4">
+          <div className="text-[#F4C430] font-bold font-headline text-xl">NicaQuizz</div>
+          <div className="flex gap-8 flex-wrap justify-center">
+            <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+              Sobre el Proyecto
+            </a>
+            <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+              Cultura Nicaragüense
+            </a>
+            <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+              Contacto
+            </a>
+          </div>
+          <p className="text-[#fefccf]/60 font-headline text-xs font-light tracking-wide">
+            © 2025 NicaQuizz - El Arte del Nacatamal Digital
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

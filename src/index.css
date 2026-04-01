@@ -2,7 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos globales personalizados */
+/* ============================================
+   NicaQuizz - Estilos Globales
+   "El Nacatamal del Conocimiento"
+   ============================================ */
+
 * {
   margin: 0;
   padding: 0;
@@ -10,8 +14,8 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  font-family: 'Roboto', 'Montserrat', sans-serif;
+  background: linear-gradient(135deg, #2D5A27 0%, #1a3d1a 50%, #0f2b12 100%);
   min-height: 100vh;
   color: #e0e0e0;
 }
@@ -20,7 +24,19 @@ body {
   min-height: 100vh;
 }
 
-/* Animaciones */
+/* ============================================
+   Tipografía
+   ============================================ */
+
+h1, h2, h3, h4, h5, h6, .display-font {
+  font-family: 'Bangers', 'Boogaloo', cursive;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   Animaciones
+   ============================================ */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -35,18 +51,20 @@ body {
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.8;
+    transform: scale(1.05);
   }
 }
 
 @keyframes glow {
   0%, 100% {
-    box-shadow: 0 0 5px rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 10px rgba(244, 196, 48, 0.5);
   }
   50% {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.8), 0 0 30px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 20px rgba(244, 196, 48, 0.8), 0 0 30px rgba(244, 196, 48, 0.4);
   }
 }
 
@@ -61,6 +79,39 @@ body {
   }
 }
 
+@keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%, 50%, 70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%, 60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes fillBanana {
+  0% {
+    fill: #2D5A27;
+  }
+  100% {
+    fill: #F4C430;
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
@@ -70,31 +121,70 @@ body {
 }
 
 .animate-glow {
-  animation: glow 2s ease-in-out infinite;
+  animation: glow 2s ease-in-out infinite alternate;
 }
 
 .animate-slide-in {
   animation: slideIn 0.4s ease-out;
 }
 
-/* Utilidades personalizadas */
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s infinite;
+}
+
+/* ============================================
+   Componentes Base
+   ============================================ */
+
+/* Tarjetas estilo NicaQuizz */
 .card {
-  @apply bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-xl p-6 border border-gray-700/50;
+  @apply bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-comic p-6 border-2 border-gray-700/50;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card:hover {
-  @apply shadow-2xl border-gray-600/50;
+  @apply shadow-comic-hover border-gray-600/50;
   transform: translateY(-4px);
 }
 
+/* Tarjetas de categoría */
+.category-card {
+  @apply bg-gradient-to-br rounded-3xl p-6 shadow-comic border-4 transition-all duration-300 cursor-pointer;
+}
+
+.category-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  @apply shadow-comic-hover;
+}
+
+/* Botón estilo cómic */
+.btn-comic {
+  @apply font-display font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-comic border-2 border-black/20;
+  transform: translateY(0);
+}
+
+.btn-comic:hover {
+  transform: translateY(-2px);
+  @apply shadow-comic-hover;
+}
+
+.btn-comic:active {
+  transform: translateY(2px);
+  @apply shadow-sm;
+}
+
 .btn-primary {
-  @apply bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-indigo-500/30;
+  @apply bg-gradient-to-r from-nica-verde to-nica-amarillo hover:from-nica-amarillo hover:to-nica-verde text-white font-display font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-comic;
   transform: translateY(0);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
+  @apply shadow-comic-hover;
 }
 
 .btn-primary:active {
@@ -110,49 +200,215 @@ body {
   transform: translateY(-2px);
 }
 
+.btn-bounce {
+  @apply btn-primary animate-bounce-slow;
+}
+
+/* Campos de entrada */
 .input-field {
-  @apply w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all duration-300 text-gray-100 placeholder-gray-400;
+  @apply w-full px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:ring-2 focus:ring-nica-amarillo focus:border-nica-amarillo outline-none transition-all duration-300 text-gray-100 placeholder-gray-400 font-body;
 }
 
 .input-field:focus {
-  @apply bg-gray-700/80 shadow-lg shadow-indigo-500/20;
+  @apply bg-gray-700/80 shadow-lg shadow-nica-amarillo/20;
   transform: translateY(-1px);
 }
 
-/* Custom scrollbar */
+/* ============================================
+   Scrollbar Personalizado
+   ============================================ */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-800/50;
+  @apply bg-gray-800/50 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-600 rounded-full;
+  @apply bg-nica-verde rounded-full border-2 border-gray-700;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-500;
+  @apply bg-nica-amarillo;
 }
 
-/* Gradient text */
+/* ============================================
+   Efectos Especiales
+   ============================================ */
+
+/* Gradiente de texto NicaQuizz */
 .gradient-text {
-  @apply bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-nica-amarillo via-nica-crema to-nica-amarillo bg-clip-text text-transparent;
 }
 
-/* Glass effect */
+.gradient-text-nica {
+  background: linear-gradient(90deg, #2D5A27, #F4C430, #C41E3A);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Efecto vidrio */
 .glass {
-  @apply bg-white/10 backdrop-blur-md border border-white/20;
+  @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl;
 }
 
-/* Hover lift effect */
+.glass-dark {
+  @apply bg-black/20 backdrop-blur-md border border-white/10 rounded-2xl;
+}
+
+/* Hover lift */
 .hover-lift {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hover-lift:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 10px 40px rgba(45, 90, 39, 0.3);
+}
+
+/* ============================================
+   Utilidades de Color
+   ============================================ */
+
+.bg-nacatamal {
+  background: linear-gradient(135deg, #2D5A27 0%, #F4C430 100%);
+}
+
+.bg-categoria-historia {
+  @apply bg-gradient-to-br from-ocre-500 to-ocre-700;
+}
+
+.bg-categoria-matematicas {
+  @apply bg-gradient-to-br from-nica-azul to-blue-700;
+}
+
+.bg-categoria-geografia {
+  @apply bg-gradient-to-br from-nica-turquesa to-teal-700;
+}
+
+.bg-categoria-ciencias {
+  @apply bg-gradient-to-br from-nica-violeta to-purple-700;
+}
+
+/* ============================================
+   Barra de Progreso Hoja de Plátano
+   ============================================ */
+
+.progress-banana {
+  position: relative;
+  height: 20px;
+  background: #2D5A27;
+  border-radius: 0 20px 20px 0;
+  overflow: hidden;
+}
+
+.progress-banana::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: var(--progress, 0%);
+  background: linear-gradient(90deg, #F4C430, #FFD700);
+  transition: width 0.5s ease;
+}
+
+/* ============================================
+   Timer Circular
+   ============================================ */
+
+.timer-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: conic-gradient(#F4C430 var(--time), #2D5A27 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.timer-circle::before {
+  content: '';
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: #1a1a2e;
+  border-radius: 50%;
+}
+
+.timer-circle span {
+  position: relative;
+  z-index: 1;
+  font-family: 'Bangers', cursive;
+  font-size: 1.5rem;
+  color: white;
+}
+
+/* ============================================
+   Modal Styles
+   ============================================ */
+
+.modal-overlay {
+  @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content {
+  @apply bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border-4 border-nica-amarillo;
+  animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+
+.toast {
+  @apply fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-comic border-2 animate-slide-in;
+  max-width: 400px;
+}
+
+.toast-success {
+  @apply bg-gradient-to-r from-green-600 to-green-700 border-green-500 text-white;
+}
+
+.toast-error {
+  @apply bg-gradient-to-r from-nica-rojo to-red-700 border-red-500 text-white;
+}
+
+.toast-info {
+  @apply bg-gradient-to-r from-nica-azul to-blue-700 border-blue-500 text-white;
+}
+
+/* ============================================
+   Ingredientes Animados
+   ============================================ */
+
+.ingredient-icon {
+  @apply transition-transform duration-300;
+}
+
+.ingredient-icon:hover {
+  transform: scale(1.2) rotate(5deg);
+}
+
+.ingredient-collected {
+  animation: glow 1s ease-in-out;
+}
+
+/* ============================================
+   Responsive Typography
+   ============================================ */
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+  }
 }

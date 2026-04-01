@@ -10,57 +10,48 @@ import {
   MEJORAS,
   useMejora
 } from '../services/firestore';
+import { FeedbackModal, ResultModal } from '../components/Modal';
 
-// Iconos SVG personalizados para ingredientes del nacatamal
+// Iconos SVG para ingredientes
 const IngredientIcon = ({ type, className = '' }) => {
   const icons = {
     masa: (
       <svg viewBox="0 0 64 64" className={className}>
-        <circle cx="32" cy="32" r="28" fill="#F5E6D3" stroke="#D4A574" strokeWidth="3"/>
-        <circle cx="24" cy="28" r="4" fill="#E8D5C4"/>
-        <circle cx="40" cy="26" r="3" fill="#E8D5C4"/>
-        <circle cx="32" cy="38" r="4" fill="#E8D5C4"/>
-        <circle cx="20" cy="36" r="3" fill="#E8D5C4"/>
-        <circle cx="44" cy="38" r="3" fill="#E8D5C4"/>
+        <ellipse cx="32" cy="32" rx="12" ry="20" fill="#F4C430" stroke="#D4A017" strokeWidth="2"/>
+        <circle cx="28" cy="28" r="3" fill="#E8B830"/>
+        <circle cx="36" cy="28" r="3" fill="#E8B830"/>
+        <circle cx="28" cy="36" r="3" fill="#E8B830"/>
+        <circle cx="36" cy="36" r="3" fill="#E8B830"/>
+        <circle cx="32" cy="32" r="3" fill="#E8B830"/>
       </svg>
     ),
     cerdo: (
       <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="36" rx="22" ry="18" fill="#FF8B9E" stroke="#E05570" strokeWidth="2"/>
-        <ellipse cx="24" cy="28" rx="8" ry="10" fill="#FF9FAD" stroke="#E05570" strokeWidth="2"/>
-        <ellipse cx="40" cy="28" rx="8" ry="10" fill="#FF9FAD" stroke="#E05570" strokeWidth="2"/>
-        <ellipse cx="32" cy="32" rx="6" ry="4" fill="#FF6B8A"/>
-        <circle cx="28" cy="31" r="2" fill="#4A2836"/>
-        <circle cx="36" cy="31" r="2" fill="#4A2836"/>
+        <rect x="16" y="20" width="32" height="24" rx="4" fill="#FF6B6B" stroke="#CC5555" strokeWidth="2"/>
+        <rect x="20" y="24" width="10" height="8" rx="2" fill="#FF8888"/>
+        <rect x="34" y="24" width="10" height="8" rx="2" fill="#FF8888"/>
       </svg>
     ),
     arroz: (
       <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="36" rx="24" ry="16" fill="#FAFAFA" stroke="#E0E0E0" strokeWidth="2"/>
-        <ellipse cx="24" cy="34" rx="6" ry="10" fill="#FFFFFF" stroke="#E8E8E8" strokeWidth="1" transform="rotate(-30 24 34)"/>
-        <ellipse cx="32" cy="30" rx="6" ry="10" fill="#FFFFFF" stroke="#E8E8E8" strokeWidth="1" transform="rotate(-10 32 30)"/>
-        <ellipse cx="40" cy="34" rx="6" ry="10" fill="#FFFFFF" stroke="#E8E8E8" strokeWidth="1" transform="rotate(15 40 34)"/>
-        <ellipse cx="28" cy="40" rx="5" ry="9" fill="#F0F0F0" stroke="#E0E0E0" strokeWidth="1" transform="rotate(-20 28 40)"/>
-        <ellipse cx="36" cy="42" rx="5" ry="9" fill="#F0F0F0" stroke="#E0E0E0" strokeWidth="1" transform="rotate(10 36 42)"/>
+        <ellipse cx="32" cy="40" rx="24" ry="12" fill="#F5F5F5" stroke="#DDD" strokeWidth="2"/>
+        <ellipse cx="24" cy="38" rx="4" ry="8" fill="#FFF" transform="rotate(-30 24 38)"/>
+        <ellipse cx="32" cy="36" rx="4" ry="8" fill="#FFF"/>
+        <ellipse cx="40" cy="38" rx="4" ry="8" fill="#FFF" transform="rotate(30 40 38)"/>
       </svg>
     ),
     papa: (
       <svg viewBox="0 0 64 64" className={className}>
-        <ellipse cx="32" cy="36" rx="22" ry="18" fill="#C9A959" stroke="#9A7B4A" strokeWidth="2"/>
-        <ellipse cx="24" cy="30" rx="6" ry="5" fill="#D4B86E"/>
-        <ellipse cx="42" cy="34" rx="5" ry="4" fill="#D4B86E"/>
-        <ellipse cx="30" cy="42" rx="5" ry="4" fill="#D4B86E"/>
-        <circle cx="20" cy="38" r="2" fill="#8B6F47"/>
-        <circle cx="38" cy="28" r="2" fill="#8B6F47"/>
-        <circle cx="34" cy="46" r="2" fill="#8B6F47"/>
+        <ellipse cx="32" cy="34" rx="20" ry="16" fill="#C9A959" stroke="#9A7B4A" strokeWidth="2"/>
+        <circle cx="26" cy="30" r="3" fill="#8B6F47"/>
+        <circle cx="38" cy="32" r="2" fill="#8B6F47"/>
+        <circle cx="32" cy="40" r="2" fill="#8B6F47"/>
       </svg>
     ),
     chile: (
       <svg viewBox="0 0 64 64" className={className}>
-        <path d="M32 16 Q36 12 40 16 L44 20 Q48 24 46 32 Q44 42 38 50 Q34 56 30 54 Q26 52 28 46 Q32 36 34 28 Q36 22 32 16Z" fill="#5A7D3A" stroke="#3D5A2A" strokeWidth="2"/>
-        <path d="M32 16 Q30 12 28 14 L26 18 Q28 20 32 16Z" fill="#4A6A30"/>
-        <ellipse cx="36" cy="30" rx="3" ry="6" fill="#6B9A4A" opacity="0.6"/>
-        <ellipse cx="34" cy="40" rx="2" ry="5" fill="#6B9A4A" opacity="0.6"/>
+        <path d="M32 12 Q36 8 40 12 L44 18 Q48 24 44 34 Q40 46 34 52 Q28 56 26 52 Q24 48 28 40 Q32 30 34 22 Q36 16 32 12Z" fill="#E74C3C" stroke="#C0392B" strokeWidth="2"/>
+        <path d="M32 12 Q30 8 28 10 L26 14 Q28 16 32 12Z" fill="#27AE60"/>
       </svg>
     )
   };
@@ -69,13 +60,13 @@ const IngredientIcon = ({ type, className = '' }) => {
 
 // Componente para iconos de Material Icons
 const MaterialIcon = ({ name, className = '' }) => (
-  <span className={`material-symbols-outlined ${className}`}>{name}</span>
+  <span className={`material-symbols-rounded ${className}`}>{name}</span>
 );
 
 // Mapeo de mejoras a iconos
 const MEJORA_ICONS = {
   [MEJORAS.PASE]: 'skip_next',
-  [MEJORAS.RELOJ_ARENA]: 'timer',
+  [MEJORAS.RELOJ_ARENA]: 'hourglass_top',
   [MEJORAS.COMODIN]: 'filter_list'
 };
 
@@ -98,6 +89,10 @@ export default function Questions() {
   const [timeLeft, setTimeLeft] = useState(30);
   const [mejoras, setMejoras] = useState({});
   const [mejoraUsada, setMejoraUsada] = useState(false); // Solo 1 mejora por partida
+  
+  // Estados para modales
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -160,9 +155,8 @@ export default function Questions() {
   async function handleTimeUp() {
     setAnswering(true);
     setIsCorrect(false);
-    setShowResult(true);
     setScore(prev => ({ ...prev, total: prev.total + 1 }));
-    
+
     const currentQuestion = questions[currentQuestionIndex];
     try {
       await submitAnswer(currentUser.uid, currentQuestion.id, categoryId, false);
@@ -170,8 +164,9 @@ export default function Questions() {
     } catch (error) {
       console.error('Error al guardar respuesta:', error);
     }
-    
+
     setAnswering(false);
+    setShowFeedback(true); // Mostrar modal de feedback
   }
 
   async function handleAnswer() {
@@ -182,7 +177,6 @@ export default function Questions() {
     const correct = selectedAnswer === currentQuestion.correctAnswer;
 
     setIsCorrect(correct);
-    setShowResult(true);
     setScore(prev => ({
       correct: prev.correct + (correct ? 1 : 0),
       total: prev.total + 1
@@ -197,9 +191,11 @@ export default function Questions() {
     }
 
     setAnswering(false);
+    setShowFeedback(true); // Mostrar modal de feedback
   }
 
   function nextQuestion() {
+    setShowFeedback(false); // Cerrar modal de feedback
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedAnswer('');
@@ -212,14 +208,31 @@ export default function Questions() {
   }
 
   async function handleQuizComplete() {
-    // Si completó todas las preguntas, dar moneda
+    const ingrediente = CATEGORIA_INGREDIENTE[categoryId];
+    let monedasGanadas = 0;
+    
+    // Si completó todas las preguntas con al menos 1 acierto, dar moneda
     if (score.correct > 0) {
       try {
         await addCoins(currentUser.uid, categoryId, false);
+        monedasGanadas = 1;
       } catch (error) {
         console.error('Error al dar moneda:', error);
       }
     }
+    
+    // Calcular nacatamales
+    const monedas = userData?.coins || {};
+    const nacatamales = Math.min(
+      monedas.masa || 0,
+      monedas.cerdo || 0,
+      monedas.arroz || 0,
+      monedas.papa || 0,
+      monedas.chile || 0
+    );
+    
+    // Mostrar modal de resultados
+    setShowResults(true);
   }
 
   function restartQuiz() {
@@ -380,83 +393,103 @@ export default function Questions() {
   }
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <Link to="/categories" className="text-gray-300 hover:text-indigo-400 transition-colors">
-            ← Volver
-          </Link>
-          <div className="text-gray-300 font-semibold">
-            Pregunta {currentQuestionIndex + 1} de {questions.length}
-          </div>
-          <div className="flex items-center gap-4">
-            <div className={`text-gray-300 font-semibold ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : ''}`}>
-              <MaterialIcon name="timer" className="inline-block w-5 h-5 align-middle" /> {timeLeft}s
+    <div className="min-h-screen py-8 px-4 bg-gradient-to-br from-nica-verde/20 via-gray-900 to-nica-verde/20">
+      <div className="max-w-3xl mx-auto">
+        {/* Header con Timer Circular y Barra de Progreso Hoja */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <Link 
+              to="/categories" 
+              className="text-gray-300 hover:text-nica-amarillo transition-colors flex items-center gap-2"
+            >
+              <MaterialIcon name="arrow_back" className="w-5 h-5" /> Volver
+            </Link>
+            <div className="text-gray-300 font-medium">
+              Pregunta {currentQuestionIndex + 1} de {questions.length}
             </div>
-            <div className="text-gray-300 font-semibold">
-              Aciertos: {score.correct}
+          </div>
+
+          {/* Barra de progreso hoja de plátano */}
+          <div className="progress-banana mb-6" style={{ '--progress': `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}></div>
+
+          {/* Timer Circular Central */}
+          <div className="flex justify-center mb-6">
+            <div 
+              className="timer-circle"
+              style={{ 
+                '--time': `${(timeLeft / 30) * 360}deg`,
+                borderColor: timeLeft <= 10 ? '#C41E3A' : timeLeft <= 20 ? '#F4C430' : '#2D5A27'
+              }}
+            >
+              <span className={timeLeft <= 10 ? 'text-nica-rojo animate-pulse' : ''}>
+                {timeLeft}
+              </span>
+            </div>
+          </div>
+
+          {/* Contador de aciertos */}
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 bg-gray-800/80 px-6 py-2 rounded-xl border border-gray-700">
+              <MaterialIcon name="check_circle" className="w-5 h-5 text-green-400" />
+              <span className="text-gray-300">Aciertos:</span>
+              <span className="text-2xl font-display text-nica-amarillo">{score.correct}</span>
             </div>
           </div>
         </div>
 
-        {/* Barra de progreso */}
-        <div className="bg-gray-800 rounded-full h-2 mb-6">
-          <div
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full transition-all"
-            style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-          />
-        </div>
-
-        {/* Mejoras */}
-        <div className="flex gap-2 mb-4 justify-center">
+        {/* Mejoras (Controles Inferiores) */}
+        <div className="flex gap-3 mb-6 justify-center">
           <button
             onClick={handlePassQuestion}
             disabled={mejoraUsada || mejoras?.[MEJORAS.PASE] <= 0}
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all hover-lift ${
+            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all hover-lift shadow-comic ${
               !mejoraUsada && mejoras?.[MEJORAS.PASE] > 0
-                ? 'bg-yellow-600 hover:bg-yellow-700 text-white shadow-lg shadow-yellow-500/30'
-                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                ? 'bg-yellow-600 hover:bg-yellow-500 text-white shadow-yellow-500/30'
+                : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50'
             }`}
             title="Pasar pregunta"
           >
-            <MaterialIcon name={MEJORA_ICONS[MEJORAS.PASE]} className="inline-block w-4 h-4 align-middle mr-1" /> {mejoras?.[MEJORAS.PASE] || 0}
+            <MaterialIcon name={MEJORA_ICONS[MEJORAS.PASE]} className="w-6 h-6" />
+            <span>{mejoras?.[MEJORAS.PASE] || 0}</span>
           </button>
           <button
             onClick={handleDoubleTime}
             disabled={mejoraUsada || mejoras?.[MEJORAS.RELOJ_ARENA] <= 0}
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all hover-lift ${
+            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all hover-lift shadow-comic ${
               !mejoraUsada && mejoras?.[MEJORAS.RELOJ_ARENA] > 0
-                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30'
-                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/30'
+                : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50'
             }`}
             title="Duplicar tiempo"
           >
-            <MaterialIcon name={MEJORA_ICONS[MEJORAS.RELOJ_ARENA]} className="inline-block w-4 h-4 align-middle mr-1" /> {mejoras?.[MEJORAS.RELOJ_ARENA] || 0}
+            <MaterialIcon name={MEJORA_ICONS[MEJORAS.RELOJ_ARENA]} className="w-6 h-6" />
+            <span>{mejoras?.[MEJORAS.RELOJ_ARENA] || 0}</span>
           </button>
           <button
             onClick={handleReduceOptions}
             disabled={mejoraUsada || mejoras?.[MEJORAS.COMODIN] <= 0}
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all hover-lift ${
+            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all hover-lift shadow-comic ${
               !mejoraUsada && mejoras?.[MEJORAS.COMODIN] > 0
-                ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/30'
-                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/30'
+                : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50'
             }`}
             title="Reducir opciones"
           >
-            <MaterialIcon name={MEJORA_ICONS[MEJORAS.COMODIN]} className="inline-block w-4 h-4 align-middle mr-1" /> {mejoras?.[MEJORAS.COMODIN] || 0}
+            <MaterialIcon name={MEJORA_ICONS[MEJORAS.COMODIN]} className="w-6 h-6" />
+            <span>{mejoras?.[MEJORAS.COMODIN] || 0}</span>
           </button>
         </div>
 
         {mejoraUsada && (
-          <p className="text-center text-gray-400 text-sm mb-2">
+          <p className="text-center text-gray-400 text-sm mb-4">
+            <MaterialIcon name="info" className="w-4 h-4 inline-block align-middle mr-1" />
             Ya usaste una mejora en esta partida
           </p>
         )}
 
-        {/* Pregunta */}
-        <div className="card">
-          <h2 className="text-2xl font-bold text-white mb-6">
+        {/* Pregunta (Elevated Card) */}
+        <div className="card bg-gray-800/90 shadow-2xl mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 leading-relaxed">
             {currentQuestion.text}
           </h2>
 
@@ -464,16 +497,16 @@ export default function Questions() {
             {currentQuestion.options?.map((option, index) => (
               <label
                 key={index}
-                className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                   showResult
                     ? option === currentQuestion.correctAnswer
                       ? 'border-green-500 bg-green-900/30'
                       : option === selectedAnswer
-                      ? 'border-red-500 bg-red-900/30'
+                      ? 'border-red-500 bg-red-900/30 animate-shake'
                       : 'border-gray-700'
                     : selectedAnswer === option
-                    ? 'border-indigo-500 bg-indigo-900/30'
-                    : 'border-gray-700 hover:bg-gray-800'
+                    ? 'border-nica-amarillo bg-nica-amarillo/20'
+                    : 'border-gray-700 hover:bg-gray-800 hover:border-nica-amarillo/50'
                 }`}
               >
                 <input
@@ -485,16 +518,16 @@ export default function Questions() {
                   disabled={showResult || answering}
                   className="w-4 h-4"
                 />
-                <span className="flex-1 text-gray-300">{option}</span>
+                <span className="flex-1 text-gray-300 text-lg">{option}</span>
               </label>
             ))}
           </div>
 
           {showResult && (
-            <div className={`p-4 rounded-lg mb-4 ${
+            <div className={`p-4 rounded-xl mb-4 ${
               isCorrect ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'
             }`}>
-              <p className="font-bold">
+              <p className="font-bold text-lg">
                 {isCorrect ? '✓ ¡Correcto!' : '✗ Incorrecto'}
               </p>
               {!isCorrect && (
@@ -510,14 +543,14 @@ export default function Questions() {
               <button
                 onClick={handleAnswer}
                 disabled={!selectedAnswer || answering}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white flex-1 py-3 rounded-lg font-semibold transition-all hover-lift shadow-lg shadow-indigo-500/30"
+                className="btn-primary flex-1"
               >
                 {answering ? 'Enviando...' : 'Responder'}
               </button>
             ) : (
               <button
                 onClick={nextQuestion}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white flex-1 py-3 rounded-lg font-semibold transition-all hover-lift shadow-lg shadow-indigo-500/30"
+                className="btn-primary flex-1"
               >
                 {currentQuestionIndex < questions.length - 1 ? 'Siguiente' : 'Ver resultados'}
               </button>
@@ -525,6 +558,34 @@ export default function Questions() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Feedback */}
+      <FeedbackModal
+        isOpen={showFeedback}
+        onClose={() => setShowFeedback(false)}
+        isCorrect={isCorrect}
+        ingrediente={CATEGORIA_INGREDIENTE[categoryId]}
+      />
+
+      {/* Modal de Resultados */}
+      <ResultModal
+        isOpen={showResults}
+        onClose={() => {
+          setShowResults(false);
+          navigate('/categories');
+        }}
+        onRetry={restartQuiz}
+        score={score.correct}
+        total={score.total}
+        ingrediente={CATEGORIA_INGREDIENTE[categoryId]}
+        nacatamales={Math.min(
+          userData?.coins?.masa || 0,
+          userData?.coins?.cerdo || 0,
+          userData?.coins?.arroz || 0,
+          userData?.coins?.papa || 0,
+          userData?.coins?.chile || 0
+        )}
+      />
     </div>
   );
 }

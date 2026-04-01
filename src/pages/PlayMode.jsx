@@ -1,10 +1,17 @@
+/**
+ * Dashboard / Selección de Categorías - NicaQuizz
+ * Muestra las categorías disponibles con progreso e ingredientes
+ * Diseño de cuadrícula con tarjetas grandes
+ */
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchCategories, CATEGORIA_INGREDIENTE, INGREDIENTE_NAMES } from '../services/firestore';
+import { fetchCategories, CATEGORIA_INGREDIENTE } from '../services/firestore';
 import { getUserChallenges, getFriends, getAvailableChallengers } from '../services/firestore';
+import UserMenu from '../components/UserMenu';
 
-// Iconos SVG personalizados para los ingredientes del nacatamal
+// Iconos SVG para ingredientes
 const IngredientIcon = ({ type, className = '' }) => {
   const icons = {
     masa: (
@@ -50,199 +57,227 @@ const IngredientIcon = ({ type, className = '' }) => {
   return icons[type] || null;
 };
 
-// Componente para iconos de Material Icons
-const MaterialIcon = ({ name, className = '' }) => (
-  <span className={`material-symbols-outlined ${className}`}>{name}</span>
-);
-
 // Configuración de modos de juego
 const GAME_MODES = [
   {
-    id: 'categories',
-    title: 'Categorías',
-    description: 'Elige una categoría y responde preguntas para ganar ingredientes',
-    icon: 'menu_book',
-    color: 'from-indigo-600 to-purple-600',
-    route: '/categories',
-    reward: 'Ingrediente por categoría'
+    id: 'categorias',
+    titulo: 'Categorías',
+    descripcion: 'Elige una materia y gana ingredientes',
+    icono: 'menu_book',
+    color: 'from-nica-verde to-nica-amarillo',
+    ruta: '/categories',
+    recompensa: '1 Ingrediente'
   },
   {
-    id: 'friends',
-    title: 'Retar Amigo',
-    description: 'Desafía a un amigo y compite por el ranking',
-    icon: 'sports_martial_arts',
+    id: 'amigos',
+    titulo: 'Retar Amigo',
+    descripcion: 'Desafía a un amigo y compite',
+    icono: 'sports_martial_arts',
     color: 'from-pink-600 to-rose-600',
-    route: '/friends',
-    reward: 'Chile + Puntos de ranking'
+    ruta: '/friends',
+    recompensa: '2 Chiles'
   },
   {
     id: 'online',
-    title: 'Reto Abierto',
-    description: 'Compite contra jugadores en línea aleatorios',
-    icon: 'public',
+    titulo: 'Reto Abierto',
+    descripcion: 'Compite contra jugadores en línea',
+    icono: 'public',
     color: 'from-cyan-600 to-blue-600',
-    route: '/challenge/open',
-    reward: '2 Chiles'
+    ruta: '/challenge/open',
+    recompensa: '2 Chiles'
   },
   {
     id: 'ranking',
-    title: 'Ranking Mundial',
-    description: 'Compite por estar en el top global',
-    icon: 'emoji_events',
+    titulo: 'Ranking',
+    descripcion: 'Compite por el top global',
+    icono: 'emoji_events',
     color: 'from-yellow-600 to-orange-600',
-    route: '/ranking',
-    reward: 'Prestigio'
+    ruta: '/ranking',
+    recompensa: 'Prestigio'
   }
 ];
 
-/**
- * Página PlayMode - Selección de modos de juego
- * Centraliza todas las opciones para jugar
- */
+// Configuración de categorías con colores
+const CATEGORY_COLORS = {
+  historia: {
+    bg: 'bg-categoria-historia',
+    borde: 'border-ocre-600',
+    texto: 'text-ocre-400'
+  },
+  matematicas: {
+    bg: 'bg-categoria-matematicas',
+    borde: 'border-blue-600',
+    texto: 'text-blue-400'
+  },
+  geografia: {
+    bg: 'bg-categoria-geografia',
+    borde: 'border-teal-600',
+    texto: 'text-teal-400'
+  },
+  ciencias: {
+    bg: 'bg-categoria-ciencias',
+    borde: 'border-purple-600',
+    texto: 'text-purple-400'
+  }
+};
+
 export default function PlayMode() {
   const { currentUser, userData } = useAuth();
   const navigate = useNavigate();
-  const [categories, setCategories] = useState([]);
-  const [pendingChallenges, setPendingChallenges] = useState([]);
-  const [onlinePlayers, setOnlinePlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [categorias, setCategorias] = useState([]);
+  const [retosPendientes, setRetosPendientes] = useState([]);
+  const [jugadoresOnline, setJugadoresOnline] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    loadGameData();
+    cargarDatosJuego();
   }, []);
 
-  async function loadGameData() {
+  async function cargarDatosJuego() {
     try {
       // Cargar categorías
       const cats = await fetchCategories();
-      setCategories(cats);
+      setCategorias(cats);
 
       // Cargar retos pendientes
-      const challenges = await getUserChallenges(currentUser.uid, 'pending');
-      setPendingChallenges(challenges);
+      const retos = await getUserChallenges(currentUser.uid, 'pending');
+      setRetosPendientes(retos);
 
-      // Cargar jugadores disponibles para retos abiertos
-      const available = await getAvailableChallengers();
-      setOnlinePlayers(available.filter(p => p.id !== currentUser.uid));
+      // Cargar jugadores disponibles
+      const disponibles = await getAvailableChallengers();
+      setJugadoresOnline(disponibles.filter(p => p.id !== currentUser.uid));
     } catch (error) {
       console.error('Error al cargar datos del juego:', error);
     } finally {
-      setLoading(false);
+      setCargando(false);
     }
   }
 
-  // Calcular ingredientes
-  const coins = userData?.coins || {};
+  // Calcular nacatamales completados
+  const monedas = userData?.coins || {};
   const nacatamalesCount = Math.min(
-    coins.masa || 0,
-    coins.cerdo || 0,
-    coins.arroz || 0,
-    coins.papa || 0,
-    coins.chile || 0
+    monedas.masa || 0,
+    monedas.cerdo || 0,
+    monedas.arroz || 0,
+    monedas.papa || 0,
+    monedas.chile || 0
   );
+
+  // Obtener estadísticas de una categoría
+  function obtenerEstadisticas(categoriaId) {
+    const catStats = userData?.stats?.categoryStats?.[categoriaId];
+    if (!catStats) return { total: 0, correct: 0, precision: 0 };
+
+    const precision = catStats.total > 0
+      ? Math.round((catStats.correct / catStats.total) * 100)
+      : 0;
+
+    return { ...catStats, precision };
+  }
 
   return (
     <div className="min-h-screen pb-12">
-      {/* Header simplificado */}
-      <header className="bg-gray-900/80 backdrop-blur-md shadow-lg border-b border-gray-700/50 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      {/* Header */}
+      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-gray-700/50 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <span className="text-3xl">🇳🇮</span>
-              <h1 className="text-2xl font-bold gradient-text">NicaQuizz</h1>
+              <span className="text-4xl">🇳🇮</span>
+              <div>
+                <h1 className="text-3xl font-display text-nica-amarillo">NicaQuizz</h1>
+                <p className="text-xs text-gray-400">El Nacatamal del Conocimiento</p>
+              </div>
             </Link>
           </div>
-          
+
           {/* Contador de nacatamales */}
-          <div className="flex items-center gap-2 bg-green-900/50 px-4 py-2 rounded-full border border-green-700">
-            <svg viewBox="0 0 64 64" className="w-6 h-6">
-              <circle cx="32" cy="32" r="28" fill="#FFD700" stroke="#DAA520" strokeWidth="3"/>
-              <circle cx="32" cy="32" r="22" fill="none" stroke="#FFA500" strokeWidth="2"/>
-              <text x="32" y="40" textAnchor="middle" fontSize="24" fontWeight="bold" fill="#DAA520">$</text>
-            </svg>
-            <span className="font-bold text-green-400">{nacatamalesCount}</span>
+          <div className="flex items-center gap-3 bg-gradient-to-r from-nica-verde/50 to-nica-amarillo/50 px-5 py-2.5 rounded-2xl border-2 border-nica-amarillo/50 shadow-comic">
+            <span className="material-symbols-rounded text-3xl text-nica-amarillo">lunch_dining</span>
+            <span className="font-display text-2xl text-white">{nacatamalesCount}</span>
+            <span className="text-xs text-gray-300 hidden sm:inline">completados</span>
           </div>
+
+          {/* Menú de usuario */}
+          <UserMenu />
         </div>
       </header>
 
       {/* Contenido principal */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Título */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2 gradient-text">
-            <MaterialIcon name="sports_esports" className="inline-block w-10 h-10 align-middle mr-2" />
-            Modos de Juego
+        <div className="text-center mb-10">
+          <h1 className="text-5xl md:text-6xl font-display text-nica-amarillo mb-3 gradient-text">
+            ¡Elige tu Reto!
           </h1>
-          <p className="text-gray-400 text-lg">Elige cómo quieres jugar y ganar ingredientes</p>
+          <p className="text-gray-400 text-lg">
+            Selecciona una categoría y comienza a ganar ingredientes
+          </p>
         </div>
 
         {/* Modos de juego principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {GAME_MODES.map((mode) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+          {GAME_MODES.map((modo) => (
             <Link
-              key={mode.id}
-              to={mode.route}
+              key={modo.id}
+              to={modo.ruta}
               className="card hover-lift group relative overflow-hidden"
             >
               {/* Fondo con gradiente */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${mode.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-              
+              <div className={`absolute inset-0 bg-gradient-to-br ${modo.color} opacity-15 group-hover:opacity-25 transition-opacity`}></div>
+
               {/* Contenido */}
-              <div className="relative flex items-start gap-4">
+              <div className="relative">
                 {/* Icono */}
-                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${mode.color} flex items-center justify-center shadow-lg flex-shrink-0`}>
-                  <MaterialIcon name={mode.icon} className="text-white text-3xl" />
+                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${modo.color} flex items-center justify-center shadow-comic mb-4 group-hover:shadow-comic-hover transition-shadow`}>
+                  <span className="material-symbols-rounded text-3xl text-white">{modo.icono}</span>
                 </div>
-                
+
                 {/* Texto */}
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
-                    {mode.title}
-                  </h3>
-                  <p className="text-gray-400 text-sm mb-2">{mode.description}</p>
-                  <div className="flex items-center gap-2 text-xs">
-                    <MaterialIcon name="rewards" className="text-yellow-400 w-4 h-4" />
-                    <span className="text-yellow-400 font-medium">{mode.reward}</span>
-                  </div>
-                </div>
+                <h3 className="text-xl font-display text-white mb-2 group-hover:text-nica-amarillo transition-colors">
+                  {modo.titulo}
+                </h3>
+                <p className="text-gray-400 text-sm mb-3">{modo.descripcion}</p>
                 
-                {/* Flecha */}
-                <MaterialIcon name="arrow_forward" className="text-gray-500 group-hover:text-white transition-colors" />
+                {/* Recompensa */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="material-symbols-rounded text-yellow-400 text-sm">rewards</span>
+                  <span className="text-yellow-400 font-medium">{modo.recompensa}</span>
+                </div>
               </div>
             </Link>
           ))}
         </div>
 
         {/* Retos pendientes */}
-        {pendingChallenges.length > 0 && (
-          <div className="card mb-8 border-yellow-700 bg-yellow-900/20">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <MaterialIcon name="notifications" className="text-yellow-400" />
-              Retos Pendientes ({pendingChallenges.length})
+        {retosPendientes.length > 0 && (
+          <div className="card mb-10 border-yellow-600 bg-yellow-900/20">
+            <h2 className="text-2xl font-display text-white mb-5 flex items-center gap-3">
+              <span className="material-symbols-rounded text-yellow-400">notifications</span>
+              Retos Pendientes ({retosPendientes.length})
             </h2>
             <div className="space-y-3">
-              {pendingChallenges.map((challenge) => (
+              {retosPendientes.map((reto) => (
                 <div
-                  key={challenge.id}
-                  className="flex items-center justify-between bg-gray-800/80 rounded-lg p-3"
+                  key={reto.id}
+                  className="flex items-center justify-between bg-gray-800/80 rounded-xl p-4 border border-gray-700"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-600 to-rose-600 flex items-center justify-center">
-                      <MaterialIcon name="sports_martial_arts" className="text-white" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-600 to-rose-600 flex items-center justify-center">
+                      <span className="material-symbols-rounded text-white">sports_martial_arts</span>
                     </div>
                     <div>
                       <p className="text-white font-medium">
-                        {challenge.challenger?.displayName || 'Jugador'}
+                        {reto.desafiante?.displayName || 'Jugador'}
                       </p>
                       <p className="text-gray-400 text-sm">
-                        {challenge.categoryId 
-                          ? `Categoría: ${challenge.categoryId}`
+                        {reto.categoriaId
+                          ? `Categoría: ${reto.categoriaId}`
                           : 'Reto abierto'}
                       </p>
                     </div>
                   </div>
                   <Link
-                    to={`/challenge/${challenge.id}`}
+                    to={`/challenge/${reto.id}`}
                     className="btn-primary text-sm"
                   >
                     Aceptar
@@ -253,49 +288,91 @@ export default function PlayMode() {
           </div>
         )}
 
-        {/* Categorías disponibles para jugar */}
-        <div className="card mb-8">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <MaterialIcon name="menu_book" className="text-indigo-400" />
+        {/* Categorías disponibles */}
+        <div className="card">
+          <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
+            <span className="material-symbols-rounded text-nica-amarillo">menu_book</span>
             Categorías Disponibles
           </h2>
-          
-          {loading ? (
-            <div className="text-center py-8 text-gray-400">
-              Cargando categorías...
+
+          {cargando ? (
+            <div className="text-center py-12 text-gray-400">
+              <span className="material-symbols-rounded text-4xl animate-spin inline-block">progress_activity</span>
+              <p className="mt-4">Cargando categorías...</p>
             </div>
-          ) : categories.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              No hay categorías disponibles
+          ) : categorias.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <span className="material-symbols-rounded text-4xl inline-block">folder_off</span>
+              <p className="mt-4">No hay categorías disponibles</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {categories.map((category) => {
-                const ingrediente = CATEGORIA_INGREDIENTE[category.id];
-                const catStats = userData?.stats?.categoryStats?.[category.id];
-                const catStatsString = catStats 
-                  ? `${catStats.correct}/${catStats.total} aciertos`
-                  : 'Sin jugar';
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {categorias.map((categoria) => {
+                const ingrediente = CATEGORIA_INGREDIENTE[categoria.id];
+                const stats = obtenerEstadisticas(categoria.id);
+                const colores = CATEGORY_COLORS[categoria.id] || CATEGORY_COLORS.historia;
 
                 return (
                   <Link
-                    key={category.id}
-                    to={`/questions/${category.id}`}
-                    className="card hover-lift border-l-4 border-indigo-500 group"
+                    key={categoria.id}
+                    to={`/questions/${categoria.id}`}
+                    className={`category-card ${colores.bg} ${colores.borde} group relative overflow-hidden`}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-bold text-white capitalize group-hover:text-indigo-300 transition-colors">
-                        {category.id}
-                      </h3>
-                      {ingrediente && (
-                        <IngredientIcon type={ingrediente} className="w-8 h-8" />
-                      )}
+                    {/* Header de categoría */}
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <span className={`material-symbols-rounded text-4xl text-white`}>
+                          {categoria.icono || 'menu_book'}
+                        </span>
+                        {ingrediente && (
+                          <div className="w-10 h-10 ingredient-icon">
+                            <IngredientIcon type={ingrediente} className="w-full h-full" />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-gray-400 text-sm mb-2 line-clamp-2">
-                      {category.description}
+
+                    {/* Información */}
+                    <h3 className="text-2xl font-display text-white mb-2 group-hover:text-nica-amarillo transition-colors capitalize">
+                      {categoria.id}
+                    </h3>
+                    <p className="text-white/80 text-sm mb-4 line-clamp-2">
+                      {categoria.descripcion}
                     </p>
-                    <div className="text-xs text-gray-500">
-                      {catStatsString}
+
+                    {/* Progreso */}
+                    <div className="mt-auto">
+                      <div className="flex justify-between items-center text-sm mb-2">
+                        <span className="text-white/60">
+                          {stats.correct}/{stats.total} aciertos
+                        </span>
+                        <span className={`font-bold ${
+                          stats.precision >= 70 ? 'text-green-400' :
+                          stats.precision >= 40 ? 'text-yellow-400' : 'text-red-400'
+                        }`}>
+                          {stats.precision}%
+                        </span>
+                      </div>
+                      
+                      {/* Barra de progreso */}
+                      <div className="bg-gray-700/50 rounded-full h-3 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            stats.precision >= 70 ? 'bg-gradient-to-r from-green-500 to-green-400' :
+                            stats.precision >= 40 ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' :
+                            'bg-gradient-to-r from-red-500 to-red-400'
+                          }`}
+                          style={{ width: `${stats.precision}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Botón Jugar */}
+                    <div className="mt-4 pt-4 border-t border-white/20">
+                      <button className="w-full bg-white/20 hover:bg-white/30 text-white font-display font-bold py-2 px-4 rounded-xl transition-all group-hover:bg-white/40">
+                        <span className="material-symbols-rounded inline-block align-middle mr-1">play_arrow</span>
+                        Jugar
+                      </button>
                     </div>
                   </Link>
                 );
@@ -305,38 +382,38 @@ export default function PlayMode() {
         </div>
 
         {/* Jugadores en línea para retos abiertos */}
-        {onlinePlayers.length > 0 && (
-          <div className="card border-cyan-700 bg-cyan-900/20">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <MaterialIcon name="public" className="text-cyan-400" />
-              Jugadores en Línea ({onlinePlayers.length})
+        {jugadoresOnline.length > 0 && (
+          <div className="card mt-10 border-cyan-600 bg-cyan-900/20">
+            <h2 className="text-2xl font-display text-white mb-4 flex items-center gap-3">
+              <span className="material-symbols-rounded text-cyan-400">public</span>
+              Jugadores en Línea ({jugadoresOnline.length})
             </h2>
-            <p className="text-gray-400 text-sm mb-4">
+            <p className="text-gray-400 text-sm mb-5">
               Desafía a cualquier jugador en línea para ganar 2 chiles
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {onlinePlayers.slice(0, 6).map((player) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {jugadoresOnline.slice(0, 6).map((jugador) => (
                 <div
-                  key={player.id}
-                  className="flex items-center justify-between bg-gray-800/80 rounded-lg p-3"
+                  key={jugador.id}
+                  className="flex items-center justify-between bg-gray-800/80 rounded-xl p-4 border border-gray-700 hover:border-cyan-500 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center relative">
-                      <MaterialIcon name="person" className="text-white" />
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-800 rounded-full"></span>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center relative">
+                      <span className="material-symbols-rounded text-white">person</span>
+                      <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-gray-800 rounded-full"></span>
                     </div>
                     <div>
                       <p className="text-white font-medium text-sm">
-                        {player.displayName || 'Jugador'}
+                        {jugador.displayName || 'Jugador'}
                       </p>
                       <p className="text-gray-400 text-xs">
-                        {player.stats?.totalQuestionsAnswered || 0} preguntas
+                        {jugador.stats?.totalQuestionsAnswered || 0} preguntas
                       </p>
                     </div>
                   </div>
                   <Link
-                    to={`/challenge/open?opponent=${player.id}`}
-                    className="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                    to={`/challenge/open?opponent=${jugador.id}`}
+                    className="text-xs bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white px-4 py-2 rounded-xl font-medium transition-all shadow-comic hover:shadow-comic-hover"
                   >
                     Retar
                   </Link>

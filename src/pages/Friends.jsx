@@ -1,5 +1,16 @@
+/**
+ * Friends.jsx - Sistema de Amigos y Retos de NicaQuizz
+ * "El Rincón del Desafío"
+ * 
+ * Funcionalidades:
+ * - Buscar amigos por email
+ * - Ver estados en línea/desconectado
+ * - Enviar/recibir solicitudes de amistad
+ * - Retar amigos directamente
+ */
+
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   getFriends,
@@ -12,19 +23,16 @@ import {
   acceptChallenge,
   rejectChallenge,
   createChallenge,
-  getUserProfile,
   searchUsersByEmail,
-  sendFriendRequestByEmail
+  sendFriendRequestByEmail,
+  getUserProfile
 } from '../services/firestore';
-
-// Componente para iconos de Material Icons
-const MaterialIcon = ({ name, className = '' }) => (
-  <span className={`material-symbols-outlined ${className}`}>{name}</span>
-);
+import Button from '../components/Button';
 
 export default function Friends() {
   const { currentUser, userData } = useAuth();
-  const [activeTab, setActiveTab] = useState('friends'); // friends, requests, challenges
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('friends');
   const [friends, setFriends] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
   const [challenges, setChallenges] = useState([]);
@@ -34,6 +42,7 @@ export default function Friends() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   useEffect(() => {
     loadData();
@@ -53,53 +62,53 @@ export default function Friends() {
       setFriendRequests(requestsData || []);
       setChallenges(challengesData || []);
       setAvailableChallengers((challengersData || []).filter(c => c?.id !== currentUser.uid));
-      setMessage({ type: '', text: '' });
     } catch (error) {
       console.error('Error al cargar datos:', error);
-      setMessage({ type: 'error', text: 'No se pudo cargar la información. Verifica tu conexión.' });
-      setFriends([]);
-      setFriendRequests([]);
-      setChallenges([]);
-      setAvailableChallengers([]);
+      showMessage('error', 'No se pudo cargar la información');
     } finally {
       setLoading(false);
     }
   }
 
+  function showMessage(type, text) {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+  }
+
   async function handleAcceptRequest(requestId, senderId) {
     try {
       await acceptFriendRequest(requestId, currentUser.uid, senderId);
-      setMessage({ type: 'success', text: '¡Amigo agregado!' });
+      showMessage('success', '¡Amigo agregado!');
       loadData();
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al aceptar solicitud' });
+      showMessage('error', 'Error al aceptar solicitud');
     }
   }
 
   async function handleRejectRequest(requestId) {
     try {
       await rejectFriendRequest(requestId);
-      setMessage({ type: 'success', text: 'Solicitud rechazada' });
+      showMessage('success', 'Solicitud rechazada');
       loadData();
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al rechazar solicitud' });
+      showMessage('error', 'Error al rechazar solicitud');
     }
   }
 
   async function handleSendRequest() {
     if (!searchEmail.trim()) {
-      setMessage({ type: 'error', text: 'Ingresa un correo electrónico' });
+      showMessage('error', 'Ingresa un correo electrónico');
       return;
     }
 
     setSearching(true);
     try {
       await sendFriendRequestByEmail(currentUser.uid, searchEmail.trim());
-      setMessage({ type: 'success', text: '¡Solicitud enviada!' });
+      showMessage('success', '¡Solicitud enviada!');
       setSearchEmail('');
       setSearchResults([]);
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Error al enviar solicitud' });
+      showMessage('error', error.message || 'Error al enviar solicitud');
     } finally {
       setSearching(false);
     }
@@ -126,204 +135,292 @@ export default function Friends() {
   async function handleAcceptChallenge(challengeId, challengerId) {
     try {
       await acceptChallenge(challengeId);
-      setMessage({ type: 'success', text: '¡Reto aceptado! Redirigiendo...' });
+      showMessage('success', '¡Reto aceptado! Redirigiendo...');
       setTimeout(() => {
-        // Redirigir al juego
-        window.location.href = `/challenge/${challengeId}`;
+        navigate(`/challenge/${challengeId}`);
       }, 1000);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al aceptar reto' });
+      showMessage('error', 'Error al aceptar reto');
     }
   }
 
   async function handleRejectChallenge(challengeId) {
     try {
       await rejectChallenge(challengeId);
-      setMessage({ type: 'success', text: 'Reto rechazado' });
+      showMessage('success', 'Reto rechazado');
       loadData();
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al rechazar reto' });
+      showMessage('error', 'Error al rechazar reto');
     }
   }
 
-  async function handleChallengeUser(userId) {
-    if (!confirm(`¿Retar a este usuario?`)) return;
-    
+  async function handleChallengeUser(userId, userName) {
+    if (!selectedCategory) {
+      showMessage('error', 'Selecciona una categoría para el reto');
+      return;
+    }
+
     try {
-      await createChallenge(currentUser.uid, userId, null, true);
-      setMessage({ type: 'success', text: '¡Reto enviado!' });
+      const challengeId = await createChallenge(currentUser.uid, userId, selectedCategory, false);
+      showMessage('success', `¡Reto enviado a ${userName}!`);
+      setSelectedCategory('');
+      loadData();
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al enviar reto' });
+      showMessage('error', 'Error al enviar reto');
     }
   }
+
+  async function handleChallengeAvailablePlayer(playerId, playerName) {
+    if (!selectedCategory) {
+      showMessage('error', 'Selecciona una categoría para el reto');
+      return;
+    }
+
+    try {
+      const challengeId = await createChallenge(currentUser.uid, playerId, selectedCategory, false);
+      showMessage('success', `¡Reto enviado a ${playerName}!`);
+      setSelectedCategory('');
+      loadData();
+    } catch (error) {
+      showMessage('error', 'Error al enviar reto');
+    }
+  }
+
+  // Categorías disponibles para retos
+  const categorias = [
+    { id: 'historia', nombre: 'Historia', color: 'bg-amber-500' },
+    { id: 'matematicas', nombre: 'Matemáticas', color: 'bg-blue-500' },
+    { id: 'geografia', nombre: 'Geografía', color: 'bg-green-500' },
+    { id: 'ciencias', nombre: 'Ciencias', color: 'bg-purple-500' },
+    { id: null, nombre: 'Libre', color: 'bg-gray-500' }
+  ];
 
   return (
-    <div className="min-h-screen pb-12">
+    <div className="min-h-screen pb-12 bg-gradient-to-br from-nica-verde/10 via-gray-900 to-nica-verde/10">
       {/* Header */}
-      <header className="bg-gray-900/80 backdrop-blur-md shadow-lg border-b border-gray-700/50">
+      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-gray-700/50 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold gradient-text">
-              <span className="text-3xl">��</span> NicaQuizz
-            </h1>
-            <nav className="hidden md:flex gap-4">
-              <Link to="/dashboard" className="text-gray-400 hover:text-indigo-400 font-medium transition-colors">Inicio</Link>
-              <Link to="/categories" className="text-gray-400 hover:text-indigo-400 font-medium transition-colors">Categorías</Link>
-              <Link to="/ranking" className="text-gray-400 hover:text-indigo-400 font-medium transition-colors">Ranking</Link>
-              <Link to="/friends" className="text-indigo-400 font-medium transition-colors">Amigos</Link>
-              <Link to="/shop" className="text-gray-400 hover:text-indigo-400 font-medium transition-colors">Tienda</Link>
-              <Link to="/profile" className="text-gray-400 hover:text-indigo-400 font-medium transition-colors">Perfil</Link>
-            </nav>
+            <Link to="/play" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <span className="text-4xl">🇳🇮</span>
+              <div>
+                <h1 className="text-3xl font-display text-nica-amarillo">NicaQuizz</h1>
+                <p className="text-xs text-gray-400">El Rincón del Desafío</p>
+              </div>
+            </Link>
           </div>
+          <Link to="/play" className="text-gray-400 hover:text-nica-amarillo transition-colors flex items-center gap-2">
+            <span className="material-symbols-rounded">home</span>
+            <span className="hidden sm:inline">Volver</span>
+          </Link>
         </div>
       </header>
 
-      {/* Contenido */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      {/* Contenido Principal */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        
+        {/* Título */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-display text-nica-amarillo mb-3 gradient-text">
+            <span className="material-symbols-rounded inline-block align-middle mr-2">people</span>
+            Amigos y Retos
+          </h1>
+          <p className="text-gray-400 text-lg">
+            Desafía a tus amigos y demuestra quién sabe más
+          </p>
+        </div>
+
+        {/* Mensajes */}
         {message.text && (
-          <div className={`p-4 rounded-lg mb-6 ${
-            message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'
+          <div className={`p-4 rounded-xl mb-6 flex items-center gap-3 ${
+            message.type === 'success'
+              ? 'bg-green-900/30 text-green-400 border border-green-700/50'
+              : 'bg-red-900/30 text-red-400 border border-red-700/50'
           }`}>
+            <span className="material-symbols-rounded text-2xl">
+              {message.type === 'success' ? 'check_circle' : 'error'}
+            </span>
             {message.text}
           </div>
         )}
 
-        <h1 className="text-4xl font-bold text-white mb-8 gradient-text">
-          <MaterialIcon name="group" className="inline-block w-8 h-8 align-middle mr-2" /> Amigos y Retos
-        </h1>
+        {/* Selector de Categoría para Retos */}
+        <div className="card mb-8">
+          <h2 className="text-xl font-display text-white mb-4 flex items-center gap-2">
+            <span className="material-symbols-rounded text-nica-amarillo">category</span>
+            Categoría del Reto
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            {categorias.map((cat) => (
+              <button
+                key={cat.id || 'libre'}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-5 py-3 rounded-xl font-bold transition-all hover-lift flex items-center gap-2 ${
+                  selectedCategory === cat.id || (cat.id === null && selectedCategory === '')
+                    ? `${cat.color} text-white shadow-comic`
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {cat.nombre}
+              </button>
+            ))}
+          </div>
+          {!selectedCategory && selectedCategory !== null && (
+            <p className="text-gray-500 text-sm mt-3">
+              <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">info</span>
+              Selecciona una categoría antes de enviar un reto
+            </p>
+          )}
+        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
+        {/* Tabs de Navegación */}
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('friends')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               activeTab === 'friends'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="group" className="inline-block w-5 h-5 align-middle mr-1" /> Amigos ({friends.length})
+            <span className="material-symbols-rounded">people</span>
+            <span>Mis Amigos ({friends.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('requests')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               activeTab === 'requests'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="mail" className="inline-block w-5 h-5 align-middle mr-1" /> Solicitudes ({friendRequests.length})
+            <span className="material-symbols-rounded">mail</span>
+            <span>Solicitudes ({friendRequests.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('challenges')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               activeTab === 'challenges'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="sports_martial_arts" className="inline-block w-5 h-5 align-middle mr-1" /> Retos ({challenges.length})
+            <span className="material-symbols-rounded">sports_martial_arts</span>
+            <span>Retos ({challenges.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('online')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
               activeTab === 'online'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            <MaterialIcon name="circle" className="inline-block w-3 h-3 align-middle text-green-500 mr-1" /> En Línea ({availableChallengers.length})
+            <span className="material-symbols-rounded">public</span>
+            <span>En Línea ({availableChallengers.length})</span>
           </button>
         </div>
 
-        {/* Tab: Amigos */}
+        {/* Tab: Buscar Amigos */}
+        <div className="card mb-8">
+          <h2 className="text-xl font-display text-white mb-4 flex items-center gap-2">
+            <span className="material-symbols-rounded text-nica-amarillo">person_add</span>
+            Buscar Amigos
+          </h2>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="email"
+              value={searchEmail}
+              onChange={(e) => setSearchEmail(e.target.value)}
+              placeholder="amigo@correo.com"
+              className="input-field flex-1"
+              disabled={searching}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <Button onClick={handleSearch} disabled={searching} variant="secondary" icon="search">
+              Buscar
+            </Button>
+            <Button onClick={handleSendRequest} disabled={searching} variant="primary" icon="send">
+              Enviar Solicitud
+            </Button>
+          </div>
+
+          {/* Resultados de búsqueda */}
+          {searchResults.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {searchResults.map(user => (
+                <div key={user.id} className="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-nica-verde to-nica-amarillo flex items-center justify-center">
+                      <span className="material-symbols-rounded text-white">person</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-white">{user.displayName || 'Usuario'}</p>
+                      <p className="text-sm text-gray-500">{user.email}</p>
+                    </div>
+                  </div>
+                  <Button onClick={handleSendRequest} variant="primary" size="sm" icon="person_add">
+                    Agregar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Tab: Mis Amigos */}
         {activeTab === 'friends' && (
           <div className="card">
-            <h2 className="text-xl font-bold mb-4 text-white">Tus Amigos</h2>
-
-            {/* Buscar amigo */}
-            <div className="mb-6">
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={searchEmail}
-                  onChange={(e) => setSearchEmail(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Buscar por correo electrónico"
-                  className="input-field flex-1"
-                />
-                <button onClick={handleSearch} className="btn-primary" disabled={searching}>
-                  <MaterialIcon name="search" className="inline-block w-5 h-5 align-middle" /> Buscar
-                </button>
-                <button onClick={handleSendRequest} className="btn-primary" disabled={searching || !searchResults.length}>
-                  {searching ? 'Enviando...' : 'Enviar Solicitud'}
-                </button>
-              </div>
-
-              {/* Resultados de búsqueda */}
-              {searchResults.length > 0 && (
-                <div className="bg-gray-800 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-gray-400 mb-2">Resultados:</p>
-                  {searchResults.map(user => (
-                    <div key={user.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-lg font-bold text-white">
-                          {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-white">{user.displayName || 'Usuario'}</p>
-                          <p className="text-sm text-gray-400">{user.email}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleSendRequest()}
-                        className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition-all"
-                      >
-                        <MaterialIcon name="person_add" className="inline-block w-5 h-5 align-middle" /> Agregar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {searching && (
-                <div className="text-center py-4 text-gray-400">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-500 border-t-transparent"></div>
-                  <p className="text-sm mt-2">Buscando...</p>
-                </div>
-              )}
-            </div>
-
+            <h2 className="text-xl font-display text-white mb-6 flex items-center gap-2">
+              <span className="material-symbols-rounded text-nica-amarillo">people</span>
+              Lista de Amigos ({friends.length})
+            </h2>
             {loading ? (
-              <div className="text-center py-8 text-gray-400 animate-pulse">Cargando amigos...</div>
+              <div className="text-center py-12">
+                <span className="material-symbols-rounded text-6xl text-nica-amarillo animate-spin inline-block">progress_activity</span>
+                <p className="text-gray-400 mt-4">Cargando amigos...</p>
+              </div>
             ) : friends.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                No tienes amigos aún. ¡Agrega a otros jugadores!
+              <div className="text-center py-12 text-gray-400">
+                <span className="material-symbols-rounded text-6xl mb-4">people_outline</span>
+                <p className="text-lg">Aún no tienes amigos</p>
+                <p className="text-sm mt-2">Busca amigos por email para comenzar</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {friends.map(friend => (
-                  <div key={friend.id} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-indigo-500 transition-colors">
+                  <div key={friend.id} className="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 border border-gray-700 hover:border-nica-amarillo/30 transition-all">
                     <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${friend.isOnline ? 'bg-green-500' : 'bg-gray-500'}`} />
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-nica-verde to-nica-amarillo flex items-center justify-center">
+                          <span className="material-symbols-rounded text-white text-xl">person</span>
+                        </div>
+                        <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-gray-900 rounded-full ${
+                          friend.isOnline ? 'bg-green-500' : 'bg-gray-500'
+                        }`}></span>
+                      </div>
                       <div>
-                        <p className="font-semibold text-gray-200">{friend.displayName}</p>
-                        <p className="text-sm text-gray-400">{friend.email}</p>
+                        <p className="font-bold text-white">{friend.displayName || 'Amigo'}</p>
+                        <p className="text-xs text-gray-500">
+                          {friend.isOnline ? 'En línea' : 'Desconectado'}
+                        </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Link
-                        to={`/challenge/friend/${friend.id}`}
-                        className="text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-3 py-1 rounded transition-all"
+                        to={`/challenge?opponent=${friend.id}&category=${selectedCategory || ''}`}
+                        className="bg-nica-verde/20 hover:bg-nica-verde/30 text-nica-verde border border-nica-verde/50 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                       >
-                        <MaterialIcon name="sports_martial_arts" className="inline-block w-4 h-4 align-middle" /> Retar
+                        <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">sports_martial_arts</span>
+                        Retar
                       </Link>
-                      <button
-                        onClick={() => setMessage({ type: 'error', text: 'Funcionalidad en desarrollo' })}
-                        className="text-sm bg-gray-600 hover:bg-gray-500 text-gray-200 px-3 py-1 rounded transition-colors"
+                      <Link
+                        to={`/profile/${friend.id}`}
+                        className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                       >
-                        <MaterialIcon name="person" className="inline-block w-4 h-4 align-middle" /> Ver Perfil
-                      </button>
+                        <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">person</span>
+                        Perfil
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -335,39 +432,50 @@ export default function Friends() {
         {/* Tab: Solicitudes */}
         {activeTab === 'requests' && (
           <div className="card">
-            <h2 className="text-xl font-bold mb-4 text-white">Solicitudes de Amistad</h2>
+            <h2 className="text-xl font-display text-white mb-6 flex items-center gap-2">
+              <span className="material-symbols-rounded text-nica-amarillo">mail</span>
+              Solicitudes Recibidas ({friendRequests.length})
+            </h2>
             {loading ? (
-              <div className="text-center py-8 text-gray-400 animate-pulse">Cargando...</div>
+              <div className="text-center py-12 text-gray-400">
+                <span className="material-symbols-rounded text-6xl animate-spin inline-block">progress_activity</span>
+                <p className="mt-4">Cargando...</p>
+              </div>
             ) : friendRequests.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                No tienes solicitudes pendientes
+              <div className="text-center py-12 text-gray-400">
+                <span className="material-symbols-rounded text-6xl mb-4">mark_email_read</span>
+                <p className="text-lg">No hay solicitudes pendientes</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {friendRequests.map(request => (
-                  <div key={request.id} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                  <div key={request.id} className="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 border border-gray-700">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-xl font-bold text-white">
-                        {request.sender?.displayName?.[0]?.toUpperCase() || '?'}
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-nica-verde to-nica-amarillo flex items-center justify-center">
+                        <span className="material-symbols-rounded text-white text-xl">person</span>
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-200">{request.sender?.displayName}</p>
-                        <p className="text-sm text-gray-400">{request.sender?.email}</p>
+                        <p className="font-bold text-white">{request.sender?.displayName || 'Usuario'}</p>
+                        <p className="text-xs text-gray-500">{request.sender?.email}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAcceptRequest(request.id, request.senderId)}
-                        className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition-all"
+                      <Button
+                        onClick={() => handleAcceptRequest(request.id, request.sender.id)}
+                        variant="success"
+                        size="sm"
+                        icon="check"
                       >
-                        <MaterialIcon name="check" className="inline-block w-5 h-5 align-middle" /> Aceptar
-                      </button>
-                      <button
+                        Aceptar
+                      </Button>
+                      <Button
                         onClick={() => handleRejectRequest(request.id)}
-                        className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg transition-all"
+                        variant="secondary"
+                        size="sm"
+                        icon="close"
                       >
-                        <MaterialIcon name="close" className="inline-block w-5 h-5 align-middle" /> Rechazar
-                      </button>
+                        Rechazar
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -376,42 +484,56 @@ export default function Friends() {
           </div>
         )}
 
-        {/* Tab: Retos */}
+        {/* Tab: Retos Recibidos */}
         {activeTab === 'challenges' && (
           <div className="card">
-            <h2 className="text-xl font-bold mb-4 text-white">Retos Recibidos</h2>
+            <h2 className="text-xl font-display text-white mb-6 flex items-center gap-2">
+              <span className="material-symbols-rounded text-nica-amarillo">sports_martial_arts</span>
+              Retos Pendientes ({challenges.length})
+            </h2>
             {loading ? (
-              <div className="text-center py-8 text-gray-400 animate-pulse">Cargando...</div>
+              <div className="text-center py-12 text-gray-400">
+                <span className="material-symbols-rounded text-6xl animate-spin inline-block">progress_activity</span>
+                <p className="mt-4">Cargando...</p>
+              </div>
             ) : challenges.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                No tienes retos pendientes
+              <div className="text-center py-12 text-gray-400">
+                <span className="material-symbols-rounded text-6xl mb-4">emoji_events</span>
+                <p className="text-lg">No hay retos pendientes</p>
+                <p className="text-sm mt-2">¡Sé el primero en desafiar!</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {challenges.map(challenge => (
-                  <div key={challenge.id} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                  <div key={challenge.id} className="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 border border-gray-700">
                     <div className="flex items-center gap-3">
-                      <MaterialIcon name="sports_martial_arts" className="text-3xl text-indigo-400" />
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-600 to-rose-600 flex items-center justify-center">
+                        <span className="material-symbols-rounded text-white text-xl">sports_martial_arts</span>
+                      </div>
                       <div>
-                        <p className="font-semibold text-gray-200">{challenge.challenger?.displayName}</p>
-                        <p className="text-sm text-gray-400">
-                          {challenge.categoryId ? 'Categoría: ' + challenge.categoryId : 'Reto abierto'}
+                        <p className="font-bold text-white">{challenge.challenger?.displayName || 'Jugador'}</p>
+                        <p className="text-xs text-gray-500">
+                          {challenge.categoryId ? `Categoría: ${challenge.categoryId}` : 'Reto abierto'}
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         onClick={() => handleAcceptChallenge(challenge.id, challenge.challengerId)}
-                        className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition-all"
+                        variant="success"
+                        size="sm"
+                        icon="check"
                       >
-                        <MaterialIcon name="check" className="inline-block w-5 h-5 align-middle" /> Aceptar
-                      </button>
-                      <button
+                        Aceptar
+                      </Button>
+                      <Button
                         onClick={() => handleRejectChallenge(challenge.id)}
-                        className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg transition-all"
+                        variant="secondary"
+                        size="sm"
+                        icon="close"
                       >
-                        <MaterialIcon name="close" className="inline-block w-5 h-5 align-middle" /> Rechazar
-                      </button>
+                        Rechazar
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -420,40 +542,50 @@ export default function Friends() {
           </div>
         )}
 
-        {/* Tab: Usuarios en Línea */}
+        {/* Tab: Jugadores En Línea */}
         {activeTab === 'online' && (
           <div className="card">
-            <h2 className="text-xl font-bold mb-4 text-white">
-              Usuarios Disponibles para Reto
-              <span className="ml-2 text-sm font-normal text-gray-400">
-                (Permiten retos abiertos)
-              </span>
+            <h2 className="text-xl font-display text-white mb-6 flex items-center gap-2">
+              <span className="material-symbols-rounded text-nica-amarillo">public</span>
+              Jugadores Disponibles ({availableChallengers.length})
             </h2>
             {loading ? (
-              <div className="text-center py-8 text-gray-400 animate-pulse">Cargando...</div>
+              <div className="text-center py-12 text-gray-400">
+                <span className="material-symbols-rounded text-6xl animate-spin inline-block">progress_activity</span>
+                <p className="mt-4">Cargando...</p>
+              </div>
             ) : availableChallengers.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                No hay usuarios disponibles en este momento
+              <div className="text-center py-12 text-gray-400">
+                <span className="material-symbols-rounded text-6xl mb-4">signal_wifi_off</span>
+                <p className="text-lg">No hay jugadores en línea</p>
+                <p className="text-sm mt-2">Intenta más tarde</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {availableChallengers.map(user => (
-                  <div key={user.id} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-indigo-500 transition-colors">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {availableChallengers.map(player => (
+                  <div key={player.id} className="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 border border-gray-700 hover:border-cyan-500/30 transition-all">
                     <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center">
+                          <span className="material-symbols-rounded text-white text-xl">person</span>
+                        </div>
+                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-gray-900 rounded-full"></span>
+                      </div>
                       <div>
-                        <p className="font-semibold text-gray-200">{user.displayName}</p>
-                        <p className="text-sm text-gray-400">
-                          {user.stats?.totalCorrect || 0} aciertos • {user.stats?.wins || 0} victorias
+                        <p className="font-bold text-white">{player.displayName || 'Jugador'}</p>
+                        <p className="text-xs text-gray-500">
+                          {player.stats?.totalQuestionsAnswered || 0} preguntas respondidas
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleChallengeUser(user.id)}
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-4 py-2 rounded-lg transition-all"
+                    <Button
+                      onClick={() => handleChallengeAvailablePlayer(player.id, player.displayName || 'Jugador')}
+                      variant="primary"
+                      size="sm"
+                      icon="sports_martial_arts"
                     >
-                      <MaterialIcon name="sports_martial_arts" className="inline-block w-5 h-5 align-middle mr-1" /> Retar
-                    </button>
+                      Retar
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -464,5 +596,3 @@ export default function Friends() {
     </div>
   );
 }
-
-

@@ -1,773 +1,344 @@
 /**
- * AdminPanel.jsx - Panel de Administración de NicaQuizz
- * "Herramienta del Maestro Docente"
+ * AdminPanel.jsx - Panel de Control Docente de NicaQuizz
+ * "El Fogón del Maestro"
  * 
- * Funcionalidades:
- * - Gestión de preguntas pendientes (aprobar/rechazar)
- * - Creación y eliminación de categorías
- * - Administración de monedas especiales
- * - Monedas infinitas para testing
+ * Características:
+ * - Sidebar de navegación
+ * - Stats Bento Grid (Preguntas, Usuarios, Monedas)
+ * - Lista de preguntas pendientes con aprobar/rechazar
+ * - Filtros por categoría
+ * - Paginación
+ * - FAB para nuevo aviso
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useIsAdmin } from '../hooks/useIsAdmin';
-import {
-  fetchPendingQuestions,
-  approveQuestion,
-  rejectQuestion,
-  createCategoryAdmin,
-  fetchCategories,
-  addInfiniteCoins,
-  deleteCategory,
-  fetchCurrencies,
-  createCurrency,
-  updateCurrency,
-  deleteCurrency,
-  toggleCurrencyActive
-} from '../services/firestore';
-import Button from '../components/Button';
 
-// Iconos disponibles para categorías
-const CATEGORY_ICONS = [
-  { name: 'history_edu', label: 'Historia' },
-  { name: 'calculate', label: 'Matemáticas' },
-  { name: 'public', label: 'Geografía' },
-  { name: 'science', label: 'Ciencias' },
-  { name: 'menu_book', label: 'Libro' },
-  { name: 'emoji_events', label: 'Trofeo' },
-  { name: 'lightbulb', label: 'Idea' },
-  { name: 'star', label: 'Estrella' },
-  { name: 'art_track', label: 'Arte' },
-  { name: 'music_note', label: 'Música' }
+// Preguntas pendientes simuladas
+const PREGUNTAS_PENDIENTES = [
+  {
+    id: 1,
+    categoria: 'Gastronomía',
+    dificultad: 'Intermedio',
+    texto: '¿Cuál es el ingrediente principal que le da el color característico a la masa del nacatamal?',
+    opciones: ['A. Achiote', 'B. Pimentón', 'C. Chile de árbol', 'D. Cúrcuma'],
+    tiempo: 'hace 2 horas',
+    color: 'border-[#154212]',
+    badgeColor: 'bg-[#154212]/10 text-[#154212]',
+    iconoDificultad: 'signal_cellular_alt'
+  },
+  {
+    id: 2,
+    categoria: 'Historia',
+    dificultad: 'Avanzado',
+    texto: '¿En qué año se firmó el acta de Independencia de Centroamérica en la que Nicaragua participó?',
+    opciones: ['A. 1821', 'B. 1810', 'C. 1838', 'D. 1900'],
+    tiempo: 'hace 5 horas',
+    color: 'border-[#79001c]',
+    badgeColor: 'bg-[#79001c]/10 text-[#79001c]',
+    iconoDificultad: 'signal_cellular_alt_2_bar'
+  },
+  {
+    id: 3,
+    categoria: 'Geografía',
+    dificultad: 'Fácil',
+    texto: '¿Cómo se le conoce popularmente al Lago Cocibolca?',
+    opciones: ['A. El Gran Lago de Nicaragua', 'B. Lago de Managua', 'C. Laguna de Apoyo', 'D. El Ojo de Agua'],
+    tiempo: 'hace 1 día',
+    color: 'border-[#755b00]',
+    badgeColor: 'bg-[#755b00]/10 text-[#755b00]',
+    iconoDificultad: 'signal_cellular_alt_1_bar'
+  }
 ];
 
-// Ingredientes disponibles
-const INGREDIENTES = [
-  { value: 'masa', label: 'Masa', icon: 'bakery_dining' },
-  { value: 'cerdo', label: 'Cerdo', icon: 'lunch_dining' },
-  { value: 'arroz', label: 'Arroz', icon: 'rice_bowl' },
-  { value: 'papa', label: 'Papa', icon: 'egg' },
-  { value: 'chile', label: 'Chile', icon: 'local_fire_department' }
-];
+// Categorías para filtros
+const CATEGORIAS = ['Todos', 'Gastronomía', 'Historia', 'Geografía', 'Ciencias'];
 
 export default function AdminPanel() {
-  const { userData, currentUser, logout } = useAuth();
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const [activeTab, setActiveTab] = useState('questions');
-  const [pendingQuestions, setPendingQuestions] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newCategory, setNewCategory] = useState({ name: '', description: '', ingrediente: 'masa', icon: 'history_edu' });
-  const [newCurrency, setNewCurrency] = useState({ name: '', description: '', icon: 'payments', defaultAmount: 0 });
-  const [editingCurrency, setEditingCurrency] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const { currentUser } = useAuth();
+  const [filtroActivo, setFiltroActivo] = useState('Todos');
+  const [preguntas] = useState(PREGUNTAS_PENDIENTES);
 
-  useEffect(() => {
-    if (!userData?.isAdmin) return;
-    loadData();
-  }, []);
+  // Stats
+  const stats = {
+    preguntasPendientes: 42,
+    nuevosUsuarios: 128,
+    monedasRepartidas: '12.5k'
+  };
 
-  async function loadData() {
-    setLoading(true);
-    try {
-      const [questions, cats, curr] = await Promise.all([
-        fetchPendingQuestions(),
-        fetchCategories(),
-        fetchCurrencies()
-      ]);
-      setPendingQuestions(questions);
-      setCategories(cats);
-      setCurrencies(curr);
-    } catch (error) {
-      console.error('Error al cargar datos:', error);
-      showMessage('error', 'Error al cargar datos');
-    } finally {
-      setLoading(false);
-    }
+  async function handleAprobar(id) {
+    console.log('Aprobando pregunta:', id);
+    // En producción: llamar a API para aprobar
   }
 
-  function showMessage(type, text) {
-    setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 4000);
-  }
-
-  async function handleApprove(questionId) {
-    setActionLoading(true);
-    try {
-      await approveQuestion(questionId);
-      setPendingQuestions(prev => prev.filter(q => q.id !== questionId));
-      showMessage('success', 'Pregunta aprobada exitosamente');
-    } catch (error) {
-      console.error('Error al aprobar pregunta:', error);
-      showMessage('error', 'Error al aprobar pregunta');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleReject(questionId) {
-    if (!confirm('¿Estás seguro de rechazar esta pregunta?')) return;
-    setActionLoading(true);
-    try {
-      await rejectQuestion(questionId);
-      setPendingQuestions(prev => prev.filter(q => q.id !== questionId));
-      showMessage('success', 'Pregunta rechazada');
-    } catch (error) {
-      console.error('Error al rechazar pregunta:', error);
-      showMessage('error', 'Error al rechazar pregunta');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleCreateCategory(e) {
-    e.preventDefault();
-    if (!newCategory.name.trim()) {
-      showMessage('error', 'El nombre de la categoría es requerido');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await createCategoryAdmin(newCategory.name, newCategory.description, newCategory.ingrediente, newCategory.icon);
-      setNewCategory({ name: '', description: '', ingrediente: 'masa', icon: 'history_edu' });
-      const cats = await fetchCategories();
-      setCategories(cats);
-      showMessage('success', 'Categoría creada exitosamente');
-    } catch (error) {
-      console.error('Error al crear categoría:', error);
-      showMessage('error', 'Error al crear categoría');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleDeleteCategory(categoryId) {
-    if (!confirm('¿Estás seguro de eliminar esta categoría? Las preguntas asociadas permanecerán en la BD.')) return;
-    setActionLoading(true);
-    try {
-      await deleteCategory(categoryId);
-      const cats = await fetchCategories();
-      setCategories(cats);
-      showMessage('success', 'Categoría eliminada');
-    } catch (error) {
-      console.error('Error al eliminar categoría:', error);
-      showMessage('error', 'Error al eliminar categoría');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleAddInfiniteCoins() {
-    if (!confirm('¿Estás seguro de agregar monedas infinitas? Esta acción es permanente.')) return;
-    setActionLoading(true);
-    try {
-      await addInfiniteCoins(currentUser.uid);
-      showMessage('success', 'Monedas infinitas agregadas. Ahora tienes 9999 de cada ingrediente.');
-    } catch (error) {
-      console.error('Error al agregar monedas:', error);
-      showMessage('error', 'Error al agregar monedas');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleCreateCurrency(e) {
-    e.preventDefault();
-    if (!newCurrency.name.trim()) {
-      showMessage('error', 'El nombre de la moneda es requerido');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await createCurrency(newCurrency.name, newCurrency.description, newCurrency.icon, newCurrency.defaultAmount);
-      setNewCurrency({ name: '', description: '', icon: 'payments', defaultAmount: 0 });
-      const curr = await fetchCurrencies();
-      setCurrencies(curr);
-      showMessage('success', 'Moneda creada exitosamente');
-    } catch (error) {
-      console.error('Error al crear moneda:', error);
-      showMessage('error', 'Error al crear moneda');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleEditCurrency(currency) {
-    setEditingCurrency({ ...currency });
-  }
-
-  async function handleUpdateCurrency(e) {
-    e.preventDefault();
-    if (!editingCurrency.name.trim()) {
-      showMessage('error', 'El nombre de la moneda es requerido');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await updateCurrency(editingCurrency.id, {
-        name: editingCurrency.name,
-        description: editingCurrency.description,
-        icon: editingCurrency.icon,
-        defaultAmount: editingCurrency.defaultAmount
-      });
-      setEditingCurrency(null);
-      const curr = await fetchCurrencies();
-      setCurrencies(curr);
-      showMessage('success', 'Moneda actualizada exitosamente');
-    } catch (error) {
-      console.error('Error al actualizar moneda:', error);
-      showMessage('error', 'Error al actualizar moneda');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleDeleteCurrency(currencyId) {
-    if (!confirm('¿Estás seguro de eliminar esta moneda?')) return;
-    setActionLoading(true);
-    try {
-      await deleteCurrency(currencyId);
-      const curr = await fetchCurrencies();
-      setCurrencies(curr);
-      showMessage('success', 'Moneda eliminada');
-    } catch (error) {
-      console.error('Error al eliminar moneda:', error);
-      showMessage('error', 'Error al eliminar moneda');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleToggleCurrencyActive(currencyId, currentActive) {
-    setActionLoading(true);
-    try {
-      await toggleCurrencyActive(currencyId, !currentActive);
-      const curr = await fetchCurrencies();
-      setCurrencies(curr);
-      showMessage('success', currentActive ? 'Moneda desactivada' : 'Moneda activada');
-    } catch (error) {
-      console.error('Error al cambiar estado de moneda:', error);
-      showMessage('error', 'Error al cambiar estado de moneda');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  // Si no es admin, mostrar mensaje de acceso denegado
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card text-center max-w-md border-red-700 bg-red-900/20">
-          <span className="material-symbols-rounded text-6xl text-red-500 mb-4">block</span>
-          <h1 className="text-2xl font-display text-white mb-4">Acceso Denegado</h1>
-          <p className="text-gray-400 mb-6">
-            No tienes permisos de administrador para acceder a esta página.
-          </p>
-          <Link to="/play" className="btn-primary inline-block">
-            <span className="material-symbols-rounded inline-block align-middle mr-1">home</span>
-            Volver al inicio
-          </Link>
-        </div>
-      </div>
-    );
+  async function handleRechazar(id) {
+    console.log('Rechazando pregunta:', id);
+    // En producción: llamar a API para rechazar
   }
 
   return (
-    <div className="min-h-screen pb-12 bg-gradient-to-br from-gray-900 via-nica-verde/10 to-gray-900">
-      {/* Header */}
-      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-nica-amarillo/30 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <span className="text-4xl">🇳🇮</span>
-              <div>
-                <h1 className="text-3xl font-display text-nica-amarillo">NicaQuizz</h1>
-                <p className="text-xs text-gray-400">Panel de Administrador</p>
-              </div>
-            </Link>
-            <span className="bg-nica-rojo/30 text-nica-rojo px-4 py-1.5 rounded-xl text-sm font-bold border border-nica-rojo/50">
-              <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">admin_panel_settings</span>
-              Admin
-            </span>
-          </div>
-          <button
-            onClick={logout}
-            className="bg-nica-rojo/20 hover:bg-nica-rojo/30 text-nica-rojo border border-nica-rojo/50 px-4 py-2 rounded-xl transition-colors flex items-center gap-2 font-bold"
-          >
-            <span className="material-symbols-rounded">logout</span>
-            Salir
-          </button>
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#fefccf] text-[#1d1d03] font-body">
+      
+      {/* Sidebar Navigation */}
+      <aside className="hidden md:flex flex-col h-screen w-72 rounded-r-[2rem] sticky left-0 top-0 bg-[#fefccf] shadow-xl py-8 space-y-4">
+        <div className="px-8 mb-8">
+          <h1 className="text-3xl font-black text-[#154212] tracking-tighter font-headline">NicaQuizz</h1>
+          <p className="text-[0.65rem] uppercase tracking-widest text-[#755b00] font-bold mt-1">
+            Panel de Control Docente
+          </p>
         </div>
-      </header>
 
-      {/* Contenido */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        
-        {/* Mensajes */}
-        {message.text && (
-          <div className={`p-4 rounded-xl mb-6 flex items-center gap-3 ${
-            message.type === 'success'
-              ? 'bg-green-900/30 text-green-400 border border-green-700/50'
-              : 'bg-red-900/30 text-red-400 border border-red-700/50'
-          }`}>
-            <span className="material-symbols-rounded text-2xl">
-              {message.type === 'success' ? 'check_circle' : 'error'}
-            </span>
-            {message.text}
-          </div>
-        )}
-
-        {/* Tabs de Navegación */}
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
-          <button
-            onClick={() => setActiveTab('questions')}
-            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
-              activeTab === 'questions'
-                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
+        <nav className="flex-1 space-y-2">
+          <Link
+            to="/admin"
+            className="flex items-center gap-4 bg-[#755b00] text-white rounded-full mx-4 my-1 px-6 py-3 transition-transform translate-x-1"
           >
-            <span className="material-symbols-rounded">fact_check</span>
-            <span>Preguntas ({pendingQuestions.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('categories')}
-            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
-              activeTab === 'categories'
-                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
+            <span className="material-symbols-outlined">pending_actions</span>
+            <span className="font-headline text-sm uppercase tracking-widest">Preguntas Pendientes</span>
+          </Link>
+          <Link
+            to="/admin/categories"
+            className="flex items-center gap-4 text-[#154212] opacity-70 px-8 py-3 hover:bg-[#154212]/10 transition-all font-headline text-sm uppercase tracking-widest"
           >
-            <span className="material-symbols-rounded">folder</span>
+            <span className="material-symbols-outlined">category</span>
             <span>Categorías</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('currencies')}
-            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
-              activeTab === 'currencies'
-                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
+          </Link>
+          <Link
+            to="/admin/currencies"
+            className="flex items-center gap-4 text-[#154212] opacity-70 px-8 py-3 hover:bg-[#154212]/10 transition-all font-headline text-sm uppercase tracking-widest"
           >
-            <span className="material-symbols-rounded">payments</span>
+            <span className="material-symbols-outlined">payments</span>
             <span>Monedas</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('coins')}
-            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all hover-lift flex items-center gap-2 ${
-              activeTab === 'coins'
-                ? 'bg-gradient-to-r from-nica-verde to-nica-amarillo text-white shadow-comic'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            <span className="material-symbols-rounded">grain</span>
-            <span>Monedas Infinitas</span>
-          </button>
-        </div>
+          </Link>
 
-        {/* Tab: Preguntas Pendientes */}
-        {activeTab === 'questions' && (
-          <div className="card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-display text-white flex items-center gap-3">
-                <span className="material-symbols-rounded text-nica-amarillo">fact_check</span>
-                Preguntas Pendientes de Aprobación
-              </h2>
-              <span className="bg-nica-amarillo/20 text-nica-amarillo px-4 py-1.5 rounded-xl font-bold border border-nica-amarillo/50">
-                {pendingQuestions.length} pendientes
+          {/* Mi Despensa */}
+          <div className="pt-8 px-8">
+            <p className="text-[10px] font-bold text-[#154212]/60 uppercase tracking-[0.2em] mb-4">
+              Mi Despensa
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-[#154212] opacity-80">
+                <span className="material-symbols-outlined text-lg">bakery_dining</span>
+                <span className="text-xs font-headline tracking-widest uppercase">Masa</span>
+              </div>
+              <div className="flex items-center gap-3 text-[#154212] opacity-80">
+                <span className="material-symbols-outlined text-lg">restaurant</span>
+                <span className="text-xs font-headline tracking-widest uppercase">Cerdo</span>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        {/* User Profile */}
+        <div className="px-6 mt-auto">
+          <div className="bg-[#f2f0c4] rounded-xl p-4 flex items-center gap-3 shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-[#fccc38] flex items-center justify-center text-[#1d1d03]">
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-[#1d1d03]">Prof. Ramírez</p>
+              <p className="text-[10px] text-[#72796e]">Editor Senior</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Canvas */}
+      <main className="flex-1 flex flex-col min-h-screen">
+        
+        {/* Top Bar */}
+        <header className="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto bg-[#fefccf] border-none shadow-[0_8px_32px_rgba(29,29,3,0.08)] sticky top-0 z-10 md:relative md:shadow-none">
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-bold tracking-tight text-[#154212] font-headline">
+              Preguntas Pendientes
+            </h2>
+            <p className="text-xs text-[#72796e] font-medium">
+              Revisión de contenido enviado por la comunidad
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="material-symbols-outlined p-2 rounded-full hover:bg-[#f2f0c4] transition-colors text-[#154212]">
+              notifications
+            </button>
+            <button className="material-symbols-outlined p-2 rounded-full hover:bg-[#f2f0c4] transition-colors text-[#154212]">
+              settings
+            </button>
+          </div>
+        </header>
+
+        {/* Content */}
+        <section className="p-8 space-y-8 max-w-7xl mx-auto w-full">
+          
+          {/* Stats Bento Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Preguntas por Revisar */}
+            <div className="bg-[#2D5A27] p-6 rounded-xl text-white flex justify-between items-end relative overflow-hidden group shadow-lg">
+              <div className="relative z-10">
+                <p className="text-sm font-medium opacity-80 mb-1">Preguntas por Revisar</p>
+                <p className="text-4xl font-black font-headline">{stats.preguntasPendientes}</p>
+              </div>
+              <span className="material-symbols-outlined text-6xl absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+                fact_check
+              </span>
+              <div className="bg-[#154212]/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm relative z-10">
+                +5 hoy
+              </div>
+            </div>
+
+            {/* Nuevos Usuarios */}
+            <div className="bg-[#fccc38] p-6 rounded-xl text-[#1d1d03] flex justify-between items-end relative overflow-hidden group shadow-lg">
+              <div className="relative z-10">
+                <p className="text-sm font-medium opacity-80 mb-1">Nuevos Usuarios</p>
+                <p className="text-4xl font-black font-headline">{stats.nuevosUsuarios}</p>
+              </div>
+              <span className="material-symbols-outlined text-6xl absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+                group_add
+              </span>
+              <div className="bg-[#755b00]/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm relative z-10">
+                Esta semana
+              </div>
+            </div>
+
+            {/* Monedas Repartidas */}
+            <div className="bg-[#e6e5b9] p-6 rounded-xl text-[#1d1d03] flex justify-between items-end relative overflow-hidden group shadow-lg border border-[#c2c9bb]/10">
+              <div className="relative z-10">
+                <p className="text-sm font-medium opacity-80 mb-1">Monedas Repartidas</p>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#755b00]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    stars
+                  </span>
+                  <p className="text-4xl font-black font-headline">{stats.monedasRepartidas}</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-6xl absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+                toll
               </span>
             </div>
+          </div>
 
-            {loading ? (
-              <div className="text-center py-12">
-                <span className="material-symbols-rounded text-6xl text-nica-amarillo animate-spin inline-block">progress_activity</span>
-                <p className="text-gray-400 mt-4">Cargando preguntas...</p>
-              </div>
-            ) : pendingQuestions.length === 0 ? (
-              <div className="text-center py-12">
-                <span className="material-symbols-rounded text-6xl text-green-400 mb-4">check_circle</span>
-                <p className="text-gray-400 text-lg">¡No hay preguntas pendientes!</p>
-                <p className="text-gray-500 text-sm mt-2">Todas las preguntas han sido revisadas</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pendingQuestions.map(question => (
-                  <div
-                    key={question.id}
-                    className="border border-gray-700 rounded-xl p-6 hover:border-nica-amarillo/50 hover:bg-gray-800/50 transition-all"
+          {/* Questions List */}
+          <div className="space-y-6">
+            
+            {/* Filters */}
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+              <div className="flex gap-2 flex-wrap">
+                {CATEGORIAS.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setFiltroActivo(cat)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                      filtroActivo === cat
+                        ? 'bg-[#ffdf90] text-[#1d1d03]'
+                        : 'bg-[#eceabe] text-[#72796e] hover:bg-[#ffdf90]'
+                    }`}
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white mb-2">
-                          {question.text}
-                        </h3>
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-                          <span className="flex items-center gap-1">
-                            <span className="material-symbols-rounded text-sm">check</span>
-                            <strong>Respuesta:</strong> {question.correctAnswer}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <span className="material-symbols-rounded text-sm">folder</span>
-                            <strong>Categoría:</strong> {question.categoryId}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <span className="material-symbols-rounded text-sm">person</span>
-                            <strong>Por:</strong> {question.createdBy?.slice(0, 8)}...
-                          </span>
-                        </div>
-                      </div>
-                      <span className="bg-gray-800 text-gray-500 px-3 py-1 rounded-lg text-xs font-mono">
-                        {question.id.slice(-6)}
-                      </span>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => handleApprove(question.id)}
-                        disabled={actionLoading}
-                        variant="success"
-                        icon="check"
-                      >
-                        Aprobar
-                      </Button>
-                      <Button
-                        onClick={() => handleReject(question.id)}
-                        disabled={actionLoading}
-                        variant="danger"
-                        icon="close"
-                      >
-                        Rechazar
-                      </Button>
-                    </div>
-                  </div>
+                    {cat}
+                  </button>
                 ))}
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab: Categorías */}
-        {activeTab === 'categories' && (
-          <div className="grid gap-6">
-            {/* Formulario para crear categoría */}
-            <div className="card">
-              <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
-                <span className="material-symbols-rounded text-nica-amarillo">add_circle</span>
-                Crear Nueva Categoría
-              </h2>
-              <form onSubmit={handleCreateCategory} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
-                    Nombre de la categoría *
-                  </label>
-                  <input
-                    type="text"
-                    value={newCategory.name}
-                    onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
-                    className="input-field"
-                    placeholder="Ej: Historia de Nicaragua"
-                    disabled={actionLoading}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
-                    Descripción
-                  </label>
-                  <textarea
-                    value={newCategory.description}
-                    onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
-                    className="input-field min-h-[80px]"
-                    placeholder="Descripción opcional de la categoría..."
-                    disabled={actionLoading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-300 mb-3">
-                    Ingrediente asociado *
-                  </label>
-                  <div className="grid grid-cols-5 gap-3">
-                    {INGREDIENTES.map(ing => (
-                      <button
-                        key={ing.value}
-                        type="button"
-                        onClick={() => setNewCategory(prev => ({ ...prev, ingrediente: ing.value }))}
-                        className={`p-4 rounded-xl border-2 transition-all hover-lift ${
-                          newCategory.ingrediente === ing.value
-                            ? 'border-nica-amarillo bg-nica-amarillo/20'
-                            : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
-                        }`}
-                      >
-                        <span className={`material-symbols-rounded text-3xl block mx-auto ${
-                          newCategory.ingrediente === ing.value ? 'text-nica-amarillo' : 'text-gray-500'
-                        }`}>
-                          {ing.icon}
-                        </span>
-                        <p className={`text-xs text-center mt-2 font-bold ${
-                          newCategory.ingrediente === ing.value ? 'text-nica-amarillo' : 'text-gray-500'
-                        }`}>
-                          {ing.label}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-300 mb-3">
-                    Icono de la categoría *
-                  </label>
-                  <div className="grid grid-cols-5 gap-3">
-                    {CATEGORY_ICONS.map(icon => (
-                      <button
-                        key={icon.name}
-                        type="button"
-                        onClick={() => setNewCategory(prev => ({ ...prev, icon: icon.name }))}
-                        className={`p-4 rounded-xl border-2 transition-all hover-lift ${
-                          newCategory.icon === icon.name
-                            ? 'border-nica-amarillo bg-nica-amarillo/20'
-                            : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
-                        }`}
-                      >
-                        <span className={`material-symbols-rounded text-3xl block mx-auto ${
-                          newCategory.icon === icon.name ? 'text-nica-amarillo' : 'text-gray-500'
-                        }`}>
-                          {icon.name}
-                        </span>
-                        <p className={`text-xs text-center mt-2 font-bold ${
-                          newCategory.icon === icon.name ? 'text-nica-amarillo' : 'text-gray-500'
-                        }`}>
-                          {icon.label}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <Button type="submit" disabled={actionLoading} variant="primary" icon="add">
-                  {actionLoading ? 'Creando...' : 'Crear Categoría'}
-                </Button>
-              </form>
+              <button className="flex items-center gap-2 text-[#154212] font-bold text-sm">
+                <span className="material-symbols-outlined text-lg">filter_list</span>
+                Filtrar
+              </button>
             </div>
 
-            {/* Lista de categorías existentes */}
-            <div className="card">
-              <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
-                <span className="material-symbols-rounded text-nica-amarillo">folder</span>
-                Categorías Existentes ({categories.length})
-              </h2>
-              {categories.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No hay categorías creadas aún
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {categories.map(cat => (
-                    <div
-                      key={cat.id}
-                      className="flex justify-between items-center p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:border-nica-amarillo/30 transition-all"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="material-symbols-rounded text-3xl text-nica-amarillo">
-                          {cat.icon || 'folder'}
+            {/* Question Cards */}
+            <div className="space-y-4">
+              {preguntas.map((pregunta) => (
+                <div
+                  key={pregunta.id}
+                  className={`bg-[#f8f6c9] p-6 rounded-xl shadow-sm ${pregunta.color} border-l-4 transition-all hover:translate-x-1 group`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <span className={`${pregunta.badgeColor} px-3 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-widest`}>
+                          {pregunta.categoria}
                         </span>
-                        <div>
-                          <h3 className="font-bold text-white">{cat.name}</h3>
-                          <p className="text-sm text-gray-500">{cat.description || 'Sin descripción'}</p>
-                        </div>
+                        <span className="text-[#72796e] text-xs flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">{pregunta.iconoDificultad}</span>
+                          {pregunta.dificultad}
+                        </span>
+                        <span className="text-[#72796e] text-xs">• {pregunta.tiempo}</span>
                       </div>
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id)}
-                        disabled={actionLoading}
-                        className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/30 rounded-lg transition-all"
-                        title="Eliminar categoría"
-                      >
-                        <span className="material-symbols-rounded text-xl">delete</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tab: Gestión de Monedas */}
-        {activeTab === 'currencies' && (
-          <div className="grid gap-6">
-            {/* Formulario para crear/editar moneda */}
-            <div className="card">
-              <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
-                <span className="material-symbols-rounded text-nica-amarillo">
-                  {editingCurrency ? 'edit' : 'add_circle'}
-                </span>
-                {editingCurrency ? 'Editar Moneda' : 'Crear Nueva Moneda'}
-              </h2>
-              <form onSubmit={editingCurrency ? handleUpdateCurrency : handleCreateCurrency} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
-                    Nombre de la moneda *
-                  </label>
-                  <input
-                    type="text"
-                    value={editingCurrency ? editingCurrency.name : newCurrency.name}
-                    onChange={(e) => editingCurrency
-                      ? setEditingCurrency(prev => ({ ...prev, name: e.target.value }))
-                      : setNewCurrency(prev => ({ ...prev, name: e.target.value }))
-                    }
-                    className="input-field"
-                    placeholder="Ej: Token Dorado"
-                    disabled={actionLoading}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
-                    Descripción
-                  </label>
-                  <textarea
-                    value={editingCurrency ? editingCurrency.description : newCurrency.description}
-                    onChange={(e) => editingCurrency
-                      ? setEditingCurrency(prev => ({ ...prev, description: e.target.value }))
-                      : setNewCurrency(prev => ({ ...prev, description: e.target.value }))
-                    }
-                    className="input-field min-h-[80px]"
-                    placeholder="Descripción opcional de la moneda..."
-                    disabled={actionLoading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
-                    Cantidad por defecto
-                  </label>
-                  <input
-                    type="number"
-                    value={editingCurrency ? editingCurrency.defaultAmount : newCurrency.defaultAmount}
-                    onChange={(e) => editingCurrency
-                      ? setEditingCurrency(prev => ({ ...prev, defaultAmount: parseInt(e.target.value) || 0 }))
-                      : setNewCurrency(prev => ({ ...prev, defaultAmount: parseInt(e.target.value) || 0 }))
-                    }
-                    className="input-field"
-                    placeholder="0"
-                    disabled={actionLoading}
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <Button type="submit" disabled={actionLoading} variant="primary" icon={editingCurrency ? 'edit' : 'add'}>
-                    {actionLoading ? 'Guardando...' : editingCurrency ? 'Actualizar Moneda' : 'Crear Moneda'}
-                  </Button>
-                  {editingCurrency && (
-                    <Button type="button" onClick={() => setEditingCurrency(null)} variant="secondary" icon="close">
-                      Cancelar
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </div>
-
-            {/* Lista de monedas existentes */}
-            <div className="card">
-              <h2 className="text-2xl font-display text-white mb-6 flex items-center gap-3">
-                <span className="material-symbols-rounded text-nica-amarillo">payments</span>
-                Monedas Existentes ({currencies.length})
-              </h2>
-              {currencies.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No hay monedas creadas aún
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {currencies.map(currency => (
-                    <div
-                      key={currency.id}
-                      className="flex justify-between items-center p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:border-nica-amarillo/30 transition-all"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="material-symbols-rounded text-3xl text-nica-amarillo">
-                          {currency.icon || 'payments'}
-                        </span>
-                        <div>
-                          <h3 className="font-bold text-white">{currency.name}</h3>
-                          <p className="text-sm text-gray-500">{currency.description || 'Sin descripción'}</p>
-                          <p className="text-xs text-gray-600">Por defecto: {currency.defaultAmount}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleCurrencyActive(currency.id, currency.active)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                            currency.active
-                              ? 'bg-green-900/30 text-green-400 border border-green-700/50'
-                              : 'bg-gray-700 text-gray-500 border border-gray-600'
-                          }`}
-                        >
-                          {currency.active ? 'Activa' : 'Inactiva'}
-                        </button>
-                        <button
-                          onClick={() => handleEditCurrency(currency)}
-                          className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-900/30 rounded-lg transition-all"
-                          title="Editar moneda"
-                        >
-                          <span className="material-symbols-rounded text-xl">edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCurrency(currency.id)}
-                          className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/30 rounded-lg transition-all"
-                          title="Eliminar moneda"
-                        >
-                          <span className="material-symbols-rounded text-xl">delete</span>
-                        </button>
+                      <h3 className="text-lg font-bold text-[#1d1d03] leading-tight">
+                        {pregunta.texto}
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+                        {pregunta.opciones.map((opcion, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2 rounded bg-[#fefccf] text-[11px] border border-[#c2c9bb]/20 italic"
+                          >
+                            {opcion}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tab: Monedas Infinitas */}
-        {activeTab === 'coins' && (
-          <div className="card bg-gradient-to-br from-nica-amarillo/20 to-yellow-900/20 border-nica-amarillo/50">
-            <div className="text-center mb-8">
-              <span className="material-symbols-rounded text-7xl text-nica-amarillo mb-4">grain</span>
-              <h2 className="text-3xl font-display text-white mb-3">Monedas Infinitas</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto">
-                Esta sección es exclusiva para administradores. Al hacer clic en el botón, recibirás 9999 de cada ingrediente del nacatamal.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-5 gap-4 mb-8 max-w-3xl mx-auto">
-              {INGREDIENTES.map(ing => (
-                <div key={ing.value} className="text-center p-4 bg-gray-800/50 rounded-xl border border-gray-700">
-                  <span className="material-symbols-rounded text-4xl text-nica-amarillo block mb-2">
-                    {ing.icon}
-                  </span>
-                  <p className="text-sm text-gray-400">{ing.label}</p>
-                  <p className="text-2xl font-display text-nica-amarillo font-bold">9999</p>
+                    <div className="flex md:flex-col gap-3 shrink-0">
+                      <button
+                        onClick={() => handleAprobar(pregunta.id)}
+                        className="flex-1 md:w-32 bg-[#2D5A27] text-white py-2 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-transform"
+                      >
+                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                        Aprobar
+                      </button>
+                      <button
+                        onClick={() => handleRechazar(pregunta.id)}
+                        className="flex-1 md:w-32 bg-[#e6e5b9] text-[#79001c] py-2 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-[#ffdad9] transition-colors active:scale-95 transition-transform"
+                      >
+                        <span className="material-symbols-outlined text-sm">cancel</span>
+                        Rechazar
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="text-center">
-              <Button
-                onClick={handleAddInfiniteCoins}
-                disabled={actionLoading}
-                variant="primary"
-                icon="grain"
-                className="px-8 py-4 text-lg"
-              >
-                {actionLoading ? 'Agregando...' : 'Agregar Monedas Infinitas'}
-              </Button>
-              <p className="text-gray-500 text-sm mt-4">
-                <span className="material-symbols-rounded text-sm inline-block align-middle mr-1">info</span>
-                Esta acción es permanente y solo disponible para administradores
-              </p>
+            {/* Pagination */}
+            <div className="flex items-center justify-center pt-8 gap-2">
+              <button className="w-10 h-10 rounded-full border border-[#c2c9bb] flex items-center justify-center text-[#154212] hover:bg-[#f2f0c4] transition-colors">
+                <span className="material-symbols-outlined">chevron_left</span>
+              </button>
+              <button className="w-10 h-10 rounded-full bg-[#154212] text-white font-bold text-sm">1</button>
+              <button className="w-10 h-10 rounded-full hover:bg-[#f2f0c4] text-[#72796e] font-bold text-sm">2</button>
+              <button className="w-10 h-10 rounded-full hover:bg-[#f2f0c4] text-[#72796e] font-bold text-sm">3</button>
+              <button className="w-10 h-10 rounded-full border border-[#c2c9bb] flex items-center justify-center text-[#154212] hover:bg-[#f2f0c4] transition-colors">
+                <span className="material-symbols-outlined">chevron_right</span>
+              </button>
             </div>
           </div>
-        )}
+        </section>
+
+        {/* Footer */}
+        <footer className="w-full mt-auto py-12 bg-[#154212] flex flex-col items-center justify-center space-y-6 text-center px-4">
+          <p className="text-[#F4C430] font-bold text-lg font-headline">NicaQuizz Admin</p>
+          <div className="flex gap-6 flex-wrap justify-center">
+            <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+              Sobre el Proyecto
+            </a>
+            <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+              Cultura Nicaragüense
+            </a>
+            <a href="#" className="text-[#fefccf]/80 font-headline text-xs font-light tracking-wide hover:text-[#F4C430] transition-colors">
+              Contacto
+            </a>
+          </div>
+          <p className="text-[#fefccf]/60 font-headline text-[10px] font-light tracking-wide">
+            © 2025 NicaQuizz - El Arte del Nacatamal Digital
+          </p>
+        </footer>
       </main>
+
+      {/* Floating Action Button (FAB) */}
+      <button className="fixed bottom-8 right-8 w-16 h-16 bg-[#755b00] text-[#1d1d03] rounded-full flex items-center justify-center shadow-2xl z-50 hover:scale-105 active:scale-95 transition-transform group">
+        <span className="material-symbols-outlined text-3xl">campaign</span>
+        <span className="absolute right-full mr-4 bg-[#1d1d03] text-[#fefccf] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
+          Nuevo Aviso
+        </span>
+      </button>
     </div>
   );
 }

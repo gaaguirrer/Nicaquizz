@@ -33,32 +33,42 @@ export function ToastProvider({ children }) {
     warning: (message, duration) => addToast(message, 'warning', duration),
   };
 
+  // Iconos para cada tipo de notificación
+  const icons = {
+    success: 'check_circle',
+    error: 'error',
+    info: 'info',
+    warning: 'warning'
+  };
+
+  // Colores para cada tipo
+  const colors = {
+    success: 'from-green-600 to-green-700 border-green-500',
+    error: 'from-nica-rojo to-red-700 border-nica-rojo',
+    info: 'from-nica-azul to-blue-700 border-nica-azul',
+    warning: 'from-orange-600 to-orange-700 border-orange-500'
+  };
+
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
+      {/* Notificaciones en esquina superior derecha */}
+      <div className="fixed top-4 right-4 z-50 space-y-3 max-w-md">
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg transform transition-all animate-slide-in max-w-sm ${
-              toast.type === 'success' ? 'bg-green-600 text-white' :
-              toast.type === 'error' ? 'bg-red-600 text-white' :
-              toast.type === 'warning' ? 'bg-yellow-600 text-white' :
-              'bg-indigo-600 text-white'
-            }`}
+            className={`toast toast-${toast.type} flex items-center gap-3 p-4 rounded-xl shadow-comic border-2 animate-slide-in backdrop-blur-md ${colors[toast.type]}`}
           >
-            <span className="text-xl">
-              {toast.type === 'success' && '✓'}
-              {toast.type === 'error' && '✕'}
-              {toast.type === 'warning' && ''}
-              {toast.type === 'info' && 'ℹ'}
+            <span className="material-symbols-rounded text-2xl flex-shrink-0">
+              {icons[toast.type]}
             </span>
-            <p className="flex-1 text-sm font-medium">{toast.message}</p>
+            <p className="flex-1 text-sm font-medium flex-1">{toast.message}</p>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-white/80 hover:text-white transition-colors"
+              className="text-white/80 hover:text-white transition-colors flex-shrink-0"
+              aria-label="Cerrar notificación"
             >
-              ✕
+              <span className="material-symbols-rounded text-lg">close</span>
             </button>
           </div>
         ))}

@@ -1,3 +1,8 @@
+/**
+ * Profile.jsx - Perfil e Inventario de NicaQuizz
+ * Muestra el Nacatamal en proceso, estadísticas y lista de amigos
+ */
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -8,12 +13,14 @@ import {
   INGREDIENTE_NAMES,
   rechargeMejoras,
   canRechargeMejoras,
-  TRABAS
+  getFriends,
+  sendFriendRequest,
+  getUserChallenges
 } from '../services/firestore';
 import UserMenu from '../components/UserMenu';
 
-// Iconos SVG personalizados para ingredientes
-const IngredientIcon = ({ type, className = '' }) => {
+// Iconos SVG para ingredientes
+const IngredientIcon = ({ type, className = '', collected = false }) => {
   const icons = {
     masa: (
       <svg viewBox="0 0 64 64" className={className}>
@@ -55,52 +62,57 @@ const IngredientIcon = ({ type, className = '' }) => {
       </svg>
     )
   };
-  return icons[type] || null;
+  
+  const icon = icons[type] || null;
+  
+  if (!collected) {
+    return <div className="grayscale opacity-30">{icon}</div>;
+  }
+  
+  return <div className="ingredient-collected animate-glow">{icon}</div>;
 };
 
-// Componente para iconos de Material Icons
-const MaterialIcon = ({ name, className = '' }) => (
-  <span className={`material-symbols-outlined ${className}`}>{name}</span>
-);
-
-// Mapeo de ingredientes a colores
-const INGREDIENT_COLORS = {
-  masa: { bg: 'from-amber-100 to-amber-200', border: 'border-amber-400', text: 'text-amber-600' },
-  cerdo: { bg: 'from-pink-200 to-rose-300', border: 'border-pink-400', text: 'text-pink-600' },
-  arroz: { bg: 'from-gray-50 to-gray-100', border: 'border-gray-300', text: 'text-gray-600' },
-  papa: { bg: 'from-yellow-200 to-amber-300', border: 'border-yellow-500', text: 'text-yellow-700' },
-  chile: { bg: 'from-green-200 to-emerald-300', border: 'border-green-500', text: 'text-green-600' }
-};
-
-// Mapeo de tabs a iconos
-const TAB_ICONS = {
-  stats: 'bar_chart',
-  wallet: 'account_balance_wallet',
-  mejoras: 'emoji_events',
-  privacy: 'lock'
-};
+// Configuración de ingredientes
+const INGREDIENTS_CONFIG = [
+  { key: 'masa', name: 'Masa', icon: 'bakery_dining', color: 'bg-amber-400' },
+  { key: 'cerdo', name: 'Cerdo', icon: 'set_meal', color: 'bg-pink-400' },
+  { key: 'arroz', name: 'Arroz', icon: 'bento', color: 'bg-gray-200' },
+  { key: 'papa', name: 'Papa', icon: 'egg', color: 'bg-yellow-600' },
+  { key: 'chile', name: 'Chile', icon: 'local_fire_department', color: 'bg-red-600' }
+];
 
 export default function Profile() {
   const { currentUser, userData, updatePrivacy } = useAuth();
   const toast = useToast();
   const [wallet, setWallet] = useState({ coins: {}, mejoras: {}, trabas: {} });
+  const [amigos, setAmigos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('stats');
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [activeTab, setActiveTab] = useState('nacatamal');
   const [rechargeLoading, setRechargeLoading] = useState(false);
   const [rechargeInfo, setRechargeInfo] = useState({ canRecharge: false, hoursLeft: 0 });
 
   useEffect(() => {
-    loadWallet();
-    checkRechargeInfo();
+    loadProfileData();
   }, []);
 
-  async function checkRechargeInfo() {
+  async function loadProfileData() {
     try {
+      // Cargar monedero
+      const walletData = await getUserWallet(currentUser.uid);
+      setWallet(walletData);
+
+      // Cargar amigos
+      const friendsList = await getFriends(currentUser.uid);
+      setAmigos(friendsList);
+
+      // Verificar recarga de mejoras
       const info = await canRechargeMejoras(currentUser.uid);
       setRechargeInfo(info);
     } catch (error) {
-      console.error('Error al verificar recarga:', error);
+      console.error('Error al cargar datos del perfil:', error);
+      toast.error('Error al cargar datos del perfil');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -109,8 +121,9 @@ export default function Profile() {
     try {
       await rechargeMejoras(currentUser.uid);
       toast.success('¡Mejoras recargadas exitosamente!');
-      checkRechargeInfo();
-      loadWallet();
+      const info = await canRechargeMejoras(currentUser.uid);
+      setRechargeInfo(info);
+      loadProfileData();
     } catch (error) {
       toast.error(error.message || 'Error al recargar mejoras');
     } finally {
@@ -118,27 +131,25 @@ export default function Profile() {
     }
   }
 
-  async function loadWallet() {
-    try {
-      const data = await getUserWallet(currentUser.uid);
-      setWallet(data);
-    } catch (error) {
-      console.error('Error al cargar monedero:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Calcular nacatamales completados
+  const monedas = wallet.coins || {};
+  const nacatamalesCount = Math.min(
+    monedas.masa || 0,
+    monedas.cerdo || 0,
+    monedas.arroz || 0,
+    monedas.papa || 0,
+    monedas.chile || 0
+  );
 
-  async function handlePrivacyChange(isPublic, allowOpenChallenges) {
-    try {
-      await updatePrivacy(isPublic, allowOpenChallenges);
-      setMessage({ type: 'success', text: 'Configuración actualizada' });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Error al actualizar' });
-    }
-  }
+  // Calcular progreso del nacatamal
+  const totalIngredientes = Object.values(INGREDIENTES).reduce(
+    (sum, ing) => sum + (monedas[ing] || 0),
+    0
+  );
+  const maxIngredientes = 5;
+  const progresoNacatamal = Math.min((totalIngredientes / maxIngredientes) * 100, 100);
 
-  // Calcular estadísticas
+  // Obtener estadísticas
   const stats = userData?.stats || {};
   const totalQuestions = stats.totalQuestionsAnswered || 0;
   const totalCorrect = stats.totalCorrect || 0;
@@ -146,369 +157,355 @@ export default function Profile() {
   const wins = stats.wins || 0;
   const losses = stats.losses || 0;
 
-  // Calcular nacatamales completos
-  const coins = wallet.coins || {};
-  const hasNacatamal = Object.values(INGREDIENTES).every(ing => (coins[ing] || 0) >= 1);
-  const nacatamalesCount = hasNacatamal
-    ? Math.min(...Object.values(INGREDIENTES).map(ing => coins[ing] || 0))
-    : 0;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <span className="material-symbols-rounded text-6xl text-nica-amarillo animate-spin inline-block">progress_activity</span>
+          <p className="text-gray-400 mt-4">Cargando perfil...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-12">
       {/* Header */}
-      <header className="bg-gray-900/80 backdrop-blur-md shadow-lg border-b border-gray-700/50 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <header className="bg-gray-900/90 backdrop-blur-md shadow-comic border-b border-gray-700/50 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <span className="text-3xl">🇳🇮</span>
-              <h1 className="text-2xl font-bold gradient-text">NicaQuizz</h1>
+              <span className="text-4xl">🇳🇮</span>
+              <div>
+                <h1 className="text-3xl font-display text-nica-amarillo">NicaQuizz</h1>
+                <p className="text-xs text-gray-400">El Nacatamal del Conocimiento</p>
+              </div>
             </Link>
           </div>
           <UserMenu />
         </div>
       </header>
 
-      {/* Contenido */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {message.text && (
-          <div className={`p-4 rounded-lg mb-6 ${
-            message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'
-          }`}>
-            {message.text}
-          </div>
-        )}
-
-        <h1 className="text-3xl font-bold text-white mb-6 gradient-text">
-          <MaterialIcon name="person" className="inline-block w-8 h-8 align-middle mr-2" />
-          Mi Perfil
-        </h1>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('stats')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
-              activeTab === 'stats'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            <MaterialIcon name={TAB_ICONS.stats} className="inline-block w-5 h-5 align-middle mr-1" /> Estadísticas
-          </button>
-          <button
-            onClick={() => setActiveTab('wallet')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
-              activeTab === 'wallet'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            <MaterialIcon name={TAB_ICONS.wallet} className="inline-block w-5 h-5 align-middle mr-1" /> Monedero
-          </button>
-          <button
-            onClick={() => setActiveTab('mejoras')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
-              activeTab === 'mejoras'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            <MaterialIcon name={TAB_ICONS.mejoras} className="inline-block w-5 h-5 align-middle mr-1" /> Mejoras
-          </button>
-          <button
-            onClick={() => setActiveTab('privacy')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all hover-lift ${
-              activeTab === 'privacy'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            <MaterialIcon name={TAB_ICONS.privacy} className="inline-block w-5 h-5 align-middle mr-1" /> Privacidad
-          </button>
-        </div>
-
-        {/* Tab: Estadísticas */}
-        {activeTab === 'stats' && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="card">
-              <h2 className="text-xl font-bold mb-4 text-white">
-                <MaterialIcon name="bar_chart" className="inline-block w-6 h-6 align-middle mr-1" /> Estadísticas Generales
-              </h2>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-                  <span className="text-gray-300">Preguntas Respondidas</span>
-                  <span className="font-bold text-2xl text-white">{totalQuestions}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-                  <span className="text-gray-300">Aciertos</span>
-                  <span className="font-bold text-2xl text-green-400">{totalCorrect}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-                  <span className="text-gray-300">Precisión</span>
-                  <span className={`font-bold text-2xl ${
-                    accuracy >= 70 ? 'text-green-400' :
-                    accuracy >= 40 ? 'text-yellow-400' : 'text-red-400'
-                  }`}>{accuracy}%</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-                  <span className="text-gray-300">Victorias</span>
-                  <span className="font-bold text-2xl text-green-400">{wins}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-                  <span className="text-gray-300">Derrotas</span>
-                  <span className="font-bold text-2xl text-red-400">{losses}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <h2 className="text-xl font-bold mb-4 text-white">Progreso por Categoría</h2>
-              <div className="space-y-4">
-                {Object.entries(stats.categoryStats || {}).map(([catId, catStats]) => (
-                  <div key={catId} className="bg-gray-800 rounded-lg p-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-white font-medium capitalize">{catId}</span>
-                      <span className="text-gray-400 text-sm">
-                        {catStats.correct}/{catStats.total} aciertos
-                      </span>
-                    </div>
-                    <div className="bg-gray-700 rounded-full h-2">
-                      <div
-                        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all"
-                        style={{ width: `${catStats.total > 0 ? (catStats.correct / catStats.total) * 100 : 0}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-                {Object.keys(stats.categoryStats || {}).length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    <MaterialIcon name="menu_book" className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Juega en las categorías para ver tu progreso</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab: Monedero */}
-        {activeTab === 'wallet' && (
-          <div className="card">
-            <h2 className="text-xl font-bold mb-4 text-white">
-              <MaterialIcon name="account_balance_wallet" className="inline-block w-6 h-6 align-middle mr-1" /> Monedero
-            </h2>
+      {/* Contenido principal */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna Izquierda: Perfil y Estadísticas */}
+          <div className="lg:col-span-2 space-y-6">
             
-            {loading ? (
-              <div className="text-center py-8 text-gray-400">Cargando...</div>
-            ) : (
-              <>
-                {/* Nacatamales completos */}
-                <div className="bg-gradient-to-br from-green-900/50 to-emerald-900/50 rounded-lg p-4 mb-6 border border-green-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-green-300 font-semibold mb-1">Nacatamales Completos</h3>
-                      <p className="text-green-200 text-sm">
-                        {nacatamalesCount === 0 
-                          ? 'Completa categorías para obtener ingredientes'
-                          : `Tienes ${nacatamalesCount} nacatamal${nacatamalesCount !== 1 ? 'es' : ''} para usar en la tienda`}
-                      </p>
+            {/* Tarjeta de Perfil */}
+            <section className="card relative overflow-hidden">
+              <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+                <div className="w-32 h-32 rounded-full border-4 border-nica-amarillo overflow-hidden shadow-comic">
+                  <div className="w-full h-full bg-gradient-to-br from-nica-verde to-nica-amarillo flex items-center justify-center">
+                    <span className="material-symbols-rounded text-6xl text-white">person</span>
+                  </div>
+                </div>
+                <div className="text-center md:text-left flex-1">
+                  <h1 className="text-4xl font-display text-white mb-2">
+                    {userData?.displayName || 'Jugador'}
+                  </h1>
+                  <p className="text-nica-amarillo font-display text-lg flex items-center justify-center md:justify-start gap-2">
+                    <span className="material-symbols-rounded">workspace_premium</span>
+                    {userData?.isAdmin ? 'Administrador' : 'Maestro Cocinero'}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-4 justify-center md:justify-start">
+                    <span className="bg-nica-verde/30 text-nica-amarillo px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-nica-verde/50">
+                      Nivel {Math.floor(totalQuestions / 10) + 1}
+                    </span>
+                    <span className="bg-nica-amarillo/30 text-nica-amarillo px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-nica-amarillo/50">
+                      {wins} Victorias
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Nacatamal en Proceso */}
+            <section className="card border-l-4 border-nica-verde">
+              <div className="flex justify-between items-end mb-6">
+                <div>
+                  <h2 className="text-2xl font-display text-white mb-1">Nacatamal en Proceso</h2>
+                  <p className="text-gray-400 text-sm">Completa el plato nacional para subir de rango</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-3xl font-display text-nica-amarillo">{Math.round(progresoNacatamal)}%</span>
+                  <p className="text-xs text-gray-400 uppercase font-bold">Sabor Logrado</p>
+                </div>
+              </div>
+
+              {/* Visualización del Nacatamal */}
+              <div className="relative aspect-video bg-gray-800/50 rounded-2xl border border-dashed border-gray-600 p-8">
+                {/* Ingredientes en layout asimétrico */}
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {/* Masa (arriba izquierda) */}
+                  <div className="absolute top-4 left-1/4 text-center">
+                    <div className={`w-16 h-16 mx-auto mb-1 ${monedas.masa > 0 ? 'animate-glow' : ''}`}>
+                      <IngredientIcon type="masa" className="w-full h-full" collected={monedas.masa > 0} />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <svg viewBox="0 0 64 64" className="w-12 h-12">
-                        <circle cx="32" cy="32" r="28" fill="#FFD700" stroke="#DAA520" strokeWidth="3"/>
-                        <circle cx="32" cy="32" r="22" fill="none" stroke="#FFA500" strokeWidth="2"/>
-                        <text x="32" y="40" textAnchor="middle" fontSize="24" fontWeight="bold" fill="#DAA520">$</text>
-                      </svg>
-                      <span className="text-green-400 font-bold text-3xl">{nacatamalesCount}</span>
+                    <p className="text-xs font-bold text-gray-300">Masa</p>
+                    <p className="text-xs text-nica-amarillo font-display">{monedas.masa || 0}</p>
+                  </div>
+
+                  {/* Cerdo (izquierda centro) */}
+                  <div className="absolute top-1/2 -left-4 text-center transform -translate-y-1/2">
+                    <div className={`w-14 h-14 mx-auto mb-1 ${monedas.cerdo > 0 ? 'animate-glow' : ''}`}>
+                      <IngredientIcon type="cerdo" className="w-full h-full" collected={monedas.cerdo > 0} />
                     </div>
+                    <p className="text-xs font-bold text-gray-300">Cerdo</p>
+                    <p className="text-xs text-nica-amarillo font-display">{monedas.cerdo || 0}</p>
+                  </div>
+
+                  {/* Papa (abajo derecha) */}
+                  <div className="absolute bottom-4 right-1/4 text-center">
+                    <div className={`w-14 h-14 mx-auto mb-1 ${monedas.papa > 0 ? 'animate-glow' : ''}`}>
+                      <IngredientIcon type="papa" className="w-full h-full" collected={monedas.papa > 0} />
+                    </div>
+                    <p className="text-xs font-bold text-gray-300">Papa</p>
+                    <p className="text-xs text-nica-amarillo font-display">{monedas.papa || 0}</p>
+                  </div>
+
+                  {/* Arroz (derecha) */}
+                  <div className="absolute top-1/3 right-4 text-center">
+                    <div className={`w-12 h-12 mx-auto mb-1 ${monedas.arroz > 0 ? 'animate-glow' : ''}`}>
+                      <IngredientIcon type="arroz" className="w-full h-full" collected={monedas.arroz > 0} />
+                    </div>
+                    <p className="text-xs font-bold text-gray-300">Arroz</p>
+                    <p className="text-xs text-nica-amarillo font-display">{monedas.arroz || 0}</p>
+                  </div>
+
+                  {/* Chile (centro abajo) */}
+                  <div className="absolute bottom-8 left-1/3 text-center">
+                    <div className={`w-12 h-12 mx-auto mb-1 ${monedas.chile > 0 ? 'animate-glow' : ''}`}>
+                      <IngredientIcon type="chile" className="w-full h-full" collected={monedas.chile > 0} />
+                    </div>
+                    <p className="text-xs font-bold text-gray-300">Chile</p>
+                    <p className="text-xs text-nica-amarillo font-display">{monedas.chile || 0}</p>
+                  </div>
+
+                  {/* Nacatamal Central */}
+                  <div className="z-10 bg-gradient-to-br from-nica-verde to-nica-amarillo p-6 rounded-3xl rotate-3 shadow-comic border-2 border-nica-verde">
+                    <span className="material-symbols-rounded text-6xl text-white">lunch_dining</span>
                   </div>
                 </div>
 
-                {/* Ingredientes individuales */}
-                <h3 className="text-white font-semibold mb-3">Ingredientes</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                  {Object.entries(INGREDIENTES).map(([key, value]) => {
-                    const count = coins[value] || 0;
-                    const hasIngredient = count >= 1;
-                    const colors = INGREDIENT_COLORS[key] || { bg: 'from-gray-200 to-gray-300', border: 'border-gray-400', text: 'text-gray-600' };
-
-                    return (
-                      <div
-                        key={key}
-                        className={`flex flex-col items-center p-4 rounded-2xl transition-all ${
-                          hasIngredient
-                            ? `bg-gradient-to-br ${colors.bg} border-2 ${colors.border} shadow-lg`
-                            : 'bg-gray-800/50 border border-gray-600/50 opacity-50'
-                        }`}
-                      >
-                        <div className="w-12 h-12 mb-2">
-                          <IngredientIcon
-                            type={key}
-                            className={`w-full h-full ${!hasIngredient ? 'grayscale' : ''}`}
-                          />
-                        </div>
-                        <span className={`text-sm font-bold ${
-                          hasIngredient ? colors.text : 'text-gray-500'
-                        }`}>
-                          {INGREDIENTE_NAMES[value]}
-                        </span>
-                        <span className={`text-lg font-bold ${
-                          hasIngredient ? 'text-white' : 'text-gray-500'
-                        }`}>
-                          {count}
-                        </span>
-                      </div>
-                    );
-                  })}
+                {/* Nacatamales completados */}
+                <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-nica-amarillo/20 px-4 py-2 rounded-xl border border-nica-amarillo/50">
+                  <span className="material-symbols-rounded text-nica-amarillo">payments</span>
+                  <span className="font-display text-xl text-nica-amarillo font-bold">{nacatamalesCount}</span>
+                  <span className="text-xs text-gray-300">completados</span>
                 </div>
+              </div>
 
-                {/* Enlaces rápidos */}
-                <div className="flex gap-4 mt-6">
-                  <Link
-                    to="/play"
-                    className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-center py-3 rounded-lg font-semibold transition-all hover-lift"
-                  >
-                    <MaterialIcon name="sports_esports" className="inline-block align-middle mr-2" />
-                    Jugar
-                  </Link>
-                  <Link
-                    to="/trade"
-                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-center py-3 rounded-lg font-semibold transition-all hover-lift"
-                  >
-                    <MaterialIcon name="swap_horiz" className="inline-block align-middle mr-2" />
-                    Intercambiar
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+              {/* Botón Ir a la Tienda */}
+              <Link
+                to="/shop"
+                className="mt-6 btn-primary w-full flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-rounded">storefront</span>
+                Ir a la Tienda
+              </Link>
+            </section>
 
-        {/* Tab: Mejoras */}
-        {activeTab === 'mejoras' && (
-          <div className="card">
-            <h2 className="text-xl font-bold mb-4 text-white">
-              <MaterialIcon name="emoji_events" className="inline-block w-6 h-6 align-middle mr-1" /> Mejoras y Trabas
-            </h2>
+            {/* Estadísticas Grid */}
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="card text-center border-b-4 border-nica-verde/30">
+                <p className="text-xs font-bold text-nica-verde uppercase tracking-widest mb-1">Aciertos</p>
+                <p className="text-3xl font-display text-white">{totalCorrect}</p>
+              </div>
+              <div className="card text-center border-b-4 border-nica-amarillo/30">
+                <p className="text-xs font-bold text-nica-amarillo uppercase tracking-widest mb-1">Precisión</p>
+                <p className={`text-3xl font-display ${
+                  accuracy >= 70 ? 'text-green-400' : accuracy >= 40 ? 'text-yellow-400' : 'text-red-400'
+                }`}>{accuracy}%</p>
+              </div>
+              <div className="card text-center border-b-4 border-green-500/30">
+                <p className="text-xs font-bold text-green-400 uppercase tracking-widest mb-1">Victorias</p>
+                <p className="text-3xl font-display text-white">{wins}</p>
+              </div>
+              <div className="card text-center border-b-4 border-red-500/30">
+                <p className="text-xs font-bold text-red-400 uppercase tracking-widest mb-1">Derrotas</p>
+                <p className="text-3xl font-display text-white">{losses}</p>
+              </div>
+            </section>
 
-            {/* Mejoras */}
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-white text-lg">Mejoras</h3>
+            {/* Mejoras y Trabas */}
+            <section className="card">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-display text-white flex items-center gap-2">
+                  <span className="material-symbols-rounded text-nica-amarillo">emoji_events</span>
+                  Mejoras y Trabas
+                </h3>
                 <button
                   onClick={handleRechargeMejoras}
                   disabled={!rechargeInfo.canRecharge || rechargeLoading}
-                  className={`text-xs px-3 py-1 rounded-lg font-semibold transition-all ${
+                  className={`text-xs px-4 py-2 rounded-xl font-bold transition-all ${
                     rechargeInfo.canRecharge
-                      ? 'bg-green-600 hover:bg-green-500 text-white'
+                      ? 'bg-green-600 hover:bg-green-500 text-white shadow-comic'
                       : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                   }`}
-                  title={rechargeInfo.canRecharge ? 'Recargar mejoras' : `Disponible en ${rechargeInfo.hoursLeft}h`}
                 >
                   {rechargeLoading ? (
                     'Recargando...'
                   ) : rechargeInfo.canRecharge ? (
-                    <><MaterialIcon name="refresh" className="inline-block w-4 h-4 align-middle" /> Recargar</>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-rounded text-sm">refresh</span> Recargar
+                    </span>
                   ) : (
-                    <><MaterialIcon name="schedule" className="inline-block w-4 h-4 align-middle" /> {rechargeInfo.hoursLeft}h</>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-rounded text-sm">schedule</span> {rechargeInfo.hoursLeft}h
+                    </span>
                   )}
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-yellow-900/50 border border-yellow-700 rounded-lg p-4 text-center">
-                  <div className="text-3xl mb-2 text-yellow-400">
-                    <MaterialIcon name="skip_next" className="text-3xl" />
+
+              {/* Mejoras */}
+              <div className="mb-6">
+                <h4 className="font-bold text-white mb-3">Mejoras</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-yellow-900/30 border border-yellow-700 rounded-xl p-4 text-center">
+                    <span className="material-symbols-rounded text-4xl text-yellow-400 mb-2">skip_next</span>
+                    <p className="text-sm text-yellow-300 font-bold mb-1">Pase</p>
+                    <p className="text-2xl font-display text-yellow-400">{wallet.mejoras?.pase || 0}</p>
                   </div>
-                  <div className="text-sm text-yellow-300 font-medium mb-1">Pase</div>
-                  <div className="font-bold text-yellow-400 text-2xl">{wallet.mejoras?.pase || 0}</div>
-                  <p className="text-xs text-gray-400 mt-2">Salta una pregunta difícil</p>
-                </div>
-                <div className="bg-blue-900/50 border border-blue-700 rounded-lg p-4 text-center">
-                  <div className="text-3xl mb-2 text-blue-400">
-                    <MaterialIcon name="timer" className="text-3xl" />
+                  <div className="bg-blue-900/30 border border-blue-700 rounded-xl p-4 text-center">
+                    <span className="material-symbols-rounded text-4xl text-blue-400 mb-2">hourglass_top</span>
+                    <p className="text-sm text-blue-300 font-bold mb-1">Reloj Arena</p>
+                    <p className="text-2xl font-display text-blue-400">{wallet.mejoras?.reloj_arena || 0}</p>
                   </div>
-                  <div className="text-sm text-blue-300 font-medium mb-1">Reloj de Arena</div>
-                  <div className="font-bold text-blue-400 text-2xl">{wallet.mejoras?.reloj_arena || 0}</div>
-                  <p className="text-xs text-gray-400 mt-2">Duplica tu tiempo</p>
-                </div>
-                <div className="bg-red-900/50 border border-red-700 rounded-lg p-4 text-center">
-                  <div className="text-3xl mb-2 text-red-400">
-                    <MaterialIcon name="filter_list" className="text-3xl" />
+                  <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 text-center">
+                    <span className="material-symbols-rounded text-4xl text-red-400 mb-2">filter_list</span>
+                    <p className="text-sm text-red-300 font-bold mb-1">Comodín</p>
+                    <p className="text-2xl font-display text-red-400">{wallet.mejoras?.comodin || 0}</p>
                   </div>
-                  <div className="text-sm text-red-300 font-medium mb-1">Comodín</div>
-                  <div className="font-bold text-red-400 text-2xl">{wallet.mejoras?.comodin || 0}</div>
-                  <p className="text-xs text-gray-400 mt-2">Elimina opciones incorrectas</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-3 text-center">
-                <MaterialIcon name="info" className="inline-block w-3 h-3 align-middle mr-1" />
-                Recarga gratuita disponible cada 24 horas
-              </p>
+
+              {/* Trabas */}
+              <div>
+                <h4 className="font-bold text-white mb-3">Trabas</h4>
+                <div className="bg-purple-900/30 border border-purple-700 rounded-xl p-4">
+                  <div className="flex items-center gap-4">
+                    <span className="material-symbols-rounded text-4xl text-purple-400">hourglass_empty</span>
+                    <div className="flex-1">
+                      <p className="font-medium text-purple-300">Reloj Rápido</p>
+                      <p className="text-xs text-gray-400">Reduce el tiempo del oponente a la mitad</p>
+                    </div>
+                    <p className="text-2xl font-display text-purple-400">{wallet.trabas?.reloj_rapido || 0}</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Columna Derecha: Mi Alacena y Amigos */}
+          <aside className="space-y-6">
+            
+            {/* Mi Alacena */}
+            <div className="card bg-nica-amarillo/10 border-nica-amarillo/30">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-nica-amarillo/30 flex items-center justify-center">
+                  <span className="material-symbols-rounded text-nica-amarillo text-3xl">kitchen</span>
+                </div>
+                <div>
+                  <h4 className="font-display font-bold text-white">Mi Alacena</h4>
+                  <p className="text-xs text-gray-400">Ingredientes recolectados</p>
+                </div>
+              </div>
+
+              <nav className="space-y-2">
+                {INGREDIENTS_CONFIG.map((ing) => {
+                  const cantidad = monedas[ing.key] || 0;
+                  const tiene = cantidad > 0;
+                  
+                  return (
+                    <div
+                      key={ing.key}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                        tiene
+                          ? `${ing.color} text-gray-900`
+                          : 'bg-gray-800/50 text-gray-500'
+                      }`}
+                    >
+                      <span className="material-symbols-rounded">{ing.icon}</span>
+                      <span className="font-medium flex-1">{ing.name}</span>
+                      <span className={`font-bold text-xs ${tiene ? 'text-gray-900' : 'text-gray-600'}`}>
+                        {tiene ? `x${cantidad}` : '0'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </nav>
+
+              <Link
+                to="/shop"
+                className="mt-6 btn-primary w-full flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-rounded">menu_book</span>
+                Ver Recetario
+              </Link>
             </div>
 
-            {/* Trabas */}
-            <div>
-              <h3 className="font-bold text-white text-lg mb-3">Trabas</h3>
-              <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-4">
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="text-3xl text-purple-400">
-                    <MaterialIcon name="hourglass_empty" className="text-3xl" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-purple-300">Reloj Rápido</div>
-                    <p className="text-xs text-gray-400">Reduce el tiempo del oponente a la mitad</p>
-                  </div>
-                  <div className="font-bold text-purple-400 text-2xl">{wallet.trabas?.reloj_rapido || 0}</div>
-                </div>
-                <p className="text-xs text-gray-400">
-                  <MaterialIcon name="info" className="inline-block w-3 h-3 align-middle mr-1" />
-                  Las trabas se compran en la tienda y se usan en retos contra otros jugadores
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+            {/* Amigos */}
+            <div className="card border-b-4 border-gray-600/30">
+              <h4 className="font-display font-bold text-white mb-6 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="material-symbols-rounded">people</span>
+                  Amigos
+                </span>
+                <span className="text-xs bg-green-600/30 text-green-400 px-2 py-1 rounded">
+                  {amigos.filter(a => a.isOnline).length} en línea
+                </span>
+              </h4>
 
-        {/* Tab: Privacidad */}
-        {activeTab === 'privacy' && (
-          <div className="card">
-            <h2 className="text-xl font-bold mb-4 text-white">
-              <MaterialIcon name="lock" className="inline-block w-6 h-6 align-middle mr-1" /> Configuración de Privacidad
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                <div>
-                  <h3 className="font-medium text-white">Perfil Público</h3>
-                  <p className="text-sm text-gray-400">Permite que otros vean tu perfil y estadísticas</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={userData?.isPublicProfile || false}
-                    onChange={(e) => handlePrivacyChange(e.target.checked, userData?.allowOpenChallenges || false)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
+              <div className="space-y-4">
+                {amigos.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <span className="material-symbols-rounded text-4xl mb-2">person_add</span>
+                    <p className="text-sm">Aún no tienes amigos</p>
+                    <Link to="/friends" className="text-nica-amarillo text-sm hover:underline mt-2 inline-block">
+                      Buscar amigos
+                    </Link>
+                  </div>
+                ) : (
+                  amigos.slice(0, 5).map((amigo) => (
+                    <div key={amigo.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-nica-verde to-nica-amarillo flex items-center justify-center">
+                            <span className="material-symbols-rounded text-white">person</span>
+                          </div>
+                          <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-gray-900 rounded-full ${
+                            amigo.isOnline ? 'bg-green-500' : 'bg-gray-500'
+                          }`}></span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">{amigo.displayName || 'Amigo'}</p>
+                          <p className="text-xs text-gray-400">
+                            {amigo.isOnline ? 'En línea' : `Visto hace ${amigo.lastSeen ? 'poco' : 'tiempo'}`}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        to={`/challenge?opponent=${amigo.id}`}
+                        className="bg-nica-verde/20 text-nica-verde text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-nica-verde hover:text-white transition-all"
+                      >
+                        Retar
+                      </Link>
+                    </div>
+                  ))
+                )}
               </div>
-              <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                <div>
-                  <h3 className="font-medium text-white">Permitir Retos Abiertos</h3>
-                  <p className="text-sm text-gray-400">Permite que cualquier jugador te desafíe</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={userData?.allowOpenChallenges || false}
-                    onChange={(e) => handlePrivacyChange(userData?.isPublicProfile || false, e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
+
+              <Link
+                to="/friends"
+                className="mt-6 w-full border-2 border-dashed border-gray-600 py-2 rounded-xl text-xs font-bold text-gray-400 hover:border-nica-amarillo hover:text-nica-amarillo transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-rounded text-sm">person_add</span>
+                + Invitar Amigos
+              </Link>
             </div>
-          </div>
-        )}
+          </aside>
+        </div>
       </main>
     </div>
   );

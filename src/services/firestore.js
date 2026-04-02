@@ -2026,6 +2026,150 @@ export function getTodayDateString() {
 }
 
 /**
+ * Obtiene el mes actual en formato YYYY-MM
+ */
+export function getCurrentMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
+ * Obtiene el mes pasado en formato YYYY-MM
+ */
+export function getLastMonth() {
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth(); // 0-indexed
+  
+  if (month === 0) {
+    // Enero → Diciembre del año anterior
+    year--;
+    month = 11;
+  } else {
+    month--;
+  }
+  
+  return `${year}-${String(month + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Obtiene las estadísticas de nacatamales del mes pasado
+ * Usa caché de 3 horas para reducir peticiones a Firestore
+ */
+export async function getLastMonthNacatamalesCount() {
+  const cacheKey = 'last_month_nacatamales';
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
+  try {
+    const lastMonth = getLastMonth();
+    const docRef = doc(db, 'monthlyStats', lastMonth);
+    const docSnap = await getDoc(docRef);
+
+    const count = docSnap.exists() ? docSnap.data().nacatamalesCompleted || 0 : 0;
+    
+    // Guardar en caché por 3 horas
+    setCachedData(cacheKey, count);
+    
+    return count;
+  } catch (error) {
+    console.error('Error al obtener estadísticas mensuales:', error);
+    return 0;
+  }
+}
+
+/**
+ * Obtiene los top usuarios por nacatamales del mes pasado
+ * Usa caché de 3 horas para reducir peticiones
+ */
+export async function getTopUsersByNacatamales(limitCount = 4) {
+  const cacheKey = `top_users_nacatamales_${limitCount}`;
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
+  try {
+    const lastMonth = getLastMonth();
+    const docRef = doc(db, 'monthlyStats', lastMonth);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      setCachedData(cacheKey, []);
+      return [];
+    }
+
+    const topUsers = docSnap.data().topUsers || [];
+    
+    // Guardar en caché por 3 horas
+    setCachedData(cacheKey, topUsers.slice(0, limitCount));
+    
+    return topUsers.slice(0, limitCount);
+  } catch (error) {
+    console.error('Error al obtener top usuarios:', error);
+    return [];
+  }
+}
+
+/**
+ * Incrementa el contador de nacatamales del mes actual
+ */
+export async function incrementMonthlyNacatamales(uid = null) {
+  try {
+    const currentMonth = getCurrentMonth();
+    const docRef = doc(db, 'monthlyStats', currentMonth);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      // Crear documento si no existe
+      await setDoc(docRef, {
+        month: currentMonth,
+        nacatamalesCompleted: 1,
+        topUsers: uid ? [{ uid, count: 1 }] : [],
+        createdAt: serverTimestamp()
+      });
+    } else {
+      // Actualizar contador
+      const updateData = {
+        nacatamalesCompleted: increment(1)
+      };
+
+      // Actualizar top usuarios si hay uid
+      if (uid) {
+        const currentTopUsers = docSnap.data().topUsers || [];
+        const userIndex = currentTopUsers.findIndex(u => u.uid === uid);
+        
+        if (userIndex >= 0) {
+          // Usuario ya existe, incrementar su count
+          const newTopUsers = [...currentTopUsers];
+          newTopUsers[userIndex] = { 
+            uid, 
+            count: (newTopUsers[userIndex].count || 0) + 1 
+          };
+          updateData.topUsers = newTopUsers.sort((a, b) => b.count - a.count);
+        } else {
+          // Usuario nuevo, agregarlo
+          updateData.topUsers = arrayUnion({ uid, count: 1 });
+        }
+      }
+
+      await updateDoc(docRef, updateData);
+    }
+  } catch (error) {
+    console.error('Error al incrementar nacatamales mensuales:', error);
+    throw error;
+  }
+}
+
+/**
  * Obtiene las estadísticas de nacatamales completados hoy
  * Usa caché de 3 horas para reducir peticiones a Firestore
  * Si el valor es 0, usa caché de solo 5 minutos (para detectar cambios rápido)

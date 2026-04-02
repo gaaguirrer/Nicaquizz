@@ -9,33 +9,43 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { getTodayNacatamalesCount, getTodayActiveUsers, registerActiveUserToday, getTodayChallenge, hasUserCompletedDailyChallenge } from '../../services/firestore';
+import { 
+  getTodayNacatamalesCount, 
+  getTodayActiveUsers, 
+  registerActiveUserToday, 
+  getTodayChallenge, 
+  hasUserCompletedDailyChallenge,
+  getLastMonthNacatamalesCount,
+  getTopUsersByNacatamales,
+  incrementMonthlyNacatamales
+} from '../../services/firestore';
 import IngredientIcon from '../components/IngredientIcon';
 
 export default function Landing() {
   const { currentUser } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const [nacatamalesCount, setNacatamalesCount] = useState(1284); // Valor por defecto
-  const [activeUsers, setActiveUsers] = useState([]);
+  const [nacatamalesCount, setNacatamalesCount] = useState(0);
+  const [topUsers, setTopUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dailyChallenge, setDailyChallenge] = useState(null);
 
   useEffect(() => {
-    async function loadDailyStats() {
+    async function loadMonthlyStats() {
       try {
-        // Registrar usuario activo si está logueado
+        // Registrar usuario activo y actualizar contador si está logueado
         if (currentUser) {
           await registerActiveUserToday(currentUser.uid);
+          await incrementMonthlyNacatamales(currentUser.uid);
         }
 
-        // Cargar estadísticas (con caché de 3h)
-        const count = await getTodayNacatamalesCount();
-        const users = await getTodayActiveUsers(4);
+        // Cargar estadísticas del mes pasado (con caché de 3h)
+        const count = await getLastMonthNacatamalesCount();
+        const users = await getTopUsersByNacatamales(4);
         const challenge = await getTodayChallenge();
 
-        setNacatamalesCount(count > 0 ? count : 1284); // Usar dato real o default
-        setActiveUsers(users);
+        setNacatamalesCount(count);
+        setTopUsers(users);
         setDailyChallenge(challenge);
       } catch (error) {
         toast.handleError(error, 'Error al cargar estadísticas');
@@ -44,7 +54,7 @@ export default function Landing() {
       }
     }
 
-    loadDailyStats();
+    loadMonthlyStats();
   }, [currentUser]);
 
   async function handleDailyChallenge() {
@@ -200,20 +210,20 @@ export default function Landing() {
               <div>
                 <p className="text-[#F4C430] font-bold tracking-widest text-sm mb-1 uppercase">Sabor Comunitario</p>
                 <h4 className="text-4xl font-game text-white tracking-wider">
-                  {loading ? 'Cargando...' : `${nacatamalesCount.toLocaleString()} Nacatamales completados hoy`}
+                  {loading ? 'Cargando...' : `${nacatamalesCount.toLocaleString()} Nacatamales el mes pasado`}
                 </h4>
               </div>
             </div>
             <div className="flex items-center gap-6">
               <div className="flex -space-x-4">
-                {activeUsers.length > 0 ? (
-                  activeUsers.map((user, index) => (
+                {topUsers.length > 0 ? (
+                  topUsers.map((user, index) => (
                     <img
-                      key={user.id || index}
+                      key={user.uid || user.id || index}
                       alt={user.displayName || 'Jugador'}
                       className="w-14 h-14 rounded-full border-4 border-black object-cover"
                       src={user.photoURL || `https://i.pravatar.cc/100?img=${index + 1}`}
-                      title={user.displayName || 'Jugador'}
+                      title={`${user.displayName || 'Jugador'} - ${user.count || 0} nacatamales`}
                     />
                   ))
                 ) : (
@@ -240,11 +250,11 @@ export default function Landing() {
                 )}
               </div>
               <div className="hidden lg:block">
-                {activeUsers.length > 0 ? (
+                {topUsers.length > 0 ? (
                   <div className="text-white/90 font-medium text-sm">
-                    <p className="font-bold text-[#F4C430]">Últimos en completar:</p>
+                    <p className="font-bold text-[#F4C430]">Top jugadores del mes:</p>
                     <p className="text-white/80 italic">
-                      {activeUsers.map(u => u.displayName || 'Jugador').join(', ')}
+                      {topUsers.map(u => u.displayName || 'Jugador').join(', ')}
                     </p>
                   </div>
                 ) : (

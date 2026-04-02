@@ -1,22 +1,24 @@
 /**
  * Landing.jsx - Página de Aterrizaje
- * 
+ *
  * Primera página para usuarios no autenticados.
- * Muestra estadísticas en tiempo real de nacatamales completados.
+ * Muestra estadísticas dinámicas de nacatamales completados (caché 3h).
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { getTodayNacatamalesCount, getTodayActiveUsers, registerActiveUserToday } from '../../services/firestore';
+import { getTodayNacatamalesCount, getTodayActiveUsers, registerActiveUserToday, getTodayChallenge, hasUserCompletedDailyChallenge } from '../../services/firestore';
 
 export default function Landing() {
   const { currentUser } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
   const [nacatamalesCount, setNacatamalesCount] = useState(1284); // Valor por defecto
   const [activeUsers, setActiveUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dailyChallenge, setDailyChallenge] = useState(null);
 
   useEffect(() => {
     async function loadDailyStats() {
@@ -26,12 +28,14 @@ export default function Landing() {
           await registerActiveUserToday(currentUser.uid);
         }
 
-        // Cargar estadísticas
+        // Cargar estadísticas (con caché de 3h)
         const count = await getTodayNacatamalesCount();
         const users = await getTodayActiveUsers(4);
+        const challenge = await getTodayChallenge();
 
         setNacatamalesCount(count > 0 ? count : 1284); // Usar dato real o default
         setActiveUsers(users);
+        setDailyChallenge(challenge);
       } catch (error) {
         toast.handleError(error, 'Error al cargar estadísticas');
       } finally {
@@ -41,6 +45,37 @@ export default function Landing() {
 
     loadDailyStats();
   }, [currentUser]);
+
+  async function handleDailyChallenge() {
+    if (!currentUser) {
+      toast.info('Inicia sesión para participar en el reto diario');
+      navigate('/auth');
+      return;
+    }
+
+    try {
+      // Verificar si ya completó el reto hoy
+      const completed = await hasUserCompletedDailyChallenge(currentUser.uid);
+      
+      if (completed) {
+        toast.success('¡Ya completaste el reto de hoy! Vuelve mañana.');
+        return;
+      }
+
+      // Redirigir al reto diario
+      // Si hay categoryId, ir a esa categoría, sino ir a preguntas generales con flag daily
+      if (dailyChallenge?.categoryId) {
+        navigate(`/questions/${dailyChallenge.categoryId}?daily=true`);
+      } else if (dailyChallenge?.questionIds?.length > 0) {
+        // Si no hay categoryId pero hay questionIds, ir a historia como default
+        navigate(`/questions/historia?daily=true`);
+      } else {
+        toast.error('No hay reto disponible hoy. ¡Vuelve mañana!');
+      }
+    } catch (error) {
+      toast.handleError(error, 'Error al iniciar reto diario');
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#FFFDD0] text-[#1d1d03] font-body">
@@ -67,9 +102,16 @@ export default function Landing() {
             </Link>
           </div>
           <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-[#154212]/5 rounded-lg transition-all scale-95 active:scale-90 duration-200">
-              <span className="material-symbols-outlined text-[#2D5A27]">notifications</span>
-            </button>
+            {/* Campanita de notificaciones - Solo visible si está logueado */}
+            {currentUser && (
+              <Link
+                to="/notifications"
+                className="p-2 hover:bg-[#154212]/5 rounded-lg transition-all scale-95 active:scale-90 duration-200 relative"
+              >
+                <span className="material-symbols-outlined text-[#2D5A27]">notifications</span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-[#C41E3A] rounded-full"></span>
+              </Link>
+            )}
             {currentUser ? (
               <Link
                 to="/play"
@@ -126,7 +168,10 @@ export default function Landing() {
           {/* Imagen Hero */}
           <div className="relative group">
             <div className="absolute -top-10 -right-10 w-72 h-72 bg-[#F4C430]/20 rounded-full blur-3xl"></div>
-            <div className="relative z-10 bg-white p-6 rounded-[2.5rem] border-4 border-black shadow-comic rotate-2 hover:rotate-0 transition-transform duration-500">
+            <div 
+              className="relative z-10 bg-white p-6 rounded-[2.5rem] border-4 border-black shadow-comic rotate-2 hover:rotate-0 transition-transform duration-500 cursor-pointer"
+              onClick={handleDailyChallenge}
+            >
               <div className="relative w-full h-[500px] bg-gradient-to-br from-[#2D5A27] to-[#154212] rounded-[1.5rem] flex items-center justify-center overflow-hidden">
                 <span className="material-symbols-outlined text-9xl text-white/80">lunch_dining</span>
               </div>
@@ -136,6 +181,9 @@ export default function Landing() {
                   <span className="font-bold tracking-widest uppercase text-xs">Reto Diario</span>
                 </div>
                 <h3 className="text-3xl font-headline">Encuentra el Achiote Sagrado</h3>
+                <p className="text-sm text-[#F4C430]/80 mt-1">
+                  {loading ? 'Cargando...' : dailyChallenge ? '¡Disponible hoy!' : 'Próximamente'}
+                </p>
               </div>
             </div>
           </div>
@@ -164,6 +212,7 @@ export default function Landing() {
                       alt={user.displayName || 'Jugador'}
                       className="w-14 h-14 rounded-full border-4 border-black object-cover"
                       src={user.photoURL || `https://i.pravatar.cc/100?img=${index + 1}`}
+                      title={user.displayName || 'Jugador'}
                     />
                   ))
                 ) : (
@@ -189,9 +238,20 @@ export default function Landing() {
                   </>
                 )}
               </div>
-              <p className="text-white/80 italic font-medium hidden lg:block">
-                "¡El sabor de la victoria es <br/>mejor que el del achiote!"
-              </p>
+              <div className="hidden lg:block">
+                {activeUsers.length > 0 ? (
+                  <div className="text-white/90 font-medium text-sm">
+                    <p className="font-bold text-[#F4C430]">Últimos en completar:</p>
+                    <p className="text-white/80 italic">
+                      {activeUsers.map(u => u.displayName || 'Jugador').join(', ')}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-white/80 italic font-medium">
+                    "¡El sabor de la victoria es <br/>mejor que el del achiote!"
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </section>

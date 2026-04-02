@@ -132,18 +132,23 @@ async function generateDailyChallenge() {
     const selectedQuestions = selectRandomItems(allQuestions, 10);
     const questionIds = selectedQuestions.map(q => q.id);
     
+    // Obtener categorías únicas de las preguntas seleccionadas
+    const categories = [...new Set(selectedQuestions.map(q => q.categoryId))];
+    const primaryCategory = categories[0] || 'historia'; // Categoría principal
+
     console.log(`\n✓ Preguntas seleccionadas:`);
     selectedQuestions.forEach((q, i) => {
       console.log(`   ${i + 1}. [${q.categoryId}] ${q.text?.substring(0, 50) || 'Pregunta sin texto'}...`);
     });
-    
+
     // Crear documento del reto diario
     const dailyChallenge = {
       date: today,
       questionIds,
       totalQuestions: 10,
       completedBy: [],
-      category: 'retos',
+      category: 'daily',
+      categoryId: primaryCategory, // Categoría principal para redireccionamiento
       reward: 'achiote',
       rewardAmount: 1,
       createdAt: Timestamp.now(),

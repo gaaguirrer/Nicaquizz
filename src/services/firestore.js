@@ -18,6 +18,59 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// ==================== CACHE UTILITIES ====================
+// Caché en localStorage para reducir peticiones a Firestore (3 horas)
+const CACHE_DURATION = 3 * 60 * 60 * 1000; // 3 horas en milisegundos
+
+export function getCachedData(key) {
+  try {
+    const cached = localStorage.getItem(`nicaquizz_cache_${key}`);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const now = Date.now();
+    
+    // Verificar si el caché aún es válido (3 horas)
+    if (now - timestamp < CACHE_DURATION) {
+      return data;
+    }
+    
+    // Caché expirado, eliminar
+    localStorage.removeItem(`nicaquizz_cache_${key}`);
+    return null;
+  } catch (error) {
+    console.error('Error al leer caché:', error);
+    return null;
+  }
+}
+
+export function setCachedData(key, data) {
+  try {
+    const cacheEntry = {
+      data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(`nicaquizz_cache_${key}`, JSON.stringify(cacheEntry));
+  } catch (error) {
+    console.error('Error al guardar caché:', error);
+  }
+}
+
+export function clearCache(key) {
+  try {
+    if (key) {
+      localStorage.removeItem(`nicaquizz_cache_${key}`);
+    } else {
+      // Limpiar todo el caché de NicaQuizz
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('nicaquizz_cache_'))
+        .forEach(k => localStorage.removeItem(k));
+    }
+  } catch (error) {
+    console.error('Error al limpiar caché:', error);
+  }
+}
+
 // ==================== CONSTANTES ====================
 
 // Ingredientes del nacatamal (monedas) - todos en minúsculas
@@ -1829,17 +1882,28 @@ export function getTodayDateString() {
 
 /**
  * Obtiene las estadísticas de nacatamales completados hoy
+ * Usa caché de 3 horas para reducir peticiones a Firestore
  */
 export async function getTodayNacatamalesCount() {
+  const cacheKey = 'nacatamales_count';
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const today = getTodayDateString();
     const docRef = doc(db, 'dailyStats', today);
     const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
-      return docSnap.data().nacatamalesCompleted || 0;
-    }
-    return 0;
+    const count = docSnap.exists() ? docSnap.data().nacatamalesCompleted || 0 : 0;
+    
+    // Guardar en caché
+    setCachedData(cacheKey, count);
+    
+    return count;
   } catch (error) {
     console.error('Error al obtener estadísticas diarias:', error);
     return 0;
@@ -1904,9 +1968,18 @@ export async function registerActiveUserToday(uid) {
 }
 
 /**
- * Obtiene usuarios activos hoy (para mostrar avatares)
+ * Obtiene últimos jugadores que completaron nacatamales hoy (para mostrar avatares)
+ * Usa caché de 3 horas para reducir peticiones a Firestore
  */
 export async function getTodayActiveUsers(limitCount = 4) {
+  const cacheKey = 'active_users';
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const today = getTodayDateString();
     const docRef = doc(db, 'dailyStats', today);
@@ -1917,15 +1990,18 @@ export async function getTodayActiveUsers(limitCount = 4) {
     const activeUserIds = docSnap.data().activeUsers || [];
     if (activeUserIds.length === 0) return [];
 
-    // Obtener perfiles de usuarios activos
+    // Obtener perfiles de usuarios activos (tomar los últimos)
     const usersRef = collection(db, 'users');
     const snapshot = await getDocs(usersRef);
-    
+
     const activeUsers = snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .filter(user => activeUserIds.includes(user.id))
-      .slice(0, limitCount);
+      .slice(-limitCount); // Obtener los últimos N usuarios
 
+    // Guardar en caché
+    setCachedData(cacheKey, activeUsers);
+    
     return activeUsers;
   } catch (error) {
     console.error('Error al obtener usuarios activos:', error);

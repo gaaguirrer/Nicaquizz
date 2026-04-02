@@ -513,11 +513,8 @@ export async function fetchCategoryRanking(categoryId, limitCount = 100) {
 }
 
 export const ITEM_TYPES = {
-  SOMBRERO: 'sombrero',
-  CAMISA: 'camisa',
-  PANTALON: 'pantalon',
-  BOTAS: 'botas',
-  ACCESORIO: 'accesorio',
+  MEJORA: 'mejora',      // Mejoras para el jugador
+  TRABA: 'traba'         // Trabas para el oponente
 };
 
 export const MEJORAS = {

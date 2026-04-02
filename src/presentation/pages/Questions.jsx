@@ -13,6 +13,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import {
   fetchCategoryById,
   fetchApprovedQuestions,
@@ -90,6 +91,7 @@ export default function Questions() {
   const { categoryId } = useParams();
   const navigate = useNavigate();
   const { currentUser, updateUserStats, userData } = useAuth();
+  const toast = useToast();
 
   const [category, setCategory] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -145,7 +147,7 @@ export default function Questions() {
 
       setQuestions(questionsWithOptions.sort(() => Math.random() - 0.5));
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      toast.handleError(error, 'Error al cargar preguntas');
     } finally {
       setLoading(false);
     }
@@ -172,7 +174,7 @@ export default function Questions() {
       await submitAnswer(currentUser.uid, currentQuestion.id, categoryId, false);
       await updateUserStats(currentQuestion.id, categoryId, false);
     } catch (error) {
-      console.error('Error al guardar respuesta:', error);
+      toast.handleError(error, 'Error al guardar respuesta');
     }
 
     setAnswering(false);
@@ -196,7 +198,7 @@ export default function Questions() {
       await submitAnswer(currentUser.uid, currentQuestion.id, categoryId, correct);
       await updateUserStats(currentQuestion.id, categoryId, correct);
     } catch (error) {
-      console.error('Error al guardar respuesta:', error);
+      toast.handleError(error, 'Error al guardar respuesta');
     }
 
     setAnswering(false);
@@ -223,7 +225,7 @@ export default function Questions() {
       try {
         await addCoins(currentUser.uid, categoryId, false);
       } catch (error) {
-        console.error('Error al dar moneda:', error);
+        toast.handleError(error, 'Error al recompensar moneda');
       }
     }
     
@@ -260,7 +262,7 @@ export default function Questions() {
       setScore(prev => ({ ...prev, total: prev.total + 1 }));
       nextQuestion();
     } catch (error) {
-      console.error('Error al usar mejora:', error);
+      toast.handleError(error, 'Error al usar power-up');
     }
   }
 
@@ -274,7 +276,7 @@ export default function Questions() {
       setMejoras(prev => ({ ...prev, [MEJORAS.RELOJ_ARENA]: prev[MEJORAS.RELOJ_ARENA] - 1 }));
       setTimeLeft(prev => Math.min(prev * 2, 60));
     } catch (error) {
-      console.error('Error al usar mejora:', error);
+      toast.handleError(error, 'Error al usar power-up');
     }
   }
 
@@ -295,7 +297,7 @@ export default function Questions() {
 
       setOptions(newOptions);
     } catch (error) {
-      console.error('Error al usar mejora:', error);
+      toast.handleError(error, 'Error al usar power-up');
     }
   }
 

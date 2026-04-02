@@ -15,6 +15,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 // Categorías disponibles
 const CATEGORIAS = [
@@ -70,6 +71,7 @@ const CATEGORIAS = [
 
 export default function Challenge() {
   const { currentUser } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -85,11 +87,11 @@ export default function Challenge() {
     try {
       // Simulación de inicio de duelo
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Redirigir al juego
       navigate(`/challenge/play?tipo=${tipo}&categoria=${categoriaSeleccionada || 'libre'}`);
     } catch (error) {
-      console.error('Error al empezar duelo:', error);
+      toast.handleError(error, 'Error al empezar duelo');
     } finally {
       setLoading(false);
     }

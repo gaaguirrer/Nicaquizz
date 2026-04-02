@@ -14,6 +14,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { fetchGlobalRanking, fetchCategoryRanking } from '../../services/firestore';
 
 // Datos simulados para el ranking
@@ -49,6 +50,7 @@ const TOP_CATEGORIAS = [
 
 export default function Ranking() {
   const { currentUser } = useAuth();
+  const toast = useToast();
   const [filtro, setFiltro] = useState('general');
   const [busqueda, setBusqueda] = useState('');
   const [ranking, setRanking] = useState(RANKING_DATA);
@@ -66,7 +68,7 @@ export default function Ranking() {
       await new Promise(resolve => setTimeout(resolve, 500));
       setRanking(RANKING_DATA);
     } catch (error) {
-      console.error('Error al cargar ranking:', error);
+      toast.handleError(error, 'Error al cargar ranking');
     } finally {
       setLoading(false);
     }

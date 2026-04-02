@@ -105,16 +105,14 @@ export default function Friends() {
   }
 
   async function handleRetar(amigoId) {
-    console.log('Retando a:', amigoId);
     // En producción: abrir modal de configuración de reto
   }
 
   async function handleAceptarSolicitud(solicitudId) {
-    console.log('Aceptando solicitud:', solicitudId);
+    // En producción: actualizar estado de solicitud
   }
 
   async function handleAceptarReto(retoId) {
-    console.log('Aceptando reto:', retoId);
     // En producción: navegar a Challenge.jsx
   }
 

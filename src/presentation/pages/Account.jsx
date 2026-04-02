@@ -33,13 +33,6 @@ export default function Account() {
   const [retosAbiertos, setRetosAbiertos] = useState(false);
 
   async function handleGuardar() {
-    console.log('Guardando cambios:', {
-      username,
-      bio,
-      avatarSeleccionado,
-      perfilPublico,
-      retosAbiertos
-    });
     // En producción: llamar a API para actualizar perfil
   }
 

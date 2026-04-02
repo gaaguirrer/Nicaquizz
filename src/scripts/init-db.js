@@ -54,156 +54,36 @@ const categories = [
 ];
 
 // ==================== ITEMS DE TIENDA ====================
+// Solo mejoras (power-ups) y trabas - NO hay ropa ni accesorios
 
 const shopItems = [
-  // Sombreros
+  // Mejoras (Power-ups)
   {
-    name: 'Sombrero de Copa',
-    type: 'sombrero',
-    icon: 'school',
+    id: 'pase',
+    name: 'Pase',
+    type: 'mejora',
+    icon: 'skip_next',
     basePrice: 1,
-    description: 'Elegante sombrero de copa negro'
+    description: 'Salta la pregunta actual sin perder el turno',
+    effect: 'skip_question'
   },
   {
-    name: 'Gorra Deportiva',
-    type: 'sombrero',
-    icon: 'sports_baseball',
-    basePrice: 1,
-    description: 'Gorra deportiva colorida'
-  },
-  {
-    name: 'Corona Real',
-    type: 'sombrero',
-    icon: 'royalty',
-    basePrice: 3,
-    description: 'Corona dorada de la realeza'
-  },
-  {
-    name: 'Sombrero de Vaquero',
-    type: 'sombrero',
-    icon: 'yards',
+    id: 'reloj_arena',
+    name: 'Reloj de Arena',
+    type: 'mejora',
+    icon: 'hourglass_top',
     basePrice: 2,
-    description: 'Sombrero de vaquero del oeste'
-  },
-
-  // Camisas
-  {
-    name: 'Camisa Elegante',
-    type: 'camisa',
-    icon: 'business_center',
-    basePrice: 1,
-    description: 'Camisa formal con corbata'
+    description: 'Duplica el tiempo disponible para responder',
+    effect: 'double_time'
   },
   {
-    name: 'Camiseta Casual',
-    type: 'camisa',
-    icon: 'checkroom',
-    basePrice: 1,
-    description: 'Camiseta casual cómoda'
-  },
-  {
-    name: 'Vestido de Gala',
-    type: 'camisa',
-    icon: 'content_paste_go',
+    id: 'comodin',
+    name: 'Comodín',
+    type: 'mejora',
+    icon: 'filter_list',
     basePrice: 2,
-    description: 'Vestido elegante de gala'
-  },
-  {
-    name: 'Chaqueta de Cuero',
-    type: 'camisa',
-    icon: 'apparel',
-    basePrice: 2,
-    description: 'Chaqueta de cuero estilo rocker'
-  },
-
-  // Pantalones
-  {
-    name: 'Jeans Clásicos',
-    type: 'pantalon',
-    icon: 'checkroom',
-    basePrice: 1,
-    description: 'Jeans azules clásicos'
-  },
-  {
-    name: 'Shorts Deportivos',
-    type: 'pantalon',
-    icon: 'sports_soccer',
-    basePrice: 1,
-    description: 'Shorts cómodos para deporte'
-  },
-  {
-    name: 'Pantalón de Vestir',
-    type: 'pantalon',
-    icon: 'business_center',
-    basePrice: 2,
-    description: 'Pantalón formal de vestir'
-  },
-
-  // Botas
-  {
-    name: 'Botas de Trabajo',
-    type: 'botas',
-    icon: 'hardware',
-    basePrice: 1,
-    description: 'Botas resistentes de trabajo'
-  },
-  {
-    name: 'Zapatillas Deportivas',
-    type: 'botas',
-    icon: 'sports_martial_arts',
-    basePrice: 1,
-    description: 'Zapatillas cómodas para correr'
-  },
-  {
-    name: 'Tacones Elegantes',
-    type: 'botas',
-    icon: 'footwear',
-    basePrice: 2,
-    description: 'Tacones elegantes de fiesta'
-  },
-  {
-    name: 'Sandalias',
-    type: 'botas',
-    icon: 'beach_access',
-    basePrice: 1,
-    description: 'Sandalias frescas de verano'
-  },
-
-  // Accesorios
-  {
-    name: 'Gafas de Sol',
-    type: 'accesorio',
-    icon: 'sunglasses',
-    basePrice: 1,
-    description: 'Gafas de sol estilo aviador'
-  },
-  {
-    name: 'Gafas de Vista',
-    type: 'accesorio',
-    icon: 'remove_red_eye',
-    basePrice: 1,
-    description: 'Gafas de vista intelectuales'
-  },
-  {
-    name: 'Mochila',
-    type: 'accesorio',
-    icon: 'backpack',
-    basePrice: 1,
-    description: 'Mochila escolar práctica'
-  },
-  {
-    name: 'Bolso de Mano',
-    type: 'accesorio',
-    icon: 'shopping_bag',
-    basePrice: 2,
-    description: 'Bolso de mano elegante'
-  },
-  {
-    name: 'Corbata de Moño',
-    type: 'accesorio',
-    icon: 'school',
-    basePrice: 1,
-    description: 'Corbata de moño elegante'
+    description: 'Elimina dos opciones incorrectas',
+    effect: 'remove_wrong_answers'
   }
 ];
 

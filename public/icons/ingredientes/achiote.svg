@@ -1,0 +1,12 @@
+<!-- Icono de Achiote - Semillas rojas/anatto -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <ellipse cx="12" cy="12" rx="10" ry="8" fill="#C41E3A" stroke="#79001c" stroke-width="2"/>
+  <circle cx="9" cy="10" r="2" fill="#E74C3C"/>
+  <circle cx="14" cy="10" r="2" fill="#E74C3C"/>
+  <circle cx="11" cy="14" r="2" fill="#E74C3C"/>
+  <circle cx="15" cy="13" r="1.5" fill="#E74C3C"/>
+  <circle cx="8" cy="13" r="1.5" fill="#E74C3C"/>
+  <path d="M12 4V2" stroke="#2D5A27" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 2l-2 2" stroke="#2D5A27" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M12 2l2 2" stroke="#2D5A27" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

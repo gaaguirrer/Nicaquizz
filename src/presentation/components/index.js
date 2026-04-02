@@ -9,3 +9,4 @@ export { default as UserMenu } from './UserMenu';
 export { default as NotificationCenter } from './NotificationCenter';
 export { default as Achievements } from './Achievements';
 export { default as ErrorBoundary } from './ErrorBoundary';
+export { default as IngredientIcon } from './IngredientIcon';

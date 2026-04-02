@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { getTodayNacatamalesCount, getTodayActiveUsers, registerActiveUserToday, getTodayChallenge, hasUserCompletedDailyChallenge } from '../../services/firestore';
+import IngredientIcon from '../components/IngredientIcon';
 
 export default function Landing() {
   const { currentUser } = useAuth();
@@ -313,15 +314,15 @@ export default function Landing() {
             <h4 className="font-game text-2xl text-[#2D5A27]/40 uppercase tracking-widest mb-10">Tu Alacena Cultural</h4>
             <div className="flex flex-wrap justify-center gap-10">
               {[
-                { nombre: 'Masa', icono: 'bakery_dining', color: 'bg-[#F4C430]/20' },
-                { nombre: 'Cerdo', icono: 'set_meal', color: 'bg-[#C41E3A]/20' },
-                { nombre: 'Arroz', icono: 'bento', color: 'bg-[#2D5A27]/20' },
-                { nombre: 'Papa', icono: 'egg', color: 'bg-yellow-100' },
-                { nombre: 'Chile', icono: 'local_fire_department', color: 'bg-red-100' }
+                { nombre: 'Masa', tipo: 'masa', color: 'bg-[#F4C430]/20' },
+                { nombre: 'Cerdo', tipo: 'cerdo', color: 'bg-[#C41E3A]/20' },
+                { nombre: 'Arroz', tipo: 'arroz', color: 'bg-[#2D5A27]/20' },
+                { nombre: 'Papa', tipo: 'papa', color: 'bg-yellow-100' },
+                { nombre: 'Chile', tipo: 'chile', color: 'bg-red-100' }
               ].map((ing) => (
                 <div key={ing.nombre} className="flex flex-col items-center gap-3">
-                  <div className={`w-16 h-16 rounded-2xl ${ing.color} border-2 border-black flex items-center justify-center`}>
-                    <span className="material-symbols-outlined text-3xl">{ing.icono}</span>
+                  <div className={`w-16 h-16 rounded-2xl ${ing.color} border-2 border-black flex items-center justify-center p-2`}>
+                    <IngredientIcon type={ing.tipo} size={40} />
                   </div>
                   <span className="font-bold text-xs uppercase tracking-tighter">{ing.nombre}</span>
                 </div>

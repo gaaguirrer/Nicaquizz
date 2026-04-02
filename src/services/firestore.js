@@ -260,19 +260,31 @@ export async function consumeNacatamal(uid) {
 
 /**
  * Obtiene las monedas y power-ups de un usuario
+ * Caché: 3 horas
  */
 export async function getUserWallet(uid) {
+  const cacheKey = `wallet_${uid}`;
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const userRef = doc(db, 'users', uid);
     const docSnap = await getDoc(userRef);
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      return {
+      const wallet = {
         coins: data.coins || {},
         mejoras: data.mejoras || {},
         trabas: data.trabas || {}
       };
+      // Guardar en caché
+      setCachedData(cacheKey, wallet);
+      return wallet;
     }
     return { coins: {}, mejoras: {}, trabas: {} };
   } catch (error) {
@@ -285,24 +297,33 @@ export async function getUserWallet(uid) {
 
 /**
  * Obtiene todos los items de la tienda con precios actualizados
+ * Caché: 3 horas
  */
 export async function getShopItems() {
+  const cacheKey = 'shopItems';
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const itemsRef = collection(db, 'shopItems');
     const q = query(itemsRef, orderBy('createdAt', 'asc'));
     const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map(doc => {
+
+    const items = snapshot.docs.map(doc => {
       const data = doc.data();
       const basePrice = data.basePrice || 0;
       const timesPurchased = data.timesPurchased || 0;
-      
+
       // Calcular precio basado en demanda
       // Máximo 25% de descuento, sin límite de aumento
       const demandMultiplier = 1 + (timesPurchased * 0.1); // +10% por cada compra
       const minPrice = basePrice * 0.75; // 25% mínimo
       const currentPrice = Math.max(minPrice, Math.round(basePrice * demandMultiplier));
-      
+
       return {
         id: doc.id,
         ...data,
@@ -311,6 +332,11 @@ export async function getShopItems() {
         timesPurchased
       };
     });
+    
+    // Guardar en caché
+    setCachedData(cacheKey, items);
+    
+    return items;
   } catch (error) {
     console.error('Error al obtener items de tienda:', error);
     throw error;
@@ -513,6 +539,7 @@ export async function sendFriendRequest(senderId, receiverId) {
 
 /**
  * Obtiene solicitudes de amistad recibidas
+ * Optimizado: Usa batch queries en lugar de N+1
  */
 export async function getFriendRequests(uid) {
   try {
@@ -523,19 +550,35 @@ export async function getFriendRequests(uid) {
       where('status', '==', 'pending')
     );
     const snapshot = await getDocs(q);
+
+    // Obtener todos los sender IDs
+    const senderIds = snapshot.docs.map(doc => doc.data().senderId);
     
-    const requests = await Promise.all(
-      snapshot.docs.map(async doc => {
-        const data = doc.data();
-        const sender = await getUserProfile(data.senderId);
-        return {
-          id: doc.id,
-          ...data,
-          sender
-        };
-      })
-    );
+    // Obtener todos los perfiles en batches de 10
+    const sendersMap = {};
+    const batchSize = 10;
     
+    for (let i = 0; i < senderIds.length; i += batchSize) {
+      const batchIds = senderIds.slice(i, i + batchSize);
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('__name__', 'in', batchIds));
+      const sendersSnapshot = await getDocs(q);
+      
+      sendersSnapshot.docs.forEach(doc => {
+        sendersMap[doc.id] = { id: doc.id, ...doc.data() };
+      });
+    }
+
+    // Construir resultado con senders ya cargados
+    const requests = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        sender: sendersMap[data.senderId] || null
+      };
+    });
+
     return requests;
   } catch (error) {
     console.error('Error al obtener solicitudes:', error);
@@ -576,22 +619,34 @@ export async function rejectFriendRequest(requestId) {
 
 /**
  * Obtiene la lista de amigos de un usuario
+ * Optimizado: Usa un solo query con where('id', 'in', ...) en lugar de N+1
  */
 export async function getFriends(uid) {
   try {
     const userRef = doc(db, 'users', uid);
     const docSnap = await getDoc(userRef);
-    
+
     if (!docSnap.exists()) return [];
-    
+
     const friendIds = docSnap.data().friends || [];
     if (friendIds.length === 0) return [];
+
+    // Firestore permite máximo 10 elementos en 'in' query
+    // Dividimos en batches de 10
+    const friends = [];
+    const batchSize = 10;
     
-    const friends = await Promise.all(
-      friendIds.map(id => getUserProfile(id))
-    );
-    
-    return friends.filter(f => f !== null);
+    for (let i = 0; i < friendIds.length; i += batchSize) {
+      const batchIds = friendIds.slice(i, i + batchSize);
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('__name__', 'in', batchIds));
+      const snapshot = await getDocs(q);
+      
+      const batchFriends = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      friends.push(...batchFriends);
+    }
+
+    return friends;
   } catch (error) {
     console.error('Error al obtener amigos:', error);
     throw error;
@@ -652,6 +707,7 @@ export async function createChallenge(challengerId, challengedId, categoryId = n
 
 /**
  * Obtiene retos de un usuario
+ * Optimizado: Usa batch queries en lugar de N+1
  */
 export async function getUserChallenges(uid, status = 'pending') {
   try {
@@ -663,19 +719,35 @@ export async function getUserChallenges(uid, status = 'pending') {
       orderBy('createdAt', 'desc')
     );
     const snapshot = await getDocs(q);
+
+    // Obtener todos los challenger IDs
+    const challengerIds = snapshot.docs.map(doc => doc.data().challengerId);
     
-    const challenges = await Promise.all(
-      snapshot.docs.map(async doc => {
-        const data = doc.data();
-        const challenger = await getUserProfile(data.challengerId);
-        return {
-          id: doc.id,
-          ...data,
-          challenger
-        };
-      })
-    );
+    // Obtener todos los perfiles en batches de 10
+    const challengersMap = {};
+    const batchSize = 10;
     
+    for (let i = 0; i < challengerIds.length; i += batchSize) {
+      const batchIds = challengerIds.slice(i, i + batchSize);
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('__name__', 'in', batchIds));
+      const challengersSnapshot = await getDocs(q);
+      
+      challengersSnapshot.docs.forEach(doc => {
+        challengersMap[doc.id] = { id: doc.id, ...doc.data() };
+      });
+    }
+
+    // Construir resultado con challengers ya cargados
+    const challenges = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        challenger: challengersMap[data.challengerId] || null
+      };
+    });
+
     return challenges;
   } catch (error) {
     console.error('Error al obtener retos:', error);
@@ -839,29 +911,61 @@ export async function sendFriendRequestByEmail(currentUserId, targetEmail) {
 
 // ==================== CATEGORÍAS ====================
 
+/**
+ * Obtiene todas las categorías
+ * Caché: 72 horas (datos casi estáticos)
+ */
 export async function fetchCategories() {
+  const cacheKey = 'categories';
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const categoriesRef = collection(db, 'categories');
     const q = query(categoriesRef, orderBy('createdAt', 'asc'));
     const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map(doc => ({
+
+    const categories = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+    
+    // Guardar en caché por 72 horas
+    setCachedData(cacheKey, categories);
+    
+    return categories;
   } catch (error) {
     console.error('Error al obtener categorías:', error);
     throw error;
   }
 }
 
+/**
+ * Obtiene una categoría por ID
+ * Caché: 72 horas (datos casi estáticos)
+ */
 export async function fetchCategoryById(categoryId) {
+  const cacheKey = `category_${categoryId}`;
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const docRef = doc(db, 'categories', categoryId);
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      const category = { id: docSnap.id, ...docSnap.data() };
+      // Guardar en caché
+      setCachedData(cacheKey, category);
+      return category;
     }
     return null;
   } catch (error) {
@@ -889,7 +993,19 @@ export async function createCategory(name, description) {
 
 // ==================== PREGUNTAS ====================
 
+/**
+ * Obtiene preguntas aprobadas por categoría y dificultad
+ * Caché: 3 horas por (categoryId, difficulty)
+ */
 export async function fetchApprovedQuestions(categoryId = null, difficulty = 'hard') {
+  const cacheKey = `questions_${categoryId || 'all'}_${difficulty}`;
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const questionsRef = collection(db, 'questions');
     let q = query(
@@ -898,7 +1014,7 @@ export async function fetchApprovedQuestions(categoryId = null, difficulty = 'ha
       where('difficulty', '==', difficulty),
       orderBy('createdAt', 'desc')
     );
-    
+
     if (categoryId) {
       q = query(
         questionsRef,
@@ -908,13 +1024,18 @@ export async function fetchApprovedQuestions(categoryId = null, difficulty = 'ha
         orderBy('createdAt', 'desc')
       );
     }
-    
+
     const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map(doc => ({
+
+    const questions = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+    
+    // Guardar en caché
+    setCachedData(cacheKey, questions);
+    
+    return questions;
   } catch (error) {
     console.error('Error al obtener preguntas:', error);
     throw error;
@@ -946,17 +1067,26 @@ export async function submitAnswer(userId, questionId, categoryId, isCorrect) {
 
 /**
  * Obtiene el ranking mundial (sin monedas, solo puntuación)
+ * Caché: 1 hora (datos que cambian frecuentemente)
  */
 export async function fetchGlobalRanking(limitCount = 100) {
+  const cacheKey = `ranking_global_${limitCount}`;
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const usersRef = collection(db, 'users');
     const snapshot = await getDocs(usersRef);
-    
+
     const users = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
-    
+
     const rankedUsers = users
       .filter(user => user.stats?.totalQuestionsAnswered > 0)
       .map(user => ({
@@ -965,8 +1095,8 @@ export async function fetchGlobalRanking(limitCount = 100) {
         email: user.email,
         totalQuestionsAnswered: user.stats?.totalQuestionsAnswered || 0,
         totalCorrect: user.stats?.totalCorrect || 0,
-        accuracy: user.stats?.totalQuestionsAnswered > 0 
-          ? Math.round((user.stats?.totalCorrect || 0) / user.stats?.totalQuestionsAnswered * 100) 
+        accuracy: user.stats?.totalQuestionsAnswered > 0
+          ? Math.round((user.stats?.totalCorrect || 0) / user.stats?.totalQuestionsAnswered * 100)
           : 0,
         wins: user.stats?.wins || 0,
         losses: user.stats?.losses || 0
@@ -980,6 +1110,9 @@ export async function fetchGlobalRanking(limitCount = 100) {
       })
       .slice(0, limitCount);
     
+    // Guardar en caché por 1 hora
+    setCachedData(cacheKey, rankedUsers);
+    
     return rankedUsers;
   } catch (error) {
     console.error('Error al obtener ranking:', error);
@@ -989,17 +1122,26 @@ export async function fetchGlobalRanking(limitCount = 100) {
 
 /**
  * Obtiene el ranking por categoría
+ * Caché: 1 hora (datos que cambian frecuentemente)
  */
 export async function fetchCategoryRanking(categoryId, limitCount = 100) {
+  const cacheKey = `ranking_${categoryId}_${limitCount}`;
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const usersRef = collection(db, 'users');
     const snapshot = await getDocs(usersRef);
-    
+
     const users = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
-    
+
     const rankedUsers = users
       .filter(user => user.stats?.categoryStats?.[categoryId]?.total > 0)
       .map(user => {
@@ -1010,8 +1152,8 @@ export async function fetchCategoryRanking(categoryId, limitCount = 100) {
           email: user.email,
           total: catStats.total || 0,
           correct: catStats.correct || 0,
-          accuracy: catStats.total > 0 
-            ? Math.round((catStats.correct || 0) / catStats.total * 100) 
+          accuracy: catStats.total > 0
+            ? Math.round((catStats.correct || 0) / catStats.total * 100)
             : 0,
           wins: user.stats?.wins || 0,
           losses: user.stats?.losses || 0
@@ -1024,6 +1166,9 @@ export async function fetchCategoryRanking(categoryId, limitCount = 100) {
         return b.accuracy - a.accuracy;
       })
       .slice(0, limitCount);
+    
+    // Guardar en caché por 1 hora
+    setCachedData(cacheKey, rankedUsers);
     
     return rankedUsers;
   } catch (error) {
@@ -2013,15 +2158,27 @@ export async function getTodayActiveUsers(limitCount = 4) {
 
 /**
  * Obtiene el reto diario actual
+ * Caché: 1 hora (el reto cambia diariamente)
  */
 export async function getTodayChallenge() {
+  const cacheKey = 'daily_challenge';
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const today = getTodayDateString();
     const docRef = doc(db, 'dailyChallenges', today);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      const challenge = { id: docSnap.id, ...docSnap.data() };
+      // Guardar en caché por 1 hora
+      setCachedData(cacheKey, challenge);
+      return challenge;
     }
     return null;
   } catch (error) {
@@ -2032,17 +2189,34 @@ export async function getTodayChallenge() {
 
 /**
  * Verifica si un usuario ya completó el reto diario
+ * Caché: 5 minutos (puede cambiar durante el día)
  */
 export async function hasUserCompletedDailyChallenge(uid) {
+  const cacheKey = `daily_challenge_completed_${uid}`;
+  
+  // Intentar obtener de caché primero
+  const cached = getCachedData(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+  
   try {
     const today = getTodayDateString();
     const docRef = doc(db, 'dailyChallenges', today);
     const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists()) return false;
+    if (!docSnap.exists()) {
+      setCachedData(cacheKey, false);
+      return false;
+    }
 
     const completedBy = docSnap.data().completedBy || [];
-    return completedBy.includes(uid);
+    const completed = completedBy.includes(uid);
+    
+    // Guardar en caché por 5 minutos
+    setCachedData(cacheKey, completed);
+    
+    return completed;
   } catch (error) {
     console.error('Error al verificar reto completado:', error);
     return false;

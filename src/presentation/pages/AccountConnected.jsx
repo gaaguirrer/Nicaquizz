@@ -14,8 +14,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { updateProfile } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { updateProfile, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
 import TopNavBar from '../components/TopNavBar';
 import Button from '../components/Button';
@@ -157,6 +157,58 @@ export default function AccountConnected() {
       ...prev,
       [field]: !prev[field]
     }));
+  }
+
+  // Eliminar cuenta
+  async function handleEliminarCuenta() {
+    if (!currentUser) {
+      toast.error('Debes iniciar sesión');
+      return;
+    }
+
+    // Confirmación final
+    const confirmText = prompt('Escribe "ELIMINAR" para confirmar la eliminación de tu cuenta:');
+    if (confirmText !== 'ELIMINAR') {
+      toast.info('Eliminación cancelada');
+      return;
+    }
+
+    try {
+      // Re-autenticar por seguridad
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        passwordForm.currentPassword
+      );
+      await reauthenticateWithCredential(currentUser, credential);
+
+      // Eliminar documento de Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await deleteDoc(userRef);
+
+      // Eliminar usuario de Auth
+      await deleteUser(currentUser);
+
+      toast.success('Cuenta eliminada exitosamente');
+      
+      // Redirigir al home después de un breve delay
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    } catch (error) {
+      console.error('Error al eliminar cuenta:', error);
+      
+      if (error.code === 'auth/wrong-password') {
+        toast.error('La contraseña es incorrecta');
+      } else if (error.code === 'auth/requires-recent-login') {
+        toast.error('Debes iniciar sesión nuevamente para eliminar tu cuenta');
+        navigate('/auth');
+      } else if (error.code === 'auth/user-token-expired') {
+        toast.error('Tu sesión expiró. Inicia sesión nuevamente');
+        navigate('/auth');
+      } else {
+        toast.error('Error al eliminar cuenta: ' + error.message);
+      }
+    }
   }
 
   // Avatares disponibles
@@ -434,15 +486,24 @@ export default function AccountConnected() {
               <p className="text-[#42493e] mb-6">
                 Una vez que elimines tu cuenta, no hay vuelta atrás. ¿Estás seguro?
               </p>
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full border-red-500 text-red-600 hover:bg-red-50"
-                onClick={() => toast.error('Función no implementada - Contacta al admin')}
-              >
-                <span className="material-symbols-outlined">delete_forever</span>
-                Eliminar Cuenta
-              </Button>
+              <div className="space-y-4">
+                <input
+                  type="password"
+                  placeholder="Ingresa tu contraseña actual para confirmar"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-[#154212]/10 focus:border-red-500 focus:outline-none"
+                />
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full border-red-500 text-red-600 hover:bg-red-50"
+                  onClick={handleEliminarCuenta}
+                >
+                  <span className="material-symbols-outlined">delete_forever</span>
+                  Eliminar Cuenta
+                </Button>
+              </div>
             </div>
           </div>
         </div>

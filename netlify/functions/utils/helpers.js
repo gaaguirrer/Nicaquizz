@@ -107,10 +107,51 @@ export function parseBody(event) {
 export async function requireAuth(event) {
   const authHeader = event.headers.authorization || event.headers.Authorization;
   const user = await verifyToken(authHeader);
-  
+
   if (!user) {
     return { error: 'No autorizado', statusCode: 401 };
   }
-  
+
   return { user };
+}
+
+// Middleware para requerir rol de admin
+export async function requireAdmin(event) {
+  const authHeader = event.headers.authorization || event.headers.Authorization;
+  const user = await verifyToken(authHeader);
+
+  if (!user) {
+    return { error: 'No autorizado', statusCode: 401 };
+  }
+
+  // Verificar si el usuario es admin en Firestore
+  const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
+  if (!FIREBASE_PROJECT_ID) {
+    return { error: 'Configuración incompleta', statusCode: 500 };
+  }
+
+  try {
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${user.uid}`,
+      {
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+    if (!response.ok) {
+      return { error: 'Usuario no encontrado', statusCode: 404 };
+    }
+
+    const data = await response.json();
+    const isAdmin = data.fields?.isAdmin?.booleanValue || false;
+
+    if (!isAdmin) {
+      return { error: 'Acceso denegado - Se requiere rol de admin', statusCode: 403 };
+    }
+
+    return { user: { ...user, isAdmin: true } };
+  } catch (error) {
+    console.error('Error al verificar rol de admin:', error);
+    return { error: 'Error al verificar permisos', statusCode: 500 };
+  }
 }

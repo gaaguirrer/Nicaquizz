@@ -1,18 +1,18 @@
 /**
  * Función serverless para manejar categorías y preguntas en Firestore
- * 
+ *
  * Métodos:
  * - GET /categories - Obtener todas las categorías
  * - GET /questions?categoryId=xxx&status=approved - Obtener preguntas
- * - POST /questions - Crear pregunta
- * - PUT /questions/:id - Actualizar pregunta (aprobar/rechazar)
- * 
+ * - POST /questions - Crear pregunta (requiere auth)
+ * - PUT /questions/:id - Actualizar pregunta (aprobar/rechazar) (requiere admin)
+ *
  * Uso:
  * GET /.netlify/functions/data?collection=categories
  * GET /.netlify/functions/data?collection=questions&categoryId=xxx
  */
 
-import { handleCors, jsonResponse, errorResponse, parseBody } from './utils/helpers.js';
+import { handleCors, jsonResponse, errorResponse, parseBody, requireAuth, requireAdmin } from './utils/helpers.js';
 
 export const handler = async (event) => {
   // Manejar CORS
@@ -80,8 +80,14 @@ export const handler = async (event) => {
       return jsonResponse(200, filteredItems);
     }
 
-    // POST - Crear documento
+    // POST - Crear documento (requiere autenticación)
     if (event.httpMethod === 'POST') {
+      // Verificar autenticación
+      const authCheck = await requireAuth(event);
+      if (authCheck.error) {
+        return errorResponse(authCheck.statusCode, authCheck.error);
+      }
+
       const body = parseBody(event);
       if (!body || !collection) {
         return errorResponse(400, 'Datos incompletos');
@@ -89,6 +95,9 @@ export const handler = async (event) => {
 
       const { id, ...data } = body;
       const docId = id || Date.now().toString();
+
+      // Agregar UID del usuario que crea la pregunta
+      data.createdBy = authCheck.user.uid;
 
       const firestoreData = convertToFirestoreMap(data);
       firestoreData.createdAt = { stringValue: new Date().toISOString() };
@@ -106,8 +115,14 @@ export const handler = async (event) => {
       return jsonResponse(201, { success: true, id: docId });
     }
 
-    // PUT - Actualizar documento
+    // PUT - Actualizar documento (requiere admin para aprobar/rechazar)
     if (event.httpMethod === 'PUT') {
+      // Verificar rol de admin
+      const adminCheck = await requireAdmin(event);
+      if (adminCheck.error) {
+        return errorResponse(adminCheck.statusCode, adminCheck.error);
+      }
+
       const body = parseBody(event);
       const { id } = event.queryStringParameters;
 
@@ -133,8 +148,14 @@ export const handler = async (event) => {
       return jsonResponse(200, { success: true });
     }
 
-    // DELETE - Eliminar documento
+    // DELETE - Eliminar documento (requiere admin)
     if (event.httpMethod === 'DELETE') {
+      // Verificar rol de admin
+      const adminCheck = await requireAdmin(event);
+      if (adminCheck.error) {
+        return errorResponse(adminCheck.statusCode, adminCheck.error);
+      }
+
       const { collection, id } = event.queryStringParameters;
 
       if (!collection || !id) {

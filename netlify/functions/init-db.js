@@ -1,11 +1,12 @@
 /**
  * Función serverless para inicializar la base de datos
  * Crea categorías, items de tienda y preguntas de ejemplo
- * 
+ *
  * Uso: POST /.netlify/functions/init-db
+ * Requiere: Rol de admin
  */
 
-import { handleCors, jsonResponse, errorResponse } from './utils/helpers.js';
+import { handleCors, jsonResponse, errorResponse, requireAdmin } from './utils/helpers.js';
 
 export const handler = async (event) => {
   // Manejar CORS
@@ -15,6 +16,12 @@ export const handler = async (event) => {
   // Solo permitir POST
   if (event.httpMethod !== 'POST') {
     return errorResponse(405, 'Method not allowed');
+  }
+
+  // Verificar autenticación y rol de admin
+  const adminCheck = await requireAdmin(event);
+  if (adminCheck.error) {
+    return errorResponse(adminCheck.statusCode, adminCheck.error);
   }
 
   const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;

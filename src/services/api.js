@@ -1,12 +1,38 @@
 /**
  * Servicios de Firebase usando Netlify Functions serverless
- * 
+ *
  * Todas las peticiones a Firestore pasan por las funciones serverless
  * para mayor seguridad y control.
  */
 
 // URL base para funciones serverless (en desarrollo y producción)
 const API_BASE = '/.netlify/functions';
+
+// ==================== CONSTANTES ====================
+
+// Unificadas con firestore.js - todos en mayúsculas, valores en minúsculas
+export const INGREDIENTES = {
+  MASA: 'masa',
+  CERDO: 'cerdo',
+  ARROZ: 'arroz',
+  PAPA: 'papa',
+  CHILE: 'chile'
+};
+
+export const INGREDIENTE_NAMES = {
+  [INGREDIENTES.MASA]: 'Masa de Maíz',
+  [INGREDIENTES.CERDO]: 'Carne de Cerdo',
+  [INGREDIENTES.ARROZ]: 'Arroz',
+  [INGREDIENTES.PAPA]: 'Papa',
+  [INGREDIENTES.CHILE]: 'Chile'
+};
+
+export const CATEGORIA_INGREDIENTE = {
+  historia: INGREDIENTES.MASA,
+  matematicas: INGREDIENTES.CERDO,
+  geografia: INGREDIENTES.ARROZ,
+  ciencias: INGREDIENTES.PAPA
+};
 
 // ==================== AUTH ====================
 
@@ -485,32 +511,6 @@ export async function fetchCategoryRanking(categoryId, limitCount = 100) {
 
   return rankedUsers;
 }
-
-// ==================== CONSTANTES ====================
-
-// Unificadas con firestore.js - todos en mayúsculas, valores en minúsculas
-export const INGREDIENTES = {
-  MASA: 'masa',
-  CERDO: 'cerdo',
-  ARROZ: 'arroz',
-  PAPA: 'papa',
-  CHILE: 'chile'
-};
-
-export const INGREDIENTE_NAMES = {
-  [INGREDIENTES.MASA]: 'Masa de Maíz',
-  [INGREDIENTES.CERDO]: 'Carne de Cerdo',
-  [INGREDIENTES.ARROZ]: 'Arroz',
-  [INGREDIENTES.PAPA]: 'Papa',
-  [INGREDIENTES.CHILE]: 'Chile'
-};
-
-export const CATEGORIA_INGREDIENTE = {
-  historia: INGREDIENTES.MASA,
-  matematicas: INGREDIENTES.CERDO,
-  geografia: INGREDIENTES.ARROZ,
-  ciencias: INGREDIENTES.PAPA
-};
 
 export const ITEM_TYPES = {
   SOMBRERO: 'sombrero',

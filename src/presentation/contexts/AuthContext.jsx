@@ -7,7 +7,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../../firebase';
+import { auth, db, signInWithGoogle } from '../../firebase';
 import { getUserProfile, updateUserStatsApi } from '../../services/api';
 
 const AuthContext = createContext(null);
@@ -94,13 +94,30 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      return { 
-        uid: userCredential.user.uid, 
+      return {
+        uid: userCredential.user.uid,
         email: userCredential.user.email,
-        displayName: userCredential.user.displayName 
+        displayName: userCredential.user.displayName
       };
     } catch (error) {
       console.error('Error en login:', error);
+      throw error;
+    }
+  }
+
+  // Función para iniciar sesión con Google
+  async function googleLogin() {
+    try {
+      const result = await signInWithGoogle();
+      return {
+        uid: result.uid,
+        email: result.email,
+        displayName: result.displayName,
+        photoURL: result.photoURL,
+        isGoogleAccount: true
+      };
+    } catch (error) {
+      console.error('Error en googleLogin:', error);
       throw error;
     }
   }
@@ -209,6 +226,7 @@ export function AuthProvider({ children }) {
     loading,
     signup,
     login,
+    googleLogin,
     logout,
     fetchUserData,
     updateUserStats,

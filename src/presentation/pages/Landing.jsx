@@ -8,10 +8,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { getTodayNacatamalesCount, getTodayActiveUsers, registerActiveUserToday } from '../../services/firestore';
 
 export default function Landing() {
   const { currentUser } = useAuth();
+  const toast = useToast();
   const [nacatamalesCount, setNacatamalesCount] = useState(1284); // Valor por defecto
   const [activeUsers, setActiveUsers] = useState([]);
   const [loading, setLoading] = useState(true);

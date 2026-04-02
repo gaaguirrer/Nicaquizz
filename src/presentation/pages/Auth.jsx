@@ -20,7 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, signup } = useAuth();
+  const { login, signup, googleLogin } = useAuth();
   
   const [isLogin, setIsLogin] = useState(!searchParams.get('register'));
   const [email, setEmail] = useState('');
@@ -74,8 +74,22 @@ export default function Auth() {
   }
 
   async function handleGoogleLogin() {
-    // TODO: Implementar Google Auth
-    console.log('Google login');
+    try {
+      setError('');
+      setLoading(true);
+      await googleLogin();
+      navigate('/play');
+    } catch (err) {
+      console.error('Error en Google login:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Ventana cerrada. Intenta de nuevo.');
+      } else if (err.code === 'auth/account-exists-with-different-credential') {
+        setError('Este email ya está registrado con otra cuenta.');
+      } else {
+        setError('Error al iniciar con Google: ' + err.message);
+      }
+    }
+    setLoading(false);
   }
 
   return (

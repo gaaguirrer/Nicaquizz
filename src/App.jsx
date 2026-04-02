@@ -1,31 +1,31 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { ToastProvider } from './context/ToastContext';
+import { AuthProvider, useAuth } from './presentation/contexts/AuthContext';
+import { ToastProvider } from './presentation/contexts/ToastContext';
 
 // Paginas - Lazy loading para code splitting
-const Landing = lazy(() => import('./pages/Landing'));
-const Auth = lazy(() => import('./pages/Auth'));
-const Categories = lazy(() => import('./pages/Categories'));
-const Questions = lazy(() => import('./pages/Questions'));
-const ProposeQuestion = lazy(() => import('./pages/ProposeQuestion'));
-const Ranking = lazy(() => import('./pages/Ranking'));
-const RankingConnected = lazy(() => import('./pages/RankingConnected'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel'));
-const Shop = lazy(() => import('./pages/Shop'));
-const ShopConnected = lazy(() => import('./pages/ShopConnected'));
-const Profile = lazy(() => import('./pages/Profile'));
-const Friends = lazy(() => import('./pages/Friends'));
-const FriendsConnected = lazy(() => import('./pages/FriendsConnected'));
-const Challenge = lazy(() => import('./pages/Challenge'));
-const ChallengeConnected = lazy(() => import('./pages/ChallengeConnected'));
-const Trade = lazy(() => import('./pages/Trade'));
-const TradeConnected = lazy(() => import('./pages/TradeConnected'));
-const History = lazy(() => import('./pages/History'));
-const HistoryConnected = lazy(() => import('./pages/HistoryConnected'));
-const Account = lazy(() => import('./pages/Account'));
-const AccountConnected = lazy(() => import('./pages/AccountConnected'));
-const PlayMode = lazy(() => import('./pages/PlayMode'));
+const Landing = lazy(() => import('./presentation/pages/Landing'));
+const Auth = lazy(() => import('./presentation/pages/Auth'));
+const Categories = lazy(() => import('./presentation/pages/Categories'));
+const Questions = lazy(() => import('./presentation/pages/Questions'));
+const ProposeQuestion = lazy(() => import('./presentation/pages/ProposeQuestion'));
+const Ranking = lazy(() => import('./presentation/pages/Ranking'));
+const RankingConnected = lazy(() => import('./presentation/pages/RankingConnected'));
+const AdminPanel = lazy(() => import('./presentation/pages/AdminPanel'));
+const Shop = lazy(() => import('./presentation/pages/Shop'));
+const ShopConnected = lazy(() => import('./presentation/pages/ShopConnected'));
+const Profile = lazy(() => import('./presentation/pages/Profile'));
+const Friends = lazy(() => import('./presentation/pages/Friends'));
+const FriendsConnected = lazy(() => import('./presentation/pages/FriendsConnected'));
+const Challenge = lazy(() => import('./presentation/pages/Challenge'));
+const ChallengeConnected = lazy(() => import('./presentation/pages/ChallengeConnected'));
+const Trade = lazy(() => import('./presentation/pages/Trade'));
+const TradeConnected = lazy(() => import('./presentation/pages/TradeConnected'));
+const History = lazy(() => import('./presentation/pages/History'));
+const HistoryConnected = lazy(() => import('./presentation/pages/HistoryConnected'));
+const Account = lazy(() => import('./presentation/pages/Account'));
+const AccountConnected = lazy(() => import('./presentation/pages/AccountConnected'));
+const PlayMode = lazy(() => import('./presentation/pages/PlayMode'));
 
 // Loading fallback component
 function PageLoader() {

@@ -2028,26 +2028,33 @@ export function getTodayDateString() {
 /**
  * Obtiene las estadísticas de nacatamales completados hoy
  * Usa caché de 3 horas para reducir peticiones a Firestore
+ * Si el valor es 0, usa caché de solo 5 minutos (para detectar cambios rápido)
  */
 export async function getTodayNacatamalesCount() {
   const cacheKey = 'nacatamales_count';
-  
+
   // Intentar obtener de caché primero
   const cached = getCachedData(cacheKey);
   if (cached !== null) {
     return cached;
   }
-  
+
   try {
     const today = getTodayDateString();
     const docRef = doc(db, 'dailyStats', today);
     const docSnap = await getDoc(docRef);
 
     const count = docSnap.exists() ? docSnap.data().nacatamalesCompleted || 0 : 0;
-    
-    // Guardar en caché
-    setCachedData(cacheKey, count);
-    
+
+    // Guardar en caché: 3 horas si hay datos, 5 minutos si es 0
+    if (count > 0) {
+      setCachedData(cacheKey, count);
+    } else {
+      // Caché temporal para datos vacíos
+      const cacheEntry = { data: count, timestamp: Date.now() - (3 * 60 * 60 * 1000) + (5 * 60 * 1000) };
+      localStorage.setItem(`nicaquizz_cache_${cacheKey}`, JSON.stringify(cacheEntry));
+    }
+
     return count;
   } catch (error) {
     console.error('Error al obtener estadísticas diarias:', error);

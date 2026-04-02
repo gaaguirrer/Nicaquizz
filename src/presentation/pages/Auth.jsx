@@ -21,6 +21,10 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, signup, googleLogin } = useAuth();
+
+  function handleBackToHome() {
+    navigate('/');
+  }
   
   const [isLogin, setIsLogin] = useState(!searchParams.get('register'));
   const [email, setEmail] = useState('');
@@ -128,10 +132,12 @@ export default function Auth() {
                   background: 'radial-gradient(circle at center, rgba(45, 90, 39, 0.1) 0%, transparent 70%)'
                 }}
               ></div>
-              <div className="w-64 h-64 md:w-80 md:h-80 bg-gradient-to-br from-[#F4C430] to-[#D4A017] rounded-full flex items-center justify-center drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] transform hover:scale-105 transition-transform duration-700">
-                <span className="material-symbols-outlined text-9xl text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  lunch_dining
-                </span>
+              <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-white/20 drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] transform hover:scale-105 transition-transform duration-700 bg-white flex items-center justify-center p-4">
+                <img
+                  src="/icons/ingredientes/nacatamal.png"
+                  alt="Nacatamal nicaragüense"
+                  className="w-full h-full object-contain"
+                />
               </div>
             </div>
 
@@ -156,7 +162,17 @@ export default function Auth() {
         {/* Right Column: Authentication Form */}
         <section className="md:w-1/2 p-8 md:p-16 flex flex-col justify-center bg-[#fefccf] relative z-10">
           <div className="max-w-md mx-auto w-full space-y-10">
-            
+
+            {/* Back Button */}
+            <button
+              onClick={handleBackToHome}
+              className="absolute top-6 left-6 flex items-center gap-2 text-[#154212]/60 hover:text-[#154212] font-bold transition-all hover:gap-3 group"
+              aria-label="Volver al inicio"
+            >
+              <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
+              <span className="text-sm uppercase tracking-wider">Inicio</span>
+            </button>
+
             <header className="space-y-2">
               <h2 className="font-headline font-bold text-3xl text-[#1d1d03] tracking-tight">
                 {isLogin ? '¡Bienvenido de nuevo!' : '¡Crea tu cuenta!'}

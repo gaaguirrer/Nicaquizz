@@ -85,13 +85,13 @@ export default function Ranking() {
       {/* TopNavBar */}
       <header className="bg-[#fefccf] border-b-2 border-[#154212]/10 shadow-[0_8px_32px_rgba(29,29,3,0.08)] sticky top-0 z-50">
         <div className="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <span className="text-4xl">🇳🇮</span>
             <div>
               <h1 className="text-2xl font-headline font-black text-[#154212] uppercase tracking-tight">NicaQuizz</h1>
               <p className="text-[10px] text-[#154212]/60 font-medium">El Nacatamal del Conocimiento</p>
             </div>
-          </div>
+          </Link>
           <nav className="hidden md:flex space-x-8 items-center">
             <Link to="/categories" className="text-[#154212]/70 hover:text-[#154212] transition-colors font-headline font-bold tracking-tight">
               Categorías

@@ -44,13 +44,13 @@ export default function Categories() {
       {/* TopNavBar */}
       <nav className="bg-[#fefccf] border-b-2 border-[#154212]/10 sticky top-0 z-50 shadow-[0_8px_32px_rgba(29,29,3,0.08)]">
         <div className="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <span className="text-4xl">🇳🇮</span>
             <div>
               <h1 className="text-2xl font-headline font-black text-[#154212] uppercase tracking-tight">NicaQuizz</h1>
               <p className="text-[10px] text-[#154212]/60 font-medium">El Nacatamal del Conocimiento</p>
             </div>
-          </div>
+          </Link>
           <div className="hidden md:flex items-center gap-8 font-headline font-bold tracking-tight">
             <Link to="/categories" className="text-[#154212] border-b-4 border-[#154212] pb-1 transition-colors">
               Categorías

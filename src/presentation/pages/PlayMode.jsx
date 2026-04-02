@@ -1,9 +1,9 @@
 /**
  * PlayMode.jsx - Dashboard Principal
- * 
+ *
  * Página principal después de login.
  * Muestra categorías, reto diario y retos pendientes.
- * 
+ *
  * El diseño es responsive: 1 columna en móvil, 2 en desktop.
  */
 
@@ -14,6 +14,7 @@ import { useToast } from '../contexts/ToastContext';
 import { fetchCategories, CATEGORIA_INGREDIENTE, getTodayChallenge, hasUserCompletedDailyChallenge } from '../../services/firestore';
 import { getUserChallenges, getAvailableChallengers } from '../../services/firestore';
 import UserMenu from '../components/UserMenu';
+import IngredientIcon from '../components/IngredientIcon';
 
 // Configuración de categorías
 // Colores, íconos e ingredientes de cada categoría
@@ -133,13 +134,13 @@ export default function PlayMode() {
       {/* Header Sticky */}
       <header className="bg-[#fefccf] border-b-2 border-[#154212]/10 shadow-[0_8px_32px_rgba(29,29,3,0.08)] sticky top-0 z-50">
         <div className="flex justify-between items-center h-20 px-8 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <span className="text-4xl">🇳🇮</span>
             <div>
               <h1 className="text-2xl font-headline font-black text-[#154212] uppercase tracking-tight">NicaQuizz</h1>
               <p className="text-[10px] text-[#154212]/60 font-medium">El Nacatamal del Conocimiento</p>
             </div>
-          </div>
+          </Link>
 
           {/* Navegación Desktop */}
           <nav className="hidden md:flex items-center gap-8 font-headline font-bold tracking-tight">
@@ -177,7 +178,12 @@ export default function PlayMode() {
 
       {/* Contenido Principal con Sidebar */}
       <div className="flex max-w-7xl mx-auto">
-        
+
+        {/* Sidebar */}
+        <aside className="w-80 fixed right-8 top-24 hidden lg:block">
+          <UserMenu />
+        </aside>
+
         {/* Canvas Content */}
         <main className="flex-grow p-8 pr-80">
           

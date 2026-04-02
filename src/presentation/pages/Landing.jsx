@@ -9,17 +9,16 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { 
-  getTodayNacatamalesCount, 
-  getTodayActiveUsers, 
-  registerActiveUserToday, 
-  getTodayChallenge, 
+import {
+  getTodayNacatamalesCount,
+  getTodayActiveUsers,
+  registerActiveUserToday,
+  getTodayChallenge,
   hasUserCompletedDailyChallenge,
   getLastMonthNacatamalesCount,
   getTopUsersByNacatamales,
   incrementMonthlyNacatamales
 } from '../../services/firestore';
-import IngredientIcon from '../components/IngredientIcon';
 
 export default function Landing() {
   const { currentUser } = useAuth();
@@ -29,6 +28,13 @@ export default function Landing() {
   const [topUsers, setTopUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dailyChallenge, setDailyChallenge] = useState(null);
+
+  function scrollToSection(sectionId) {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
 
   useEffect(() => {
     async function loadMonthlyStats() {
@@ -146,17 +152,15 @@ export default function Landing() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative overflow-hidden pt-16 pb-24 px-8 max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+        <section className="relative overflow-hidden pt-12 pb-20 px-8 max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           <div className="z-10">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-[#C41E3A] text-white font-bold text-sm mb-6 tracking-wide shadow-sm uppercase">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-[#C41E3A] text-white font-bold text-sm mb-4 tracking-wide shadow-sm uppercase">
               ¡Nicaragua te espera!
             </span>
-            <h1 className="text-6xl md:text-8xl font-headline text-[#2D5A27] leading-tight mb-6 drop-shadow-sm">
-              ¡Conviértete en el <br/>
-              <span className="text-[#F4C430] italic">Maestro</span> del <br/>
-              Nacatamal!
+            <h1 className="text-4xl md:text-6xl font-headline text-[#2D5A27] leading-tight mb-6 drop-shadow-sm">
+              ¡Conviértete en el <span className="text-[#F4C430] italic">Maestro</span> del Nacatamal!
             </h1>
-            <p className="text-xl text-[#2D5A27]/80 mb-10 max-w-lg leading-relaxed font-medium">
+            <p className="text-lg text-[#2D5A27]/80 mb-8 max-w-lg leading-relaxed font-medium">
               Aprende Historia, Mate y más mientras recolectas los ingredientes más frescos para la receta perfecta. ¡Nicaragua es tu tablero de juego!
             </p>
             <div className="flex flex-col sm:flex-row gap-6">
@@ -167,24 +171,28 @@ export default function Landing() {
                 ¡Empezar a Jugar!
                 <span className="material-symbols-outlined text-4xl">rocket_launch</span>
               </Link>
-              <Link
-                to="#como-funciona"
+              <button
+                onClick={() => scrollToSection('como-funciona')}
                 className="btn-comic bg-white text-[#2D5A27] px-10 py-5 rounded-2xl font-headline text-2xl hover:bg-white/90"
               >
                 Ver Tutorial
-              </Link>
+              </button>
             </div>
           </div>
 
           {/* Imagen Hero */}
           <div className="relative group">
             <div className="absolute -top-10 -right-10 w-72 h-72 bg-[#F4C430]/20 rounded-full blur-3xl"></div>
-            <div 
-              className="relative z-10 bg-white p-6 rounded-[2.5rem] border-4 border-black shadow-comic rotate-2 hover:rotate-0 transition-transform duration-500 cursor-pointer"
+            <div
+              className="relative z-10 bg-white p-5 rounded-[2.5rem] border-4 border-black shadow-comic rotate-2 hover:rotate-0 transition-transform duration-500 cursor-pointer"
               onClick={handleDailyChallenge}
             >
-              <div className="relative w-full h-[500px] bg-gradient-to-br from-[#2D5A27] to-[#154212] rounded-[1.5rem] flex items-center justify-center overflow-hidden">
-                <span className="material-symbols-outlined text-9xl text-white/80">lunch_dining</span>
+              <div className="relative w-full h-[440px] bg-[#1a6b3a] rounded-[1.5rem] flex items-start justify-center overflow-hidden pt-4">
+                <img
+                  src="/icons/ingredientes/achiote.png"
+                  alt="Achiote sagrado"
+                  className="w-[70%] h-[70%] object-contain drop-shadow-2xl"
+                />
               </div>
               <div className="absolute bottom-10 left-10 right-10 bg-black/60 backdrop-blur-md p-6 rounded-2xl border-2 border-[#F4C430]/50 text-white">
                 <div className="flex items-center gap-2 mb-2">
@@ -314,29 +322,6 @@ export default function Landing() {
                   Masa, Cerdo, Arroz, Papa y Chile. ¡Completa los cinco para el Nacatamal de Oro!
                 </p>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Ingredients Showcase */}
-        <section className="max-w-4xl mx-auto px-8 mb-32">
-          <div className="bg-white/50 border-4 border-black border-dashed rounded-[3rem] p-12 text-center">
-            <h4 className="font-game text-2xl text-[#2D5A27]/40 uppercase tracking-widest mb-10">Tu Alacena Cultural</h4>
-            <div className="flex flex-wrap justify-center gap-10">
-              {[
-                { nombre: 'Masa', tipo: 'masa', color: 'bg-[#F4C430]/20' },
-                { nombre: 'Cerdo', tipo: 'cerdo', color: 'bg-[#C41E3A]/20' },
-                { nombre: 'Arroz', tipo: 'arroz', color: 'bg-[#2D5A27]/20' },
-                { nombre: 'Papa', tipo: 'papa', color: 'bg-yellow-100' },
-                { nombre: 'Chile', tipo: 'chile', color: 'bg-red-100' }
-              ].map((ing) => (
-                <div key={ing.nombre} className="flex flex-col items-center gap-3">
-                  <div className={`w-16 h-16 rounded-2xl ${ing.color} border-2 border-black flex items-center justify-center p-2`}>
-                    <IngredientIcon type={ing.tipo} size={40} />
-                  </div>
-                  <span className="font-bold text-xs uppercase tracking-tighter">{ing.nombre}</span>
-                </div>
-              ))}
             </div>
           </div>
         </section>

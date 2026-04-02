@@ -53,7 +53,7 @@ function PrivateRoute({ children }) {
     return <PageLoader />;
   }
 
-  return currentUser ? children : <Navigate to="/play" />;
+  return currentUser ? children : <Navigate to="/auth" />;
 }
 
 // Componente para rutas de admin
@@ -314,7 +314,7 @@ function AppRoutes() {
       />
 
       {/* Ruta por defecto */}
-      <Route path="*" element={<Navigate to="/play" />} />
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 }

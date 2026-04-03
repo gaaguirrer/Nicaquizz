@@ -16,7 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { updateProfile, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
+import { db, auth } from '../../infrastructure/firebase/firebase.config';
 import TopNavBar from '../components/TopNavBar';
 import Button from '../components/Button';
 

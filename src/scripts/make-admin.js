@@ -12,7 +12,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 
 // Importar configuracion
-import { firebaseConfig } from '../firebase.config.js';
+import { firebaseConfig } from '../shared/firebase.config.js';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);

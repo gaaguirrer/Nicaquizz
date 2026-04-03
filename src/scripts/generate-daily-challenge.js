@@ -22,7 +22,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
-import { firebaseConfig } from '../firebase.config.js';
+import { firebaseConfig } from '../shared/firebase.config.js';
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);

@@ -25,7 +25,7 @@ vi.mock('firebase/firestore', () => ({
   serverTimestamp: vi.fn(() => ({ type: 'timestamp' }))
 }));
 
-vi.mock('../firebase', () => ({
+vi.mock('../infrastructure/firebase/firebase.config', () => ({
   db: {}
 }));
 

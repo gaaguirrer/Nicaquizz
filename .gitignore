@@ -36,18 +36,11 @@ coverage/
 .firebaserc
 firebase-debug.log
 firestore-debug.log
+firebase-adminsdk.json
+*-adminsdk.json
 
 # Netlify
 .netlify
-
-# Environment variables
-.env
-.env.local
-.env.production
-
-# Firebase Admin SDK Key
-firebase-adminsdk.json
-*-adminsdk.json
 
 # Build
 build/

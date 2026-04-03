@@ -14,7 +14,7 @@ import { getFirestore, collection, addDoc, doc, setDoc, Timestamp } from 'fireba
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 
 // Importar configuracion
-import { firebaseConfig } from '../firebase.config.js';
+import { firebaseConfig } from '../shared/firebase.config.js';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);

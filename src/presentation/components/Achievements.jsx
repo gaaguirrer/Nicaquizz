@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db } from '../../infrastructure/firebase/firebase.config';
 import Card from './Card';
 import Skeleton from './Skeleton';
 

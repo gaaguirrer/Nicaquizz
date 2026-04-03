@@ -16,7 +16,7 @@ import {
   arrayRemove,
   serverTimestamp
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../infrastructure/firebase/firebase.config';
 
 // ==================== CACHE UTILITIES ====================
 // Caché en localStorage para reducir peticiones a Firestore (3 horas)

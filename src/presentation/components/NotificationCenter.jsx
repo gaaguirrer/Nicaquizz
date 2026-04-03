@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, query, where, orderBy, limit, onSnapshot, updateDoc, doc, writeBatch } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db } from '../../infrastructure/firebase/firebase.config';
 import Button from './Button';
 
 export default function NotificationCenter({ userId }) {

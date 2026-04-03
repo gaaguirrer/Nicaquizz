@@ -6,7 +6,7 @@
  */
 
 import { getAnalytics, logEvent, setUserProperties, setUserId } from 'firebase/analytics';
-import { app } from './firebase';
+import { app } from './infrastructure/firebase/firebase.config';
 
 // Inicializar Analytics (solo en cliente)
 let analytics = null;

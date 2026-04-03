@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -21,7 +21,9 @@ import {
   CATEGORIA_INGREDIENTE,
   addCoins,
   MEJORAS,
-  useMejora
+  useMejora,
+  getChallenge,
+  completeChallenge
 } from '../../services/firestore';
 import { FeedbackModal, ResultModal } from '../components/Modal';
 import Button from '../components/Button';
@@ -90,8 +92,11 @@ const ANSWER_COLORS = {
 export default function Questions() {
   const { categoryId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentUser, updateUserStats, userData } = useAuth();
   const toast = useToast();
+
+  const challengeId = searchParams.get('challenge');
 
   const [category, setCategory] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -107,7 +112,7 @@ export default function Questions() {
   const [timeLeft, setTimeLeft] = useState(30);
   const [mejoras, setMejoras] = useState({});
   const [mejoraUsada, setMejoraUsada] = useState(false);
-  
+
   // Estados para modales
   const [showFeedback, setShowFeedback] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -220,7 +225,7 @@ export default function Questions() {
 
   async function handleQuizComplete() {
     const ingrediente = CATEGORIA_INGREDIENTE[categoryId];
-    
+
     if (score.correct > 0) {
       try {
         await addCoins(currentUser.uid, categoryId, false);
@@ -228,7 +233,30 @@ export default function Questions() {
         toast.handleError(error, 'Error al recompensar moneda');
       }
     }
-    
+
+    // Si hay un challenge ID, completar el reto
+    if (challengeId) {
+      try {
+        const challengeData = await getChallenge(challengeId);
+        if (challengeData && challengeData.status === 'accepted') {
+          // Este jugador es el challenged, su score se registra
+          // El challenger score se registra cuando él termine
+          await completeChallenge(
+            challengeId,
+            null, // winnerId se determina cuando ambos terminan
+            challengeData.challengerId === currentUser.uid ? score.correct : 0,
+            challengeData.challengedId === currentUser.uid ? score.correct : 0
+          );
+        }
+
+        // Navegar a la página del challenge para ver resultados
+        navigate(`/challenge/${challengeId}`);
+        return;
+      } catch (error) {
+        console.error('Error al completar reto:', error);
+      }
+    }
+
     const monedas = userData?.coins || {};
     const nacatamales = Math.min(
       monedas.masa || 0,
@@ -237,7 +265,7 @@ export default function Questions() {
       monedas.papa || 0,
       monedas.chile || 0
     );
-    
+
     setShowResults(true);
   }
 

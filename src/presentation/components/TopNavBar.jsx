@@ -8,15 +8,21 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationCenter from './NotificationCenter';
+import UserMenu from './UserMenu';
 
-export default function TopNavBar({ 
-  currentPage = 'home', 
-  showNacatamales = false, 
-  nacatamalesCount = 0 
+export default function TopNavBar({
+  currentPage = 'home',
+  showNacatamales = false,
+  nacatamalesCount = 0
 }) {
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
 
   const isActive = (page) => currentPage === page;
+
+  // Calcular nivel del usuario
+  const stats = userData?.stats || {};
+  const nivel = Math.floor((stats.totalQuestionsAnswered || 0) / 10) + 1;
+  const tituloNivel = nivel >= 50 ? 'Maestro Supremo' : nivel >= 20 ? 'Maestro Cocinero' : nivel >= 10 ? 'Chef Experto' : 'Aprendiz';
 
   return (
     <nav className="bg-[#fefccf] border-b-2 border-[#154212]/10 sticky top-0 z-50 shadow-[0_8px_32px_rgba(29,29,3,0.08)]">
@@ -83,15 +89,15 @@ export default function TopNavBar({
             </div>
           )}
 
-          {/* Botón de Cuenta */}
+          {/* Usuario - Solo si está logueado */}
           {currentUser ? (
-            <Link
-              to="/play"
-              className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
-            >
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
-              <span className="font-bold">Mi Cuenta</span>
-            </Link>
+            <div className="flex items-center gap-3 pl-4 border-l border-[#154212]/10">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-bold text-[#154212] uppercase tracking-widest">{userData?.displayName || 'Usuario'}</p>
+                <p className="text-[10px] text-[#755b00] font-bold">Nivel {nivel} - {tituloNivel}</p>
+              </div>
+              <UserMenu />
+            </div>
           ) : (
             <Link
               to="/auth"

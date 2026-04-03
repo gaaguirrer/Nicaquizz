@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import UserMenu from '../components/UserMenu';
 import {
   getTodayNacatamalesCount,
   getTodayActiveUsers,
@@ -21,13 +22,18 @@ import {
 } from '../../services/firestore';
 
 export default function Landing() {
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [nacatamalesCount, setNacatamalesCount] = useState(0);
   const [topUsers, setTopUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dailyChallenge, setDailyChallenge] = useState(null);
+
+  // Calcular nivel del usuario
+  const stats = userData?.stats || {};
+  const nivel = Math.floor((stats.totalQuestionsAnswered || 0) / 10) + 1;
+  const tituloNivel = nivel >= 50 ? 'Maestro Supremo' : nivel >= 20 ? 'Maestro Cocinero' : nivel >= 10 ? 'Chef Experto' : 'Aprendiz';
 
   function scrollToSection(sectionId) {
     const element = document.getElementById(sectionId);
@@ -130,13 +136,13 @@ export default function Landing() {
               </Link>
             )}
             {currentUser ? (
-              <Link
-                to="/play"
-                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
-              >
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
-                <span className="font-bold">Mi Cuenta</span>
-              </Link>
+              <div className="flex items-center gap-3 pl-4 border-l border-[#154212]/10">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs font-bold text-[#154212] uppercase tracking-widest">{userData?.displayName || 'Usuario'}</p>
+                  <p className="text-[10px] text-[#755b00] font-bold">Nivel {nivel} - {tituloNivel}</p>
+                </div>
+                <UserMenu />
+              </div>
             ) : (
               <Link
                 to="/auth"

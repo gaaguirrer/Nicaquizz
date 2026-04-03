@@ -83,13 +83,11 @@ export default function UserMenu() {
 
   // Calcular nacatamales completos
   const coins = userData?.coins || {};
-  const nacatamalesCount = Math.min(
-    coins.masa || 0,
-    coins.cerdo || 0,
-    coins.arroz || 0,
-    coins.papa || 0,
-    coins.chile || 0
-  );
+  const nacatamalesCount = coins.nacatamal || 0;
+
+  // Ingredientes base
+  const ingredientesBase = ['masa', 'cerdo', 'arroz', 'papa', 'chile'];
+  const puedeConvertir = ingredientesBase.every(ing => (coins[ing] || 0) >= 1);
 
   // Obtener datos del usuario
   const userPhoto = currentUser?.photoURL || null;
@@ -125,7 +123,7 @@ export default function UserMenu() {
         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
       >
         {/* Avatar del usuario - Círculo con primera letra */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 border-2 border-indigo-400">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2D5A27] to-[#154212] flex items-center justify-center shadow-lg shadow-[#2D5A27]/30 border-2 border-[#F4C430]">
           {userPhoto ? (
             <img
               src={userPhoto}
@@ -142,14 +140,14 @@ export default function UserMenu() {
 
       {/* Menú desplegable */}
       {isOpen && (
-        <div 
-          className="absolute right-0 mt-2 w-72 bg-gray-800 rounded-xl shadow-2xl border border-gray-700 overflow-hidden animate-fade-in"
+        <div
+          className="absolute right-0 mt-2 w-72 bg-[#fefccf] rounded-xl shadow-2xl border-2 border-[#154212]/20 overflow-hidden animate-fade-in"
           style={{ zIndex: 10000 }}
         >
           {/* Header con info del usuario */}
-          <div className="bg-gradient-to-r from-indigo-900/80 to-purple-900/80 p-4 border-b border-gray-700">
+          <div className="bg-gradient-to-r from-[#2D5A27] to-[#154212] p-4 border-b border-[#154212]/20">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center border-2 border-indigo-400">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#2D5A27] to-[#154212] flex items-center justify-center border-2 border-[#F4C430]">
                 {userPhoto ? (
                   <img
                     src={userPhoto}
@@ -162,7 +160,7 @@ export default function UserMenu() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold truncate">{displayName}</p>
-                <p className="text-gray-400 text-xs truncate">{currentUser?.email}</p>
+                <p className="text-[#fefccf]/70 text-xs truncate">{currentUser?.email}</p>
               </div>
             </div>
           </div>
@@ -170,53 +168,80 @@ export default function UserMenu() {
           {/* Mostrar monedero o menú principal */}
           {showWallet ? (
             /* Vista del monedero */
-            <div className="p-4">
+            <div className="p-4 bg-[#fefccf]">
               <button
                 onClick={toggleWallet}
-                className="flex items-center gap-2 text-gray-400 hover:text-white mb-3 transition-colors"
+                className="flex items-center gap-2 text-[#154212]/60 hover:text-[#154212] mb-3 transition-colors font-bold"
               >
                 <span className="material-symbols-outlined text-sm">arrow_back</span>
                 <span className="text-sm">Volver al menú</span>
               </button>
 
-              <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-                <span className="material-symbols-outlined text-green-400">account_balance_wallet</span>
+              <h3 className="text-[#154212] font-bold mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#2D5A27]">account_balance_wallet</span>
                 Monedero
               </h3>
 
               {/* Nacatamales completos */}
-              <div className="bg-gradient-to-br from-green-900/50 to-emerald-900/50 rounded-lg p-3 mb-3 border border-green-700">
+              <div className="bg-gradient-to-br from-[#2D5A27]/10 to-[#154212]/10 rounded-lg p-3 mb-3 border-2 border-[#2D5A27]/20">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-green-300 text-sm font-medium">Nacatamales</span>
-                  <span className="text-green-400 font-bold text-lg">{nacatamalesCount}</span>
+                  <span className="text-[#2D5A27] text-sm font-bold">Nacatamales</span>
+                  <span className="text-[#154212] font-bold text-lg">{nacatamalesCount}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <CoinIcon className="w-5 h-5" />
-                  <span className="text-xs text-green-200">
-                    {nacatamalesCount} nacatamal{nacatamalesCount !== 1 ? 'es' : ''} complet{nacatamalesCount !== 1 ? 'os' : 'o'}
+                  <span className="material-symbols-outlined text-[#2D5A27] text-sm">restaurant</span>
+                  <span className="text-xs text-[#154212]/70 font-medium">
+                    {nacatamalesCount} nacatamal{nacatamalesCount !== 1 ? 'es' : ''}
                   </span>
                 </div>
               </div>
 
-              {/* Ingredientes individuales */}
-              <div className="space-y-2">
-                {Object.entries(coins).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between bg-gray-700/50 rounded-lg p-2">
-                    <div className="flex items-center gap-2">
-                      <IngredientIcon type={key} className="w-6 h-6" />
-                      <span className="text-gray-300 text-sm capitalize">{key}</span>
+              {/* Ingredientes base */}
+              <div className="mb-3">
+                <p className="text-xs font-bold text-[#154212] mb-2">Ingredientes Base</p>
+                <div className="space-y-1.5">
+                  {ingredientesBase.map((key) => (
+                    <div key={key} className="flex items-center justify-between bg-white/70 rounded-lg p-2 border border-[#154212]/10">
+                      <div className="flex items-center gap-2">
+                        <IngredientIcon type={key} className="w-5 h-5" />
+                        <span className="text-[#154212] text-xs font-medium capitalize">{key}</span>
+                      </div>
+                      <span className="text-[#2D5A27] font-bold text-sm">{coins[key] || 0}</span>
                     </div>
-                    <span className="text-white font-bold">{value || 0}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {puedeConvertir && (
+                  <Link
+                    to="/shop"
+                    onClick={() => setIsOpen(false)}
+                    className="mt-2 block w-full bg-[#2D5A27] hover:bg-[#154212] text-white text-center py-2 rounded-lg font-bold text-xs transition-all"
+                  >
+                    <span className="material-symbols-outlined text-sm align-middle mr-1">autorenew</span>
+                    Convertir a Nacatamal
+                  </Link>
+                )}
               </div>
+
+              {/* Ingredientes especiales */}
+              {(coins.achiote || 0) > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs font-bold text-[#154212] mb-2">Especiales</p>
+                  <div className="flex items-center justify-between bg-white/70 rounded-lg p-2 border border-[#154212]/10">
+                    <div className="flex items-center gap-2">
+                      <IngredientIcon type="achiote" className="w-5 h-5" />
+                      <span className="text-[#154212] text-xs font-medium capitalize">achiote</span>
+                    </div>
+                    <span className="text-[#D9531E] font-bold text-sm">{coins.achiote || 0}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Botón ir a tienda */}
               {nacatamalesCount > 0 && (
                 <Link
                   to="/shop"
                   onClick={() => setIsOpen(false)}
-                  className="mt-3 block w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-center py-2 rounded-lg font-semibold transition-all"
+                  className="mt-2 block w-full bg-[#2D5A27] hover:bg-[#154212] text-white text-center py-2 rounded-lg font-bold text-xs transition-all"
                 >
                   <span className="material-symbols-outlined text-sm align-middle mr-1">storefront</span>
                   Ir a la Tienda
@@ -225,26 +250,27 @@ export default function UserMenu() {
             </div>
           ) : (
             /* Menú principal */
-            <div className="p-2">
+            <div className="p-2 bg-[#fefccf]">
               {/* Opción Inicio */}
               <Link
                 to="/play"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-700/70 transition-colors group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#154212]/5 transition-colors group"
               >
-                <span className="material-symbols-outlined text-indigo-400 group-hover:text-indigo-300">home</span>
-                <span className="text-gray-200 font-medium">Inicio</span>
+                <span className="material-symbols-outlined text-[#2D5A27] group-hover:text-[#154212]">home</span>
+                <span className="text-[#154212] font-medium">Inicio</span>
               </Link>
 
               {/* Opción Monedero */}
               <button
                 onClick={toggleWallet}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-700/70 transition-colors group text-left"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#154212]/5 transition-colors group text-left"
               >
-                <span className="material-symbols-outlined text-green-400 group-hover:text-green-300">account_balance_wallet</span>
-                <span className="text-gray-200 font-medium">Monedero</span>
+                <span className="material-symbols-outlined text-[#2D5A27] group-hover:text-[#154212]">account_balance_wallet</span>
+                <span className="text-[#154212] font-medium">Monedero</span>
                 {nacatamalesCount > 0 && (
-                  <span className="ml-auto bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  <span className="ml-auto bg-[#F4C430] text-[#1d1d03] text-xs font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-xs">restaurant</span>
                     {nacatamalesCount}
                   </span>
                 )}
@@ -254,55 +280,55 @@ export default function UserMenu() {
               <Link
                 to="/friends"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-700/70 transition-colors group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#154212]/5 transition-colors group"
               >
-                <span className="material-symbols-outlined text-blue-400 group-hover:text-blue-300">group</span>
-                <span className="text-gray-200 font-medium">Amigos</span>
+                <span className="material-symbols-outlined text-[#2D5A27] group-hover:text-[#154212]">group</span>
+                <span className="text-[#154212] font-medium">Amigos</span>
               </Link>
 
               {/* Opción Tienda */}
               <Link
                 to="/shop"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-700/70 transition-colors group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#154212]/5 transition-colors group"
               >
-                <span className="material-symbols-outlined text-yellow-400 group-hover:text-yellow-300">storefront</span>
-                <span className="text-gray-200 font-medium">Tienda</span>
+                <span className="material-symbols-outlined text-[#2D5A27] group-hover:text-[#154212]">storefront</span>
+                <span className="text-[#154212] font-medium">Tienda</span>
               </Link>
 
               {/* Separador */}
-              <div className="border-t border-gray-700 my-2"></div>
+              <div className="border-t border-[#154212]/10 my-2"></div>
 
               {/* Opción Cuenta */}
               <Link
                 to="/account"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-700/70 transition-colors group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#154212]/5 transition-colors group"
               >
-                <span className="material-symbols-outlined text-purple-400 group-hover:text-purple-300">person</span>
-                <span className="text-gray-200 font-medium">Cuenta</span>
+                <span className="material-symbols-outlined text-[#2D5A27] group-hover:text-[#154212]">person</span>
+                <span className="text-[#154212] font-medium">Cuenta</span>
               </Link>
 
               {/* Opción Perfil */}
               <Link
                 to="/profile"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-700/70 transition-colors group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#154212]/5 transition-colors group"
               >
-                <span className="material-symbols-outlined text-blue-400 group-hover:text-blue-300">badge</span>
-                <span className="text-gray-200 font-medium">Perfil</span>
+                <span className="material-symbols-outlined text-[#2D5A27] group-hover:text-[#154212]">badge</span>
+                <span className="text-[#154212] font-medium">Perfil</span>
               </Link>
 
               {/* Separador */}
-              <div className="border-t border-gray-700 my-2"></div>
+              <div className="border-t border-[#154212]/10 my-2"></div>
 
               {/* Opción Cerrar sesión */}
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-900/50 transition-colors group text-left"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#C41E3A]/10 transition-colors group text-left"
               >
-                <span className="material-symbols-outlined text-red-400 group-hover:text-red-300">logout</span>
-                <span className="text-red-400 font-medium">Cerrar sesión</span>
+                <span className="material-symbols-outlined text-[#C41E3A] group-hover:text-[#A31832]">logout</span>
+                <span className="text-[#C41E3A] font-bold">Cerrar sesión</span>
               </button>
             </div>
           )}

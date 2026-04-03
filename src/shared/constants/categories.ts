@@ -11,7 +11,9 @@ export const CATEGORIAS = {
   MATEMATICAS: 'matematicas',
   GEOGRAFIA: 'geografia',
   CIENCIAS: 'ciencias',
-  RETOS: 'retos'
+  RETOS: 'retos',
+  MEZCOLANZA: 'mezcolanza',
+  RETO_ACHIOTE: 'reto_achiote'
 } as const;
 
 export type Categoria = typeof CATEGORIAS[keyof typeof CATEGORIAS];
@@ -21,7 +23,9 @@ export const CATEGORIA_INGREDIENTE: Record<Categoria, Ingrediente> = {
   [CATEGORIAS.MATEMATICAS]: INGREDIENTES.CERDO,
   [CATEGORIAS.GEOGRAFIA]: INGREDIENTES.ARROZ,
   [CATEGORIAS.CIENCIAS]: INGREDIENTES.PAPA,
-  [CATEGORIAS.RETOS]: INGREDIENTES.ACHIOTE
+  [CATEGORIAS.RETOS]: INGREDIENTES.ACHIOTE,
+  [CATEGORIAS.MEZCOLANZA]: INGREDIENTES.CHILE,
+  [CATEGORIAS.RETO_ACHIOTE]: INGREDIENTES.ACHIOTE
 };
 
 export const CATEGORIAS_CONFIG = {
@@ -61,6 +65,22 @@ export const CATEGORIAS_CONFIG = {
     nombre: 'Retos',
     subtitulo: 'Desafío Diario',
     icono: 'emoji_events',
+    color: '#D9531E',
+    colorClaro: 'rgba(217, 83, 30, 0.05)',
+    borde: 'rgba(217, 83, 30, 0.2)'
+  },
+  [CATEGORIAS.MEZCOLANZA]: {
+    nombre: 'Mezcolanza',
+    subtitulo: 'Mezcla de Saberes',
+    icono: 'shuffle',
+    color: '#FF6B35',
+    colorClaro: 'rgba(255, 107, 53, 0.05)',
+    borde: 'rgba(255, 107, 53, 0.2)'
+  },
+  [CATEGORIAS.RETO_ACHIOTE]: {
+    nombre: 'Reto del Achiote',
+    subtitulo: 'El Desafío Supremo',
+    icono: 'auto_awesome',
     color: '#D9531E',
     colorClaro: 'rgba(217, 83, 30, 0.05)',
     borde: 'rgba(217, 83, 30, 0.2)'

@@ -26,15 +26,16 @@ export function getCachedData(key) {
   try {
     const cached = localStorage.getItem(`nicaquizz_cache_${key}`);
     if (!cached) return null;
-    
-    const { data, timestamp } = JSON.parse(cached);
+
+    const { data, timestamp, durationMs } = JSON.parse(cached);
     const now = Date.now();
-    
-    // Verificar si el caché aún es válido (3 horas)
-    if (now - timestamp < CACHE_DURATION) {
+    const duration = durationMs || CACHE_DURATION;
+
+    // Verificar si el caché aún es válido
+    if (now - timestamp < duration) {
       return data;
     }
-    
+
     // Caché expirado, eliminar
     localStorage.removeItem(`nicaquizz_cache_${key}`);
     return null;
@@ -44,11 +45,12 @@ export function getCachedData(key) {
   }
 }
 
-export function setCachedData(key, data) {
+export function setCachedData(key, data, durationMs = 72 * 60 * 60 * 1000) {
   try {
     const cacheEntry = {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      durationMs
     };
     localStorage.setItem(`nicaquizz_cache_${key}`, JSON.stringify(cacheEntry));
   } catch (error) {
@@ -193,15 +195,18 @@ export async function addCoins(uid, categoria, isOpenChallenge = false) {
     const userRef = doc(db, 'users', uid);
     const ingrediente = CATEGORIA_INGREDIENTE[categoria];
     const cantidad = isOpenChallenge ? 2 : 1;
-    
+
     if (!ingrediente) {
       // Ranking mundial no da monedas
       return;
     }
-    
+
     await updateDoc(userRef, {
       [`coins.${ingrediente}`]: increment(cantidad)
     });
+
+    // Intentar conversión automática a nacatamal
+    await autoConvertToNacatamal(uid);
   } catch (error) {
     console.error('Error al agregar monedas:', error);
     throw error;
@@ -255,6 +260,52 @@ export async function consumeNacatamal(uid) {
   } catch (error) {
     console.error('Error al consumir nacatamal:', error);
     throw error;
+  }
+}
+
+/**
+ * Convierte automáticamente 5 ingredientes base (1 de cada uno) en 1 nacatamal
+ * Se llama después de recibir ingredientes para verificar si se puede convertir
+ */
+export async function autoConvertToNacatamal(uid) {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const docSnap = await getDoc(userRef);
+
+    if (!docSnap.exists()) return false;
+
+    const coins = docSnap.data().coins || {};
+    const ingredientesBase = [
+      INGREDIENTES.MASA,
+      INGREDIENTES.CERDO,
+      INGREDIENTES.ARROZ,
+      INGREDIENTES.PAPA,
+      INGREDIENTES.CHILE
+    ];
+
+    // Verificar si tiene al menos 1 de cada ingrediente base
+    const canConvert = ingredientesBase.every(
+      ing => (coins[ing] || 0) >= 1
+    );
+
+    if (!canConvert) return false;
+
+    // Convertir: restar 1 de cada ingrediente y agregar 1 nacatamal
+    const updates = {};
+    ingredientesBase.forEach(ing => {
+      updates[`coins.${ing}`] = increment(-1);
+    });
+
+    // Inicializar nacatamales si no existe
+    const currentNacatamales = coins.nacatamal || 0;
+    updates['coins.nacatamal'] = currentNacatamales + 1;
+
+    await updateDoc(userRef, updates);
+
+    return true;
+  } catch (error) {
+    console.error('Error al convertir automáticamente a nacatamal:', error);
+    return false;
   }
 }
 
@@ -351,27 +402,19 @@ export async function purchaseItem(uid, itemId, currentPrice, itemType) {
     const userRef = doc(db, 'users', uid);
     const itemRef = doc(db, 'shopItems', itemId);
 
-    // Verificar si tiene un nacatamal completo
+    // Verificar si tiene nacatamales
     const userSnap = await getDoc(userRef);
     const coins = userSnap.data().coins || {};
-    // Solo los 5 ingredientes base del nacatamal (no incluye achiote)
-    const ingredientesBase = [
-      INGREDIENTES.MASA,
-      INGREDIENTES.CERDO,
-      INGREDIENTES.ARROZ,
-      INGREDIENTES.PAPA,
-      INGREDIENTES.CHILE
-    ];
-    const hasNacatamal = ingredientesBase.every(
-      ing => (coins[ing] || 0) >= 1
-    );
+    const nacatamales = coins.nacatamal || 0;
 
-    if (!hasNacatamal) {
-      throw new Error('Necesitas un nacatamal completo para comprar');
+    if (nacatamales < 1) {
+      throw new Error('Necesitas al menos 1 nacatamal para comprar');
     }
 
-    // Consumir nacatamal y agregar mejora o traba
-    await consumeNacatamal(uid);
+    // Consumir 1 nacatamal
+    await updateDoc(userRef, {
+      'coins.nacatamal': increment(-1)
+    });
 
     // Agregar según el tipo de item
     if (itemType === ITEM_TYPES.TRABA) {
@@ -675,10 +718,36 @@ export async function getAvailableChallengers() {
   }
 }
 
+// ==================== NOTIFICACIONES ====================
+
+/**
+ * Crea una notificación para un usuario
+ */
+export async function createChallengeNotification(userId, tipo, titulo, mensaje, data = {}) {
+  try {
+    const notification = {
+      userId,
+      tipo,
+      titulo,
+      mensaje,
+      data,
+      leido: false,
+      createdAt: serverTimestamp()
+    };
+
+    const notificationsRef = collection(db, 'notifications');
+    const docRef = await addDoc(notificationsRef, notification);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error al crear notificación:', error);
+    throw error;
+  }
+}
+
 // ==================== RETOS ====================
 
 /**
- * Crea un nuevo reto
+ * Crea un nuevo reto y envía notificación al jugador retado
  */
 export async function createChallenge(challengerId, challengedId, categoryId = null, isOpenChallenge = false) {
   try {
@@ -687,7 +756,7 @@ export async function createChallenge(challengerId, challengedId, categoryId = n
       challengedId,
       categoryId,
       isOpenChallenge,
-      status: 'pending', // pending, accepted, rejected, completed
+      status: 'pending',
       winnerId: null,
       challengerScore: 0,
       challengedScore: 0,
@@ -695,9 +764,24 @@ export async function createChallenge(challengerId, challengedId, categoryId = n
       startedAt: null,
       completedAt: null
     };
-    
+
     const challengesRef = collection(db, 'challenges');
     const docRef = await addDoc(challengesRef, challenge);
+
+    // Enviar notificación al jugador retado (si no es reto abierto)
+    if (!isOpenChallenge && challengedId) {
+      const challengerDoc = await getDoc(doc(db, 'users', challengerId));
+      const challengerName = challengerDoc.exists() ? challengerDoc.data().displayName : 'Un jugador';
+
+      await createChallengeNotification(
+        challengedId,
+        'challenge',
+        '¡Nuevo Reto!',
+        `${challengerName} te ha retado a un duelo de conocimiento.`,
+        { challengeId: docRef.id, challengerId, categoryId }
+      );
+    }
+
     return docRef.id;
   } catch (error) {
     console.error('Error al crear reto:', error);
@@ -785,18 +869,56 @@ export async function rejectChallenge(challengeId) {
 }
 
 /**
+ * Elimina un reto (para cancelar o limpiar retos pendientes)
+ */
+export async function deleteChallenge(challengeId) {
+  try {
+    const challengeRef = doc(db, 'challenges', challengeId);
+    await deleteDoc(challengeRef);
+  } catch (error) {
+    console.error('Error al eliminar reto:', error);
+    throw error;
+  }
+}
+
+/**
  * Completa un reto con el resultado
+ * Si ambos jugadores han terminado, determina al ganador
  */
 export async function completeChallenge(challengeId, winnerId, challengerScore, challengedScore) {
   try {
     const challengeRef = doc(db, 'challenges', challengeId);
-    await updateDoc(challengeRef, {
-      status: 'completed',
-      winnerId,
+    const challengeSnap = await getDoc(challengeRef);
+
+    if (!challengeSnap.exists()) {
+      throw new Error('Reto no encontrado');
+    }
+
+    const challengeData = challengeSnap.data();
+    const updates = {
       challengerScore,
-      challengedScore,
-      completedAt: serverTimestamp()
-    });
+      challengedScore
+    };
+
+    // Determinar ganador si ambos tienen score > 0
+    if (challengerScore > 0 && challengedScore > 0) {
+      if (challengerScore > challengedScore) {
+        updates.winnerId = challengeData.challengerId;
+      } else if (challengedScore > challengerScore) {
+        updates.winnerId = challengeData.challengedId;
+      } else {
+        updates.winnerId = null; // Empate
+      }
+      updates.status = 'completed';
+      updates.completedAt = serverTimestamp();
+    } else if (winnerId) {
+      // Si ya se sabe el ganador explícitamente
+      updates.winnerId = winnerId;
+      updates.status = 'completed';
+      updates.completedAt = serverTimestamp();
+    }
+
+    await updateDoc(challengeRef, updates);
   } catch (error) {
     console.error('Error al completar reto:', error);
     throw error;
@@ -913,17 +1035,17 @@ export async function sendFriendRequestByEmail(currentUserId, targetEmail) {
 
 /**
  * Obtiene todas las categorías
- * Caché: 72 horas (datos casi estáticos)
+ * Caché: 5 minutos (para permitir actualizaciones)
  */
 export async function fetchCategories() {
   const cacheKey = 'categories';
-  
+
   // Intentar obtener de caché primero
   const cached = getCachedData(cacheKey);
   if (cached !== null) {
     return cached;
   }
-  
+
   try {
     const categoriesRef = collection(db, 'categories');
     const q = query(categoriesRef, orderBy('createdAt', 'asc'));
@@ -933,10 +1055,12 @@ export async function fetchCategories() {
       id: doc.id,
       ...doc.data()
     }));
-    
-    // Guardar en caché por 72 horas
-    setCachedData(cacheKey, categories);
-    
+
+    console.log('Categorías cargadas desde Firestore:', categories.map(c => c.id));
+
+    // Guardar en caché por 5 minutos
+    setCachedData(cacheKey, categories, 5 * 60 * 1000);
+
     return categories;
   } catch (error) {
     console.error('Error al obtener categorías:', error);

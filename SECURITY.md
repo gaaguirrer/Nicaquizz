@@ -1,3 +1,4 @@
+}
 # Seguridad en NicaQuizz
 
 ## Reglas de Firestore

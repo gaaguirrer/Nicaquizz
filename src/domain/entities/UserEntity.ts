@@ -258,14 +258,15 @@ export class Coins {
     public readonly arroz: number = 0,
     public readonly papa: number = 0,
     public readonly chile: number = 0,
-    public readonly achiote: number = 0
+    public readonly achiote: number = 0,
+    public readonly nacatamal: number = 0
   ) {
     this.validate();
   }
 
   private validate(): void {
     if (this.masa < 0 || this.cerdo < 0 || this.arroz < 0 ||
-        this.papa < 0 || this.chile < 0 || this.achiote < 0) {
+        this.papa < 0 || this.chile < 0 || this.achiote < 0 || this.nacatamal < 0) {
       throw new Error('Las monedas no pueden ser negativas');
     }
   }
@@ -277,7 +278,8 @@ export class Coins {
       (data.arroz as number) ?? 0,
       (data.papa as number) ?? 0,
       (data.chile as number) ?? 0,
-      (data.achiote as number) ?? 0
+      (data.achiote as number) ?? 0,
+      (data.nacatamal as number) ?? 0
     );
   }
 
@@ -288,7 +290,8 @@ export class Coins {
       arroz: this.arroz,
       papa: this.papa,
       chile: this.chile,
-      achiote: this.achiote
+      achiote: this.achiote,
+      nacatamal: this.nacatamal
     };
   }
 
@@ -299,7 +302,8 @@ export class Coins {
       ingrediente === 'arroz' ? this.arroz + amount : this.arroz,
       ingrediente === 'papa' ? this.papa + amount : this.papa,
       ingrediente === 'chile' ? this.chile + amount : this.chile,
-      ingrediente === 'achiote' ? this.achiote + amount : this.achiote
+      ingrediente === 'achiote' ? this.achiote + amount : this.achiote,
+      ingrediente === 'nacatamal' ? this.nacatamal + amount : this.nacatamal
     );
   }
 
@@ -319,7 +323,24 @@ export class Coins {
       this.arroz - 1,
       this.papa - 1,
       this.chile - 1,
-      this.achiote
+      this.achiote,
+      this.nacatamal
+    );
+  }
+
+  autoConvertToNacatamal(): Coins {
+    if (!this.hasNacatamalComplete()) {
+      return this;
+    }
+
+    return new Coins(
+      this.masa - 1,
+      this.cerdo - 1,
+      this.arroz - 1,
+      this.papa - 1,
+      this.chile - 1,
+      this.achiote,
+      this.nacatamal + 1
     );
   }
 

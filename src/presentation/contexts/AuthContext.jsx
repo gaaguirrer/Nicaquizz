@@ -9,6 +9,7 @@ import {
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, signInWithGoogle } from '../../firebase';
 import { getUserProfile, updateUserStatsApi } from '../../services/api';
+import { updateUserOnlineStatus } from '../../services/firestore';
 
 const AuthContext = createContext(null);
 
@@ -63,7 +64,9 @@ export function AuthProvider({ children }) {
           cerdo: 0,
           arroz: 0,
           papa: 0,
-          chile: 0
+          chile: 0,
+          achiote: 0,
+          nacatamal: 3
         },
         mejoras: {
           pase: 3,
@@ -124,6 +127,9 @@ export function AuthProvider({ children }) {
 
   // Función para cerrar sesión
   async function logout() {
+    if (currentUser) {
+      await updateUserOnlineStatus(currentUser.uid, false);
+    }
     return signOut(auth);
   }
 
@@ -207,13 +213,41 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      
+
       if (user) {
         await fetchUserData(user.uid);
+
+        // Marcar usuario como online
+        await updateUserOnlineStatus(user.uid, true);
+
+        // Configurar desconexión automática al cerrar pestaña o cambiar visibilidad
+        const handleVisibilityChange = async () => {
+          if (document.visibilityState === 'hidden') {
+            // Usar sendBeacon para asegurar que se envíe antes de cerrar
+            const url = `/api/users/${user.uid}/offline`;
+            navigator.sendBeacon?.(url);
+
+            // Fallback con updateDoc directo (síncrono en la medida de lo posible)
+            try {
+              const userRef = doc(db, 'users', user.uid);
+              await updateDoc(userRef, {
+                isOnline: false,
+                lastSeen: serverTimestamp()
+              });
+            } catch (e) {
+              // Ignorar error en background
+            }
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
       } else {
         setUserData(null);
       }
-      
+
       setLoading(false);
     });
 

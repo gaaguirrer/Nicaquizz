@@ -17,6 +17,7 @@ import {
   getChallenge,
   acceptChallenge,
   rejectChallenge,
+  deleteChallenge,
   fetchCategoryById,
   getUserProfile
 } from '../../services/firestore';
@@ -36,12 +37,34 @@ export default function ChallengeConnected() {
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
 
+  // Estados para timeout
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+  const [timeoutElapsed, setTimeoutElapsed] = useState(false);
+
   // Cargar datos del reto
   useEffect(() => {
     if (challengeId && currentUser) {
       loadChallenge();
     }
   }, [challengeId, currentUser]);
+
+  // Timer de 1 minuto para el retador si el reto está pendiente
+  useEffect(() => {
+    if (!challenge || !currentUser) return;
+
+    // Solo aplica si el usuario actual es el challenger y el reto está pendiente
+    const isChallenger = challenge.challengerId === currentUser.uid;
+    const isPending = challenge.status === 'pending';
+
+    if (!isChallenger || !isPending) return;
+
+    const timer = setTimeout(() => {
+      setTimeoutElapsed(true);
+      setShowTimeoutModal(true);
+    }, 60 * 1000); // 1 minuto
+
+    return () => clearTimeout(timer);
+  }, [challenge, currentUser]);
 
   async function loadChallenge() {
     if (!challengeId) return;
@@ -118,6 +141,39 @@ export default function ChallengeConnected() {
       navigate('/friends');
     } catch (error) {
       toast.error('Error al rechazar reto');
+    }
+  }
+
+  // Timeout: Jugar reto abierto
+  async function handleTimeoutRetoAbierto() {
+    try {
+      // Eliminar el reto actual
+      await deleteChallenge(challengeId);
+      setShowTimeoutModal(false);
+
+      // Ir a jugar solo
+      const categoryId = challenge.categoryId || 'historia';
+      navigate(`/questions/${categoryId}`);
+    } catch (error) {
+      toast.error('Error al convertir a reto abierto');
+    }
+  }
+
+  // Timeout: Retar a otro jugador
+  function handleTimeoutOtroJugador() {
+    setShowTimeoutModal(false);
+    navigate('/play');
+  }
+
+  // Timeout: Cancelar reto
+  async function handleTimeoutCancelar() {
+    try {
+      await deleteChallenge(challengeId);
+      setShowTimeoutModal(false);
+      toast.info('Reto cancelado');
+      navigate('/play');
+    } catch (error) {
+      toast.error('Error al cancelar reto');
     }
   }
 
@@ -302,31 +358,85 @@ export default function ChallengeConnected() {
                 </div>
               ) : challenge.status === 'completed' ? (
                 <div className="text-center">
-                  <p className="text-[#154212] font-bold text-lg mb-4">
-                    {challenge.winnerId === currentUser?.uid ? '¡Ganaste!' : 'Reto completado'}
-                  </p>
-                  <div className="bg-[#154212]/5 rounded-xl p-4 mb-4">
-                    <p className="text-sm text-[#42493e]/60">Puntuación Final</p>
-                    <div className="flex items-center justify-center gap-8 mt-2">
-                      <div className="text-center">
-                        <p className="text-3xl font-black text-[#2D5A27]">{challenge.challengerScore}</p>
-                        <p className="text-xs text-[#42493e]/60">Retador</p>
+                  {/* Resultado del reto */}
+                  <div className="mb-6">
+                    <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-[#F4C430] to-[#2D5A27] flex items-center justify-center mb-3">
+                      <span className="material-symbols-outlined text-white text-5xl">
+                        {challenge.winnerId === currentUser?.uid ? 'emoji_events' : 'handshake'}
+                      </span>
+                    </div>
+                    <h2 className="text-2xl font-headline font-black text-[#154212] mb-1">
+                      {challenge.winnerId === currentUser?.uid ? '¡Victoria!' : 'Reto Completado'}
+                    </h2>
+                    <p className="text-sm text-[#42493e]">
+                      {challenge.winnerId === currentUser?.uid
+                        ? 'Has demostrado tu conocimiento'
+                        : 'Ambos jugadores han completado el reto'}
+                    </p>
+                  </div>
+
+                  {/* Marcador */}
+                  <div className="bg-gradient-to-br from-[#154212]/10 to-[#C41E3A]/10 rounded-2xl p-6 mb-6 border-2 border-[#154212]/20">
+                    <h3 className="font-bold text-[#154212] mb-4 text-sm uppercase tracking-wider">Marcador Final</h3>
+                    <div className="flex items-center justify-center gap-6">
+                      {/* Retador */}
+                      <div className="text-center flex-1">
+                        <div className="w-14 h-14 mx-auto mb-2 rounded-full bg-gradient-to-br from-[#2D5A27] to-[#154212] flex items-center justify-center text-white font-bold text-lg">
+                          {challenger?.displayName?.charAt(0) || 'R'}
+                        </div>
+                        <p className="text-xs text-[#42493e]/60 mb-1 truncate">{challenger?.displayName || 'Retador'}</p>
+                        <p className="text-4xl font-black text-[#2D5A27]">{challenge.challengerScore}</p>
+                        <p className="text-[10px] text-[#42493e]/40">aciertos</p>
                       </div>
-                      <div className="text-[#154212]/40 font-black">-</div>
-                      <div className="text-center">
-                        <p className="text-3xl font-black text-[#C41E3A]">{challenge.challengedScore}</p>
-                        <p className="text-xs text-[#42493e]/60">Desafiado</p>
+
+                      <div className="text-2xl font-black text-[#154212]/20">VS</div>
+
+                      {/* Desafiado */}
+                      <div className="text-center flex-1">
+                        <div className="w-14 h-14 mx-auto mb-2 rounded-full bg-gradient-to-br from-[#C41E3A] to-[#79001c] flex items-center justify-center text-white font-bold text-lg">
+                          {currentUser?.displayName?.charAt(0) || 'T'}
+                        </div>
+                        <p className="text-xs text-[#42493e]/60 mb-1 truncate">{currentUser?.displayName || 'Tú'}</p>
+                        <p className="text-4xl font-black text-[#C41E3A]">{challenge.challengedScore}</p>
+                        <p className="text-[10px] text-[#42493e]/40">aciertos</p>
                       </div>
                     </div>
+
+                    {/* Ganador badge */}
+                    {challenge.winnerId && (
+                      <div className="mt-4 bg-[#F4C430]/20 rounded-xl p-3 border border-[#F4C430]/30">
+                        <p className="text-sm font-bold text-[#154212]">
+                          <span className="material-symbols-outlined text-[#F4C430] text-base align-middle mr-1">emoji_events</span>
+                          Ganador: {challenge.winnerId === challenger?.id ? challenger?.displayName : currentUser?.displayName}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <Button
-                    onClick={() => navigate('/friends')}
-                    variant="outline"
-                    size="lg"
-                  >
-                    <span className="material-symbols-outlined">arrow_back</span>
-                    Volver a Amigos
-                  </Button>
+
+                  {/* Botones de acción */}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => navigate('/play')}
+                      variant="outline"
+                      size="md"
+                      className="flex-1"
+                    >
+                      <span className="material-symbols-outlined">home</span>
+                      Inicio
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        // Revancha: crear nuevo reto con mismos jugadores
+                        navigate(`/play`);
+                      }}
+                      variant="primary"
+                      size="md"
+                      className="flex-1"
+                    >
+                      <span className="material-symbols-outlined">autorenew</span>
+                      Revancha
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center text-[#42493e]/60">
@@ -363,6 +473,51 @@ export default function ChallengeConnected() {
           </div>
         </div>
       </main>
+
+      {/* Modal de Timeout */}
+      {showTimeoutModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-[#fefccf] rounded-2xl shadow-2xl w-full max-w-sm border-4 border-[#F4C430]/50 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#D9531E] to-[#B93B0E] p-5 text-center">
+              <span className="material-symbols-outlined text-white text-5xl mb-2">hourglass_top</span>
+              <h3 className="text-xl font-headline font-bold text-white">Jugador no responde</h3>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-[#42493e] text-center">
+                El jugador retado no ha respondido. ¿Qué deseas hacer?
+              </p>
+
+              <button
+                onClick={handleTimeoutRetoAbierto}
+                className="w-full bg-[#2D5A27] hover:bg-[#154212] text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                <span className="material-symbols-outlined text-lg">person</span>
+                Jugar reto abierto
+              </button>
+
+              <button
+                onClick={handleTimeoutOtroJugador}
+                className="w-full bg-[#F4C430] hover:bg-[#ffdf90] text-[#1d1d03] font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                <span className="material-symbols-outlined text-lg">people</span>
+                Retar a otro jugador
+              </button>
+
+              <button
+                onClick={handleTimeoutCancelar}
+                className="w-full bg-white hover:bg-gray-100 text-[#42493e] font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm border-2 border-[#154212]/10"
+              >
+                <span className="material-symbols-outlined text-lg">cancel</span>
+                Cancelar reto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

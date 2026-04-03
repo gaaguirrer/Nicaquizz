@@ -27,7 +27,7 @@ const categories = [
     id: 'historia',
     name: 'Historia',
     description: 'Historia de Nicaragua y Centroamérica',
-    ingrediente: 'maiz',
+    ingrediente: 'masa',
     icon: 'history_edu'
   },
   {
@@ -50,6 +50,13 @@ const categories = [
     description: 'Biología, química y física',
     ingrediente: 'papa',
     icon: 'science'
+  },
+  {
+    id: 'retos',
+    name: 'Retos Diarios',
+    description: 'Desafío diario con recompensa especial',
+    ingrediente: 'achiote',
+    icon: 'emoji_events'
   }
 ];
 

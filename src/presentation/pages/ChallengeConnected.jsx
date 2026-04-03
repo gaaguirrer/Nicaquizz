@@ -21,6 +21,11 @@ import {
   fetchCategoryById,
   getUserProfile
 } from '../../services/firestore';
+import {
+  doc,
+  onSnapshot
+} from 'firebase/firestore';
+import { db } from '../../infrastructure/firebase/firebase.config';
 import TopNavBar from '../components/TopNavBar';
 import Button from '../components/Button';
 
@@ -40,6 +45,7 @@ export default function ChallengeConnected() {
   // Estados para timeout
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const [timeoutElapsed, setTimeoutElapsed] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
 
   // Cargar datos del reto
   useEffect(() => {
@@ -101,6 +107,31 @@ export default function ChallengeConnected() {
     }
   }
 
+  // Listener en tiempo real para cambios en el estado del reto
+  // Notifica al retador cuando el retado acepta o rechaza
+  useEffect(() => {
+    if (!challengeId) return;
+
+    const challengeRef = doc(db, 'challenges', challengeId);
+    const unsubscribe = onSnapshot(challengeRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+
+      const data = snapshot.data();
+
+      if (data.status === 'rejected' && challenge?.status !== 'rejected') {
+        toast.warning('El jugador rechazó tu reto');
+      }
+
+      if (data.status === 'accepted' && challenge?.status === 'pending') {
+        toast.success('¡El jugador aceptó el reto!');
+      }
+
+      setChallenge({ id: snapshot.id, ...data });
+    });
+
+    return () => unsubscribe();
+  }, [challengeId]);
+
   // Aceptar reto
   async function handleAceptarReto() {
     if (!currentUser) {
@@ -118,9 +149,9 @@ export default function ChallengeConnected() {
     try {
       await acceptChallenge(challengeId);
       toast.success('¡Reto aceptado!');
-      
+
       // Navegar a preguntas
-      const categoryId = challenge.categoryId || 'random';
+      const categoryId = challenge.categoryId || 'historia';
       navigate(`/questions/${categoryId}?challenge=${challengeId}`);
     } catch (error) {
       toast.error(error.message || 'Error al aceptar reto');
@@ -129,12 +160,14 @@ export default function ChallengeConnected() {
     }
   }
 
-  // Rechazar reto
+  // Rechazar reto - muestra modal de confirmacion
   async function handleRechazarReto() {
     if (!currentUser) return;
+    setShowRejectModal(true);
+  }
 
-    if (!window.confirm('¿Estás seguro de rechazar este reto?')) return;
-
+  async function confirmRechazarReto() {
+    setShowRejectModal(false);
     try {
       await rejectChallenge(challengeId);
       toast.success('Reto rechazado');
@@ -348,7 +381,7 @@ export default function ChallengeConnected() {
                 <div className="text-center">
                   <p className="text-[#2D5A27] font-bold text-lg mb-4">¡Reto en progreso!</p>
                   <Button
-                    onClick={() => navigate(`/questions/${challenge.categoryId || 'random'}?challenge=${challengeId}`)}
+                    onClick={() => navigate(`/questions/${challenge.categoryId || 'historia'}?challenge=${challengeId}`)}
                     variant="primary"
                     size="lg"
                   >
@@ -473,6 +506,38 @@ export default function ChallengeConnected() {
           </div>
         </div>
       </main>
+
+      {/* Modal de Confirmacion para Rechazar */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-[#fefccf] rounded-2xl shadow-2xl w-full max-w-sm border-4 border-[#C41E3A]/50 overflow-hidden">
+            <div className="bg-gradient-to-r from-[#C41E3A] to-[#79001c] p-5 text-center">
+              <span className="material-symbols-outlined text-white text-5xl mb-2">cancel</span>
+              <h3 className="text-xl font-headline font-bold text-white">Rechazar Reto</h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-[#42493e] text-center">
+                ¿Estas seguro de que deseas rechazar este reto?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRejectModal(false)}
+                  className="flex-1 bg-white hover:bg-gray-100 text-[#154212] font-bold py-3 rounded-xl transition-all border-2 border-[#154212]/10"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmRechazarReto}
+                  className="flex-1 bg-[#C41E3A] hover:bg-[#A31832] text-white font-bold py-3 rounded-xl transition-all"
+                >
+                  Sí, Rechazar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Timeout */}
       {showTimeoutModal && (

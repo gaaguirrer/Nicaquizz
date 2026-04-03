@@ -1,12 +1,12 @@
-import { 
-  collection, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  query, 
+import {
+  collection,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
   where,
   orderBy,
   limit,
@@ -33,6 +33,11 @@ export function getCachedData(key) {
 
     // Verificar si el caché aún es válido
     if (now - timestamp < duration) {
+      // No retornar arrays vacíos del cache: siempre fresh
+      if (Array.isArray(data) && data.length === 0) {
+        localStorage.removeItem(`nicaquizz_cache_${key}`);
+        return null;
+      }
       return data;
     }
 
@@ -205,8 +210,8 @@ export async function addCoins(uid, categoria, isOpenChallenge = false) {
       [`coins.${ingrediente}`]: increment(cantidad)
     });
 
-    // Intentar conversión automática a nacatamal
-    await autoConvertToNacatamal(uid);
+    // Limpiar cache para que la UI vea el cambio
+    clearCache(`wallet_${uid}`);
   } catch (error) {
     console.error('Error al agregar monedas:', error);
     throw error;
@@ -302,10 +307,70 @@ export async function autoConvertToNacatamal(uid) {
 
     await updateDoc(userRef, updates);
 
+    // Limpiar cache del monedero para que la UI vea el cambio
+    clearCache(`wallet_${uid}`);
+
     return true;
   } catch (error) {
     console.error('Error al convertir automáticamente a nacatamal:', error);
     return false;
+  }
+}
+
+/**
+ * Convierte manualmente 5 ingredientes base (1 de cada uno) en 1 nacatamal
+ * El usuario debe activar esta conversion manualmente desde la interfaz
+ */
+export async function convertToNacatamalManual(uid) {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const docSnap = await getDoc(userRef);
+
+    if (!docSnap.exists()) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    const coins = docSnap.data().coins || {};
+    const ingredientesBase = [
+      INGREDIENTES.MASA,
+      INGREDIENTES.CERDO,
+      INGREDIENTES.ARROZ,
+      INGREDIENTES.PAPA,
+      INGREDIENTES.CHILE
+    ];
+
+    // Verificar si tiene al menos 1 de cada ingrediente base
+    const puedeConvertir = ingredientesBase.every(
+      ing => (coins[ing] || 0) >= 1
+    );
+
+    if (!puedeConvertir) {
+      throw new Error('Necesitas al menos 1 de cada ingrediente base (masa, cerdo, arroz, papa, chile) para canjear un nacatamal');
+    }
+
+    // Cuantos nacatamales puede formar (el minimo de los 5 ingredientes)
+    const cantidadPosible = Math.min(
+      ...ingredientesBase.map(ing => coins[ing] || 0)
+    );
+
+    // Convertir: restar 1 de cada ingrediente y agregar 1 nacatamal
+    const updates = {};
+    ingredientesBase.forEach(ing => {
+      updates[`coins.${ing}`] = increment(-1);
+    });
+
+    const currentNacatamales = coins.nacatamal || 0;
+    updates['coins.nacatamal'] = currentNacatamales + 1;
+
+    await updateDoc(userRef, updates);
+
+    // Limpiar cache del monedero para que la UI vea el cambio
+    clearCache(`wallet_${uid}`);
+
+    return { success: true, nacatamalesAgregados: 1, ingredientesUsados: 5 };
+  } catch (error) {
+    console.error('Error al convertir a nacatamal:', error);
+    throw error;
   }
 }
 
@@ -435,6 +500,9 @@ export async function purchaseItem(uid, itemId, currentPrice, itemType) {
       timesPurchased: increment(1),
       totalRevenue: increment(currentPrice)
     });
+
+    // Limpiar cache del monedero para que la UI vea el cambio
+    clearCache(`wallet_${uid}`);
 
     return true;
   } catch (error) {
@@ -1162,6 +1230,56 @@ export async function fetchApprovedQuestions(categoryId = null, difficulty = 'ha
     return questions;
   } catch (error) {
     console.error('Error al obtener preguntas:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene preguntas aleatorias aprobadas por categoría (sin filtro de dificultad)
+ * Retorna exactamente `count` preguntas mezcladas (por defecto 10).
+ * Sin cache: siempre datos frescos desde Firestore.
+ *
+ * Optimizacion: No trae todas las preguntas; usa muestreo aleatorio
+ * para evitar cargar datasets grandes en memoria.
+ */
+export async function fetchRandomQuestions(categoryId = null, count = 10) {
+  try {
+    const questionsRef = collection(db, 'questions');
+
+    let q = query(
+      questionsRef,
+      where('status', '==', 'approved'),
+      orderBy('createdAt', 'desc'),
+      limit(200)
+    );
+
+    if (categoryId) {
+      q = query(
+        questionsRef,
+        where('status', '==', 'approved'),
+        where('categoryId', '==', categoryId),
+        orderBy('createdAt', 'desc'),
+        limit(200)
+      );
+    }
+
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    let questions = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Mezclar y tomar las primeras `count`
+    questions = questions.sort(() => Math.random() - 0.5).slice(0, count);
+
+    return questions;
+  } catch (error) {
+    console.error('Error al obtener preguntas aleatorias:', error);
     throw error;
   }
 }
@@ -2598,6 +2716,9 @@ export async function exchangeAchiote(uid, targetIngredient, amount = 1) {
       amount,
       createdAt: serverTimestamp()
     });
+
+    // Limpiar cache del monedero
+    clearCache(`wallet_${uid}`);
 
     return { success: true };
   } catch (error) {

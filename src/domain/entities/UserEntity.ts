@@ -11,6 +11,7 @@ export class UserEntity {
     public readonly id: string,
     public readonly email: string,
     public readonly displayName: string,
+    public readonly department?: string,
     public readonly photoURL?: string,
     public readonly isAdmin: boolean = false,
     public readonly isPublicProfile: boolean = true,
@@ -32,6 +33,7 @@ export class UserEntity {
       data.id as string,
       data.email as string,
       data.displayName as string,
+      data.department as string | undefined,
       data.photoURL as string | undefined,
       data.isAdmin as boolean ?? false,
       data.isPublicProfile as boolean ?? true,
@@ -54,6 +56,7 @@ export class UserEntity {
       id: this.id,
       email: this.email,
       displayName: this.displayName,
+      department: this.department,
       photoURL: this.photoURL,
       isAdmin: this.isAdmin,
       isPublicProfile: this.isPublicProfile,
@@ -78,7 +81,7 @@ export class UserEntity {
   consumeNacatamal(): UserEntity {
     const newCoins = this.coins.consumeNacatamal();
     return new UserEntity(
-      this.id, this.email, this.displayName, this.photoURL,
+      this.id, this.email, this.displayName, this.department, this.photoURL,
       this.isAdmin, this.isPublicProfile, this.allowOpenChallenges,
       this.isOnline, this.friends, this.stats, newCoins,
       this.mejoras, this.trabas, this.inventory, this.equipped,
@@ -89,7 +92,7 @@ export class UserEntity {
   addCoins(ingrediente: Ingrediente, amount: number): UserEntity {
     const newCoins = this.coins.add(ingrediente, amount);
     return new UserEntity(
-      this.id, this.email, this.displayName, this.photoURL,
+      this.id, this.email, this.displayName, this.department, this.photoURL,
       this.isAdmin, this.isPublicProfile, this.allowOpenChallenges,
       this.isOnline, this.friends, this.stats, newCoins,
       this.mejoras, this.trabas, this.inventory, this.equipped,
@@ -99,7 +102,7 @@ export class UserEntity {
 
   updateStats(newStats: UserStats): UserEntity {
     return new UserEntity(
-      this.id, this.email, this.displayName, this.photoURL,
+      this.id, this.email, this.displayName, this.department, this.photoURL,
       this.isAdmin, this.isPublicProfile, this.allowOpenChallenges,
       this.isOnline, this.friends, newStats, this.coins,
       this.mejoras, this.trabas, this.inventory, this.equipped,
@@ -112,7 +115,7 @@ export class UserEntity {
       return this;
     }
     return new UserEntity(
-      this.id, this.email, this.displayName, this.photoURL,
+      this.id, this.email, this.displayName, this.department, this.photoURL,
       this.isAdmin, this.isPublicProfile, this.allowOpenChallenges,
       this.isOnline, [...this.friends, friendId], this.stats, this.coins,
       this.mejoras, this.trabas, this.inventory, this.equipped,
@@ -122,7 +125,7 @@ export class UserEntity {
 
   removeFriend(friendId: string): UserEntity {
     return new UserEntity(
-      this.id, this.email, this.displayName, this.photoURL,
+      this.id, this.email, this.displayName, this.department, this.photoURL,
       this.isAdmin, this.isPublicProfile, this.allowOpenChallenges,
       this.isOnline, this.friends.filter(id => id !== friendId), this.stats,
       this.coins, this.mejoras, this.trabas, this.inventory, this.equipped,

@@ -18,9 +18,10 @@ import {
   exchangeAchiote,
   getUserExchangeHistory,
   getUserWallet,
-  autoConvertToNacatamal,
+  convertToNacatamalManual,
   INGREDIENTES,
-  ITEM_TYPES
+  ITEM_TYPES,
+  clearCache
 } from '../../services/firestore';
 import TopNavBar from '../components/TopNavBar';
 
@@ -48,6 +49,9 @@ export default function ShopConnected() {
 
     try {
       setLoading(true);
+
+      // Limpiar cache para obtener datos frescos de Firestore
+      clearCache(`wallet_${currentUser.uid}`);
 
       // Cargar items de la tienda
       const items = await getShopItems();
@@ -113,30 +117,19 @@ export default function ShopConnected() {
     }
   }
 
-  // Convertir 5 monedas en nacatamal
+  // Canjear 5 ingredientes por 1 nacatamal (manual)
   async function handleConvertToNacatamal() {
     if (!currentUser) {
       toast.error('Debes iniciar sesión');
       return;
     }
 
-    const coins = wallet.coins || {};
-    const ingredientesBase = ['masa', 'cerdo', 'arroz', 'papa', 'chile'];
-    const canConvert = ingredientesBase.every(ing => (coins[ing] || 0) >= 1);
-
-    if (!canConvert) {
-      toast.error('Necesitas al menos 1 de cada ingrediente base para convertir');
-      return;
-    }
-
     setLoading(true);
     try {
-      const converted = await autoConvertToNacatamal(currentUser.uid);
-      if (converted) {
-        toast.success('¡Convertiste 5 ingredientes en 1 nacatamal!');
+      const resultado = await convertToNacatamalManual(currentUser.uid);
+      if (resultado.success) {
+        toast.success(`¡Canjeaste ${resultado.ingredientesUsados} ingredientes por ${resultado.nacatamalesAgregados} nacatamal!`);
         loadData();
-      } else {
-        toast.error('No se pudo completar la conversión');
       }
     } catch (error) {
       toast.error(error.message || 'Error al convertir');

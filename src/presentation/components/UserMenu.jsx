@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../infrastructure/firebase/firebase.config';
+import { convertToNacatamalManual } from '../../services/firestore';
 
 // Icono de monedas (nacatamal) - SVG personalizado
 const CoinIcon = ({ className = '' }) => (
@@ -63,12 +67,32 @@ const IngredientIcon = ({ type, className = '' }) => {
  */
 export default function UserMenu() {
   const { currentUser, userData, logout } = useAuth();
+  const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
+  const [liveCoins, setLiveCoins] = useState({});
+  const [converting, setConverting] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
-  // Cerrar menú al hacer clic fuera
+  // Listener en tiempo real para monedas del usuario
+  useEffect(() => {
+    if (!currentUser) {
+      setLiveCoins({});
+      return;
+    }
+
+    const userRef = doc(db, 'users', currentUser.uid);
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setLiveCoins(snapshot.data().coins || {});
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Cerrar menu al hacer clic fuera
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -81,8 +105,8 @@ export default function UserMenu() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Calcular nacatamales completos
-  const coins = userData?.coins || {};
+  // Calcular nacatamales completos (usar liveCoins en tiempo real)
+  const coins = liveCoins;
   const nacatamalesCount = coins.nacatamal || 0;
 
   // Ingredientes base
@@ -114,6 +138,24 @@ export default function UserMenu() {
     e.stopPropagation();
     setShowWallet(!showWallet);
   };
+
+  // Canjear nacatamal directamente desde el monedero
+  async function handleConvertirNacatamal(e) {
+    e.stopPropagation();
+    if (!currentUser) return;
+
+    setConverting(true);
+    try {
+      const resultado = await convertToNacatamalManual(currentUser.uid);
+      if (resultado.success) {
+        toast.success('¡Canjeaste 5 ingredientes por 1 nacatamal!');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Error al canjear nacatamal');
+    } finally {
+      setConverting(false);
+    }
+  }
 
   return (
     <div className="relative" ref={menuRef} style={{ zIndex: 9999 }}>
@@ -184,15 +226,9 @@ export default function UserMenu() {
 
               {/* Nacatamales completos */}
               <div className="bg-gradient-to-br from-[#2D5A27]/10 to-[#154212]/10 rounded-lg p-3 mb-3 border-2 border-[#2D5A27]/20">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between">
                   <span className="text-[#2D5A27] text-sm font-bold">Nacatamales</span>
                   <span className="text-[#154212] font-bold text-lg">{nacatamalesCount}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[#2D5A27] text-sm">restaurant</span>
-                  <span className="text-xs text-[#154212]/70 font-medium">
-                    {nacatamalesCount} nacatamal{nacatamalesCount !== 1 ? 'es' : ''}
-                  </span>
                 </div>
               </div>
 
@@ -211,14 +247,23 @@ export default function UserMenu() {
                   ))}
                 </div>
                 {puedeConvertir && (
-                  <Link
-                    to="/shop"
-                    onClick={() => setIsOpen(false)}
-                    className="mt-2 block w-full bg-[#2D5A27] hover:bg-[#154212] text-white text-center py-2 rounded-lg font-bold text-xs transition-all"
+                  <button
+                    onClick={handleConvertirNacatamal}
+                    disabled={converting}
+                    className="mt-2 block w-full bg-[#2D5A27] hover:bg-[#154212] text-white text-center py-2 rounded-lg font-bold text-xs transition-all disabled:opacity-50"
                   >
-                    <span className="material-symbols-outlined text-sm align-middle mr-1">autorenew</span>
-                    Convertir a Nacatamal
-                  </Link>
+                    {converting ? (
+                      <>
+                        <span className="material-symbols-outlined text-sm align-middle mr-1 animate-spin">progress_activity</span>
+                        Canjeando...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-sm align-middle mr-1">autorenew</span>
+                        Canjear 1 Nacatamal
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
 

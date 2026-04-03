@@ -6,10 +6,23 @@ import {
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
 import { auth, db, signInWithGoogle } from '../../infrastructure/firebase/firebase.config';
 import { getUserProfile, updateUserStatsApi } from '../../services/api';
 import { updateUserOnlineStatus } from '../../services/firestore';
+
+async function fetchUserDataFromFirestore(uid) {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      return userSnap.data();
+    }
+  } catch (error) {
+    console.error('Error al leer de Firestore directo:', error);
+  }
+  return null;
+}
 
 const AuthContext = createContext(null);
 
@@ -26,32 +39,31 @@ export function AuthProvider({ children }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Función para registrar un nuevo usuario (usa Firebase SDK directamente)
-  async function signup(email, password, displayName) {
+  async function signup(email, password, displayName, department) {
     try {
-      console.log('Iniciando registro:', { email, displayName });
-      
-      // Paso 1: Registrar con Firebase Auth
+      console.log('Iniciando registro:', { email, displayName, department });
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       console.log(' Usuario Auth creado:', user.uid);
 
-      // Paso 2: Actualizar perfil con displayName
       await updateProfile(user, { displayName });
       console.log(' Perfil actualizado:', displayName);
 
-      // Paso 3: Crear documento de usuario en Firestore
-      // Usamos el UID del usuario como ID del documento
       const userRef = doc(db, 'users', user.uid);
       const userData = {
         uid: user.uid,
         email: user.email,
         displayName: displayName,
+        department: department || null,
+        photoURL: null,
+        isGoogleAccount: false,
         isAdmin: false,
         isPublicProfile: true,
         allowOpenChallenges: false,
         isOnline: false,
         friends: [],
+        initialGiftClaimed: true,
         stats: {
           totalQuestionsAnswered: 0,
           totalCorrect: 0,
@@ -74,26 +86,93 @@ export function AuthProvider({ children }) {
           comodin: 2
         },
         trabas: {},
-        createdAt: new Date().toISOString() // Usar string en lugar de serverTimestamp para evitar problemas
+        inventory: [],
+        equipped: {},
+        createdAt: new Date().toISOString()
       };
-      
+
       console.log(' Guardando en Firestore:', userRef.path);
-      console.log(' Datos:', userData);
-      
       await setDoc(userRef, userData);
       console.log(' Usuario guardado en Firestore');
 
       return { uid: user.uid, email: user.email, displayName };
     } catch (error) {
-      console.error(' Error completo en signup:', error);
-      console.error(' Código de error:', error.code);
-      console.error(' Mensaje de error:', error.message);
-      console.error(' Stack:', error.stack);
+      console.error(' Error en signup:', error);
+
+      if (error.code === 'auth/email-already-in-use') {
+        console.warn('Email ya registrado. Intentando recuperar cuenta...');
+
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const existingUser = userCredential.user;
+          const userRef = doc(db, 'users', existingUser.uid);
+          const existingDoc = await getDoc(userRef);
+
+          if (!existingDoc.exists()) {
+            console.log('Usuario huerfano encontrado. Reparando perfil...');
+
+            const repairedData = {
+              uid: existingUser.uid,
+              email: existingUser.email,
+              displayName: existingUser.displayName || displayName,
+              department: department || null,
+              photoURL: existingUser.photoURL || null,
+              isGoogleAccount: existingUser.providerData.some(p => p.providerId === 'google.com'),
+              isAdmin: false,
+              isPublicProfile: true,
+              allowOpenChallenges: false,
+              isOnline: false,
+              friends: [],
+              initialGiftClaimed: false,
+              stats: {
+                totalQuestionsAnswered: 0,
+                totalCorrect: 0,
+                wins: 0,
+                losses: 0,
+                categoryStats: {}
+              },
+              coins: {
+                masa: 0,
+                cerdo: 0,
+                arroz: 0,
+                papa: 0,
+                chile: 0,
+                achiote: 0,
+                nacatamal: 0
+              },
+              mejoras: {
+                pase: 3,
+                reloj_arena: 2,
+                comodin: 2
+              },
+              trabas: {},
+              inventory: [],
+              equipped: {},
+              createdAt: existingUser.metadata.creationTime || new Date().toISOString()
+            };
+
+            await setDoc(userRef, repairedData);
+            console.log('Perfil reparado para usuario existente:', existingUser.uid);
+          }
+
+          return { uid: existingUser.uid, email: existingUser.email, displayName: existingUser.displayName || displayName };
+        } catch (loginError) {
+          console.error('No se pudo recuperar la cuenta:', loginError);
+
+          if (loginError.code === 'auth/wrong-password' || loginError.code === 'auth/invalid-credential') {
+            const recoveryError = new Error('Este correo ya esta registrado con otra contrasena. Intenta iniciar sesion.');
+            recoveryError.code = 'auth/email-already-in-use-recovery';
+            throw recoveryError;
+          }
+
+          throw error;
+        }
+      }
+
       throw error;
     }
   }
 
-  // Función para iniciar sesión (usa Firebase SDK directamente)
   async function login(email, password) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -108,7 +187,6 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Función para iniciar sesión con Google
   async function googleLogin() {
     try {
       const result = await signInWithGoogle();
@@ -125,24 +203,27 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Función para cerrar sesión
   async function logout() {
-    if (currentUser) {
-      await updateUserOnlineStatus(currentUser.uid, false);
+    try {
+      if (currentUser) {
+        await updateUserOnlineStatus(currentUser.uid, false).catch((error) => {
+          console.warn('No se pudo actualizar estado offline:', error.message);
+        });
+      }
+    } finally {
+      return signOut(auth);
     }
-    return signOut(auth);
   }
 
-  // Función para obtener datos del usuario desde Firestore
   async function fetchUserData(uid) {
     try {
       const data = await getUserProfile(uid);
-      
+
       if (data) {
         setUserData(data);
         return data;
       } else {
-        console.error('No se encontró documento para el usuario');
+        console.error('No se encontro documento para el usuario');
         return null;
       }
     } catch (error) {
@@ -151,10 +232,9 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Función para actualizar estadísticas del usuario
   async function updateUserStats(questionId, categoryId, isCorrect) {
     if (!currentUser || !userData) return;
-    
+
     try {
       const newStats = {
         totalQuestionsAnswered: (userData.stats?.totalQuestionsAnswered || 0) + 1,
@@ -163,8 +243,7 @@ export function AuthProvider({ children }) {
         losses: userData.stats?.losses || 0,
         categoryStats: { ...userData.stats?.categoryStats }
       };
-      
-      // Actualizar estadísticas por categoría
+
       if (!newStats.categoryStats[categoryId]) {
         newStats.categoryStats[categoryId] = { correct: 0, total: 0 };
       }
@@ -172,33 +251,30 @@ export function AuthProvider({ children }) {
       if (isCorrect) {
         newStats.categoryStats[categoryId].correct = (newStats.categoryStats[categoryId].correct || 0) + 1;
       }
-      
-      // Actualizar vía API serverless
+
       await updateUserStatsApi(currentUser.uid, newStats);
-      
-      // Actualizar estado local
+
       setUserData(prev => ({
         ...prev,
         stats: newStats
       }));
-      
+
     } catch (error) {
-      console.error('Error al actualizar estadísticas:', error);
+      console.error('Error al actualizar estadisticas:', error);
       throw error;
     }
   }
 
-  // Función para actualizar configuración de privacidad
   async function updatePrivacy(isPublic, allowOpenChallenges) {
     if (!currentUser) return;
-    
+
     try {
       const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
+      await setDoc(userRef, {
         isPublicProfile: isPublic,
         allowOpenChallenges: allowOpenChallenges
-      });
-      
+      }, { merge: true });
+
       setUserData(prev => ({
         ...prev,
         isPublicProfile: isPublic,
@@ -212,43 +288,104 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
+      try {
+        setCurrentUser(user);
 
-      if (user) {
-        await fetchUserData(user.uid);
+        if (user) {
+          // Intentar API primero, fallback a Firestore directo
+          let profileData = await fetchUserData(user.uid).catch((err) => {
+            console.warn('API no disponible, usando Firestore directo:', err.message);
+            return null;
+          });
 
-        // Marcar usuario como online
-        await updateUserOnlineStatus(user.uid, true);
-
-        // Configurar desconexión automática al cerrar pestaña o cambiar visibilidad
-        const handleVisibilityChange = async () => {
-          if (document.visibilityState === 'hidden') {
-            // Usar sendBeacon para asegurar que se envíe antes de cerrar
-            const url = `/api/users/${user.uid}/offline`;
-            navigator.sendBeacon?.(url);
-
-            // Fallback con updateDoc directo (síncrono en la medida de lo posible)
-            try {
-              const userRef = doc(db, 'users', user.uid);
-              await updateDoc(userRef, {
-                isOnline: false,
-                lastSeen: serverTimestamp()
-              });
-            } catch (e) {
-              // Ignorar error en background
+          if (!profileData) {
+            profileData = await fetchUserDataFromFirestore(user.uid);
+            if (profileData) {
+              setUserData(profileData);
             }
           }
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        return () => {
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-      } else {
-        setUserData(null);
+          if (!profileData) {
+            console.warn('Usuario huerfano detectado. Reparando perfil...');
+
+            const userRef = doc(db, 'users', user.uid);
+            const repairedData = {
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName || 'Usuario',
+              department: null,
+              photoURL: user.photoURL || null,
+              isGoogleAccount: user.providerData.some(p => p.providerId === 'google.com'),
+              isAdmin: false,
+              isPublicProfile: true,
+              allowOpenChallenges: false,
+              isOnline: false,
+              friends: [],
+              initialGiftClaimed: false,
+              stats: {
+                totalQuestionsAnswered: 0,
+                totalCorrect: 0,
+                wins: 0,
+                losses: 0,
+                categoryStats: {}
+              },
+              coins: {
+                masa: 0,
+                cerdo: 0,
+                arroz: 0,
+                papa: 0,
+                chile: 0,
+                achiote: 0,
+                nacatamal: 0
+              },
+              mejoras: {
+                pase: 3,
+                reloj_arena: 2,
+                comodin: 2
+              },
+              trabas: {},
+              inventory: [],
+              equipped: {},
+              createdAt: user.metadata.creationTime || new Date().toISOString()
+            };
+
+            await setDoc(userRef, repairedData);
+            console.log('Perfil reparado exitosamente para:', user.uid);
+
+            // Usar los datos reparados directamente en lugar de volver a llamar a la API
+            setUserData(repairedData);
+          }
+
+          await updateUserOnlineStatus(user.uid, true).catch((err) => {
+            console.error('Error al actualizar estado online:', err);
+          });
+
+          const handleVisibilityChange = async () => {
+            if (document.visibilityState === 'hidden') {
+              const url = `/api/users/${user.uid}/offline`;
+              navigator.sendBeacon?.(url);
+
+              try {
+                const userRef = doc(db, 'users', user.uid);
+                await setDoc(userRef, {
+                  isOnline: false
+                }, { merge: true });
+              } catch (e) {
+                // Ignorar error en background
+              }
+            }
+          };
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+
+          return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+          };
+        } else {
+          setUserData(null);
+        }
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return unsubscribe;
@@ -270,10 +407,17 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {loading ? (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 border-4 border-[#154212]/20 border-t-[#154212] rounded-full animate-spin"></div>
+            <p className="text-[#154212] font-bold text-lg">Cargando NicaQuizz...</p>
+            <p className="text-[#42493e]/60 text-sm mt-1">Verificando sesi&oacute;n</p>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 }
-
-
-

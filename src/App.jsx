@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './presentation/contexts/AuthContext';
 import { ToastProvider } from './presentation/contexts/ToastContext';
+import ChallengeRequestListener from './presentation/components/ChallengeRequestListener';
+import InitialGiftModal from './presentation/components/InitialGiftModal';
 
 // Paginas - Lazy loading para code splitting
 const Landing = lazy(() => import('./presentation/pages/Landing'));
@@ -324,6 +326,8 @@ function App() {
     <Router>
       <ToastProvider>
         <AuthProvider>
+          <ChallengeRequestListener />
+          <InitialGiftModal />
           <AppRoutes />
         </AuthProvider>
       </ToastProvider>

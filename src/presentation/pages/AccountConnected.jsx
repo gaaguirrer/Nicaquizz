@@ -19,6 +19,8 @@ import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../infrastructure/firebase/firebase.config';
 import TopNavBar from '../components/TopNavBar';
 import Button from '../components/Button';
+import { getAuthErrorMessage } from '../../shared/authErrors';
+import { DEPARTAMENTOS } from '../../shared/constants/departments';
 
 export default function AccountConnected() {
   const { currentUser, userData, updatePrivacy } = useAuth();
@@ -29,6 +31,7 @@ export default function AccountConnected() {
   const [formData, setFormData] = useState({
     displayName: '',
     bio: '',
+    department: '',
     isPublicProfile: true,
     allowOpenChallenges: true
   });
@@ -49,6 +52,7 @@ export default function AccountConnected() {
       setFormData({
         displayName: userData.displayName || '',
         bio: userData.bio || '',
+        department: userData.department || '',
         isPublicProfile: userData.isPublicProfile ?? true,
         allowOpenChallenges: userData.allowOpenChallenges ?? true
       });
@@ -71,6 +75,7 @@ export default function AccountConnected() {
       await updateDoc(userRef, {
         displayName: formData.displayName,
         bio: formData.bio,
+        department: formData.department || null,
         isPublicProfile: formData.isPublicProfile,
         allowOpenChallenges: formData.allowOpenChallenges
       });
@@ -137,15 +142,10 @@ export default function AccountConnected() {
         confirmPassword: ''
       });
     } catch (error) {
-      toast.handleError(error, 'Error al cambiar contraseña', false);
+      console.error('Error al cambiar contraseña:', error);
 
-      if (error.code === 'auth/wrong-password') {
-        toast.error('La contraseña actual es incorrecta');
-      } else if (error.code === 'auth/requires-recent-login') {
-        toast.error('Debes iniciar sesión nuevamente');
-      } else {
-        toast.error(error.message || 'Error al cambiar contraseña');
-      }
+      const userMessage = getAuthErrorMessage(error);
+      toast.error(userMessage);
     } finally {
       setChangingPassword(false);
     }
@@ -196,17 +196,12 @@ export default function AccountConnected() {
       }, 2000);
     } catch (error) {
       console.error('Error al eliminar cuenta:', error);
-      
-      if (error.code === 'auth/wrong-password') {
-        toast.error('La contraseña es incorrecta');
-      } else if (error.code === 'auth/requires-recent-login') {
-        toast.error('Debes iniciar sesión nuevamente para eliminar tu cuenta');
+
+      const userMessage = getAuthErrorMessage(error);
+      toast.error(userMessage);
+
+      if (error.code === 'auth/requires-recent-login' || error.code === 'auth/user-token-expired') {
         navigate('/auth');
-      } else if (error.code === 'auth/user-token-expired') {
-        toast.error('Tu sesión expiró. Inicia sesión nuevamente');
-        navigate('/auth');
-      } else {
-        toast.error('Error al eliminar cuenta: ' + error.message);
       }
     }
   }
@@ -295,6 +290,23 @@ export default function AccountConnected() {
                   disabled
                   className="w-full px-4 py-3 rounded-xl border-2 border-[#154212]/20 bg-[#154212]/5 text-[#42493e]/60 font-bold"
                 />
+              </div>
+
+              {/* Departamento */}
+              <div>
+                <label className="block text-sm font-bold text-[#154212] mb-2">
+                  Departamento
+                </label>
+                <select
+                  value={formData.department}
+                  onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-[#154212]/20 focus:border-[#2D5A27] focus:outline-none font-bold appearance-none cursor-pointer bg-white"
+                >
+                  <option value="">Sin definir</option>
+                  {DEPARTAMENTOS.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.nombre}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Bio */}

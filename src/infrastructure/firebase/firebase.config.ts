@@ -46,15 +46,15 @@ export async function signInWithGoogle() {
       await setDoc(userRef, {
         email: user.email,
         displayName: user.displayName,
+        department: null,
         photoURL: user.photoURL,
         isGoogleAccount: true,
-        coins: {
-          masa: 0,
-          cerdo: 0,
-          arroz: 0,
-          papa: 0,
-          chile: 0
-        },
+        isAdmin: false,
+        isPublicProfile: true,
+        allowOpenChallenges: true,
+        isOnline: false,
+        friends: [],
+        initialGiftClaimed: false,
         stats: {
           totalQuestionsAnswered: 0,
           totalCorrect: 0,
@@ -62,20 +62,23 @@ export async function signInWithGoogle() {
           losses: 0,
           categoryStats: {}
         },
-        inventory: [],
-        equipped: {},
+        coins: {
+          masa: 0,
+          cerdo: 0,
+          arroz: 0,
+          papa: 0,
+          chile: 0,
+          achiote: 0,
+          nacatamal: 0
+        },
         mejoras: {
           pase: 3,
           reloj_arena: 2,
           comodin: 2
         },
         trabas: {},
-        friends: [],
-        nacatamales: 0,
-        nacatamalesEarned: 0,
-        isPublicProfile: true,
-        allowOpenChallenges: true,
-        isOnline: false,
+        inventory: [],
+        equipped: {},
         createdAt: new Date().toISOString()
       });
     }

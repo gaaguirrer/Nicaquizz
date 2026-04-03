@@ -1,10 +1,11 @@
 /**
  * ToastContext.jsx - Notificaciones Globales
- * 
+ *
  * Métodos: success, error, info, warning, handleError
  * handleError muestra mensaje amigable y opcionalmente loguea en consola.
  */
 import { createContext, useContext, useState, useCallback } from 'react';
+import { getAuthErrorMessage } from '../../shared/authErrors';
 
 const ToastContext = createContext(null);
 
@@ -23,13 +24,21 @@ export function ToastProvider({ children }) {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
 
-    setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
-    }, duration);
+    // Los errores NO se auto-cierran, persisten hasta cierre manual
+    // Info, success y warning si tienen auto-cierre
+    if (type !== 'error') {
+      setTimeout(() => {
+        setToasts(prev => prev.filter(toast => toast.id !== id));
+      }, duration);
+    }
   }, []);
 
   const removeToast = useCallback((id) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
+
+  const clearErrors = useCallback(() => {
+    setToasts(prev => prev.filter(toast => toast.type !== 'error'));
   }, []);
 
   const toast = {
@@ -37,14 +46,20 @@ export function ToastProvider({ children }) {
     error: (message, duration) => addToast(message, 'error', duration),
     info: (message, duration) => addToast(message, 'info', duration),
     warning: (message, duration) => addToast(message, 'warning', duration),
+    clearErrors: clearErrors,
     // handleError: Maneja errores de forma amigable
     handleError: (error, userMessage = 'Ocurrió un error', shouldLog = true) => {
       // Opcionalmente loguear el error completo para debugging
       if (shouldLog) {
         console.error(`${userMessage}:`, error);
       }
+      
+      // Detectar si es un error de Firebase Auth y traducir automáticamente
+      const isFirebaseAuthError = error?.code?.startsWith('auth/');
+      const finalMessage = isFirebaseAuthError ? getAuthErrorMessage(error) : userMessage;
+      
       // Mostrar mensaje amigable al usuario
-      addToast(userMessage, 'error', 6000);
+      addToast(finalMessage, 'error', 6000);
     }
   };
 

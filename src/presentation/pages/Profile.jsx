@@ -131,9 +131,10 @@ export default function Profile() {
     }
   }
 
-  // Calcular nacatamales completados
+  // Obtener nacatamales reales (moneda) y potenciales (ingredientes base)
   const monedas = wallet.coins || {};
-  const nacatamalesCount = Math.min(
+  const nacatamalesCount = monedas.nacatamal || 0;
+  const nacatamalesPotenciales = Math.min(
     monedas.masa || 0,
     monedas.cerdo || 0,
     monedas.arroz || 0,
@@ -288,11 +289,11 @@ export default function Profile() {
                   </div>
                 </div>
 
-                {/* Nacatamales completados */}
+                {/* Nacatamales */}
                 <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-nica-amarillo/20 px-4 py-2 rounded-xl border border-nica-amarillo/50">
-                  <span className="material-symbols-rounded text-nica-amarillo">payments</span>
+                  <span className="material-symbols-rounded text-nica-amarillo">restaurant</span>
                   <span className="font-display text-xl text-nica-amarillo font-bold">{nacatamalesCount}</span>
-                  <span className="text-xs text-gray-300">completados</span>
+                  <span className="text-xs text-gray-300">nacatamales</span>
                 </div>
               </div>
 

@@ -10,6 +10,7 @@ import type { BaseEntity, ChallengeStatus } from './common.types';
 export interface User extends BaseEntity {
   email: string;
   displayName: string;
+  department?: string;
   photoURL?: string;
   isAdmin: boolean;
   isPublicProfile: boolean;

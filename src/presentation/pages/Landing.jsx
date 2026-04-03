@@ -144,13 +144,22 @@ export default function Landing() {
                 <UserMenu />
               </div>
             ) : (
-              <Link
-                to="/auth"
-                className="flex items-center gap-3 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors"
-              >
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>login</span>
-                <span className="font-bold">Iniciar Sesión</span>
-              </Link>
+              <div className="flex items-center gap-3 pl-4 border-l border-[#154212]/10">
+                <Link
+                  to="/auth?register=true"
+                  className="flex items-center gap-2 bg-[#F4C430] text-[#1d1d03] px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#e6b830] transition-colors font-bold"
+                >
+                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>person_add</span>
+                  <span>Registrarse</span>
+                </Link>
+                <Link
+                  to="/auth"
+                  className="flex items-center gap-2 bg-[#2D5A27] text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-[#1e3d1a] transition-colors font-bold"
+                >
+                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>login</span>
+                  <span>Iniciar Sesión</span>
+                </Link>
+              </div>
             )}
           </div>
         </div>

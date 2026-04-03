@@ -16,7 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
   fetchCategoryById,
-  fetchApprovedQuestions,
+  fetchRandomQuestions,
   submitAnswer,
   CATEGORIA_INGREDIENTE,
   addCoins,
@@ -140,8 +140,20 @@ export default function Questions() {
     try {
       const [categoryData, questionsData] = await Promise.all([
         fetchCategoryById(categoryId),
-        fetchApprovedQuestions(categoryId, 'hard')
+        fetchRandomQuestions(categoryId, 10)
       ]);
+
+      if (!categoryData) {
+        toast.error('Categoría no encontrada');
+        navigate('/play');
+        return;
+      }
+
+      if (!questionsData || questionsData.length === 0) {
+        toast.error('No hay preguntas disponibles para esta categoría');
+        navigate('/play');
+        return;
+      }
 
       setCategory(categoryData);
 
@@ -160,11 +172,12 @@ export default function Questions() {
 
   function generateOptions(correctAnswer) {
     const wrongOptions = [
-      'Opción incorrecta 1',
-      'Opción incorrecta 2',
-      'Opción incorrecta 3'
+      'Ninguna de las anteriores',
+      'Todas las anteriores',
+      'No estoy seguro',
+      'Otra respuesta'
     ].sort(() => Math.random() - 0.5).slice(0, 3);
-    
+
     const shuffled = [...wrongOptions, correctAnswer].sort(() => Math.random() - 0.5);
     return shuffled;
   }

@@ -15,7 +15,8 @@ import {
   acceptFriendRequest,
   rejectFriendRequest,
   searchUsersByEmail,
-  rejectChallenge
+  rejectChallenge,
+  createChallenge
 } from '../../services/firestore';
 import TopNavBar from '../components/TopNavBar';
 
@@ -31,6 +32,7 @@ export default function FriendsConnected() {
   const [busqueda, setBusqueda] = useState('');
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [challengingId, setChallengingId] = useState(null);
 
   // Cargar datos al montar
   useEffect(() => {
@@ -125,9 +127,23 @@ export default function FriendsConnected() {
     }
   }
 
-  // Retar amigo
+  // Retar amigo - Crea el reto en Firestore y navega
   async function handleRetar(amigoId) {
-    navigate(`/challenge?opponent=${amigoId}`);
+    if (!currentUser) {
+      toast.error('Debes iniciar sesión');
+      return;
+    }
+
+    setChallengingId(amigoId);
+    try {
+      const challengeId = await createChallenge(currentUser.uid, amigoId, null, false);
+      toast.success('¡Reto enviado!');
+      navigate(`/challenge/${challengeId}`);
+    } catch (error) {
+      toast.error('Error al enviar el reto');
+    } finally {
+      setChallengingId(null);
+    }
   }
 
   // Rechazar reto
@@ -340,15 +356,24 @@ export default function FriendsConnected() {
                         </p>
                         <button
                           onClick={() => handleRetar(amigo.id)}
-                          disabled={!amigo.isOnline}
+                          disabled={!amigo.isOnline || challengingId === amigo.id}
                           className={`w-full py-3 rounded-2xl font-bold shadow-sm transition-all flex items-center justify-center gap-2 ${
                             amigo.isOnline
                               ? 'bg-white text-[#154212] group-hover:bg-[#154212] group-hover:text-white'
                               : 'bg-[#eceabe] text-[#154212]/40 cursor-not-allowed'
-                          }`}
+                          } ${challengingId === amigo.id ? 'opacity-60 cursor-wait' : ''}`}
                         >
-                          <span className="material-symbols-outlined text-sm">swords</span>
-                          {amigo.isOnline ? 'Retar' : 'Offline'}
+                          {challengingId === amigo.id ? (
+                            <>
+                              <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                              Enviando...
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-sm">swords</span>
+                              {amigo.isOnline ? 'Retar' : 'Offline'}
+                            </>
+                          )}
                         </button>
                       </div>
                     ))

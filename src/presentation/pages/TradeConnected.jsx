@@ -36,6 +36,7 @@ export default function TradeConnected() {
   const [tradeRequests, setTradeRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [pendingTradeId, setPendingTradeId] = useState(null);
   
   // Estado para crear trueque
   const [doyIngrediente, setDoyIngrediente] = useState('masa');
@@ -114,25 +115,32 @@ export default function TradeConnected() {
     }
   }
 
-  // Aceptar trueque
+  // Aceptar trueque - muestra modal de confirmacion
   async function handleAceptarTrueque(tradeId) {
     if (!currentUser) {
       toast.error('Debes iniciar sesión');
       return;
     }
 
-    // Obtener datos del trueque
     const trade = tradeRequests.find(t => t.id === tradeId);
     if (!trade) {
       toast.error('Trueque no encontrado');
       return;
     }
 
-    if (!window.confirm('¿Estás seguro de aceptar este trueque?')) return;
+    setPendingTradeId(tradeId);
+  }
 
+  async function confirmAceptarTrueque() {
+    if (!pendingTradeId) return;
+
+    const trade = tradeRequests.find(t => t.id === pendingTradeId);
+    if (!trade) return;
+
+    setPendingTradeId(null);
     try {
       await acceptTrade(
-        tradeId,
+        pendingTradeId,
         trade.senderId,
         currentUser.uid,
         trade.offeredIngredient,
@@ -403,6 +411,38 @@ export default function TradeConnected() {
           </section>
         </div>
       </main>
+
+      {/* Modal de Confirmacion para Trueque */}
+      {pendingTradeId && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-[#fefccf] rounded-2xl shadow-2xl w-full max-w-sm border-4 border-[#F4C430]/50 overflow-hidden">
+            <div className="bg-gradient-to-r from-[#2D5A27] to-[#154212] p-5 text-center">
+              <span className="material-symbols-outlined text-white text-5xl mb-2">swap_horiz</span>
+              <h3 className="text-xl font-headline font-bold text-white">Confirmar Trueque</h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-[#42493e] text-center">
+                ¿Estas seguro de que deseas aceptar este trueque?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingTradeId(null)}
+                  className="flex-1 bg-white hover:bg-gray-100 text-[#154212] font-bold py-3 rounded-xl transition-all border-2 border-[#154212]/10"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmAceptarTrueque}
+                  className="flex-1 bg-gradient-to-r from-[#2D5A27] to-[#154212] text-white font-bold py-3 rounded-xl transition-all"
+                >
+                  Sí, Aceptar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Crear Trueque */}
       <Modal
